@@ -2776,10 +2776,21 @@ const browserTestSource = String.raw`(() => {
       ]);
       await delay(0);
       formationPreview.render("433");
+      const multiPositionSnapshot = () => ({
+        formation: formation.value,
+        assignments: formationPreview.getAssignments(),
+        spots: Array.from(document.querySelectorAll("#plannerFormationPositions .plannerFormationSpot"), element => ({
+          key: element.dataset.slotKey,
+          position: element.dataset.position,
+          player: element.dataset.playerId || null,
+          depth: element.querySelector(".plannerFormationDepthBadge")?.textContent || null,
+        })),
+      });
       assert(depthIndicator("CM#1")?.textContent === "1"
         && depthIndicator("CM#2")?.textContent === "1"
         && depthIndicator("CM#3")?.textContent === "1",
-        "A free multi-position player must count as depth for every matching CM slot.");
+        "A free multi-position player must count as depth for every matching CM slot: "
+          + JSON.stringify(multiPositionSnapshot()));
       await delay(0);
       formationPreview.render("433a");
       assert(depthIndicator("CAM#1")?.textContent === "1"
