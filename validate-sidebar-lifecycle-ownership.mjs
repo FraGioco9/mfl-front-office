@@ -89,7 +89,7 @@ invariant(
 );
 
 invariant(
-  index.includes('<aside id="sidebar" class="sidebar">\n          <div class="sidebarGrid">')
+  index.includes('<nav id="sidebar" class="sidebar" aria-label="Main navigation">\n          <div class="sidebarGrid">')
     && index.includes('</div>\n          <a class="navButton settingsNavButton"'),
   "Desktop sidebar navigation buttons must be grouped by the canonical sidebar grid while Settings remains independently bottom-anchored.",
 );
