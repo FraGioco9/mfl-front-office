@@ -126,6 +126,7 @@ const browserTestSource = String.raw`(() => {
   const plannerBrowserFocused = ${JSON.stringify(process.env.MFL_PLANNER_BROWSER_FOCUSED === "1")};
   const plannerBrowserPhase = ${JSON.stringify(process.env.MFL_PLANNER_BROWSER_PHASE || "")};
   const ux03BrowserFocused = ${JSON.stringify(process.env.MFL_UX03_BROWSER_FOCUSED === "1")};
+  const ux04BrowserFocused = ${JSON.stringify(process.env.MFL_UX04_BROWSER_FOCUSED === "1")};
 
   const filteredEmpty = window.location.search === "?overall.gte=99";
   const linkedTableRefresh = window.location.search === "?overall.gte=79&sort=age&direction=asc";
@@ -2715,11 +2716,37 @@ const browserTestSource = String.raw`(() => {
     }
 
     if (scenario.endsWith("-empty")) {
+      if (ux04BrowserFocused && (scenario === "database-empty" || scenario === "watchlist-empty")) {
+        const action = document.getElementById("tableEmptyClearFiltersButton");
+        assert(action instanceof HTMLButtonElement && action.textContent.trim() === "Clear filters",
+          "UX-04 filtered-empty reset must remain visible and distinct from Clear rules.");
+        assert(document.getElementById("quickClearFiltersButton")?.hidden === true,
+          "UX-04 must not reintroduce the hidden global quick-filter reset.");
+        assert(document.documentElement.scrollWidth <= innerWidth + 1,
+          "UX-04 filtered-empty action caused horizontal viewport overflow.");
+      }
       assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
       finish("passed", scenario + ": URL-filtered direct refresh committed the authoritative empty table state.");
       return;
     }
     if (scenario === "database-linked-state") {
+      if (ux04BrowserFocused) {
+        const filters = document.getElementById("openFiltersButton");
+        const selectedHeader = document.querySelector('#tableHead th[data-table-column="age"]');
+        assert(filters instanceof HTMLButtonElement, "UX-04 filter trigger is missing.");
+        assert(text("#filterSummary") === "1", "UX-04 linked advanced rule badge changed after hydration.");
+        assert(/^Filters: 1 advanced rule, [0-9]+ active quick filters?$/.test(filters.getAttribute("aria-label") || ""),
+          "UX-04 linked filter trigger did not retain advanced vs quick accessible counts.");
+        assert(filters.title === filters.getAttribute("aria-label"),
+          "UX-04 filter tooltip differs from its accessible description.");
+        assert(selectedHeader?.getAttribute("aria-sort") === "ascending",
+          "UX-04 linked ascending Age sort was not retained on the hydrated route.");
+        const ageSort = selectedHeader?.querySelector(".tableSortButton");
+        assert(ageSort instanceof HTMLButtonElement && ageSort.getAttribute("aria-description") === "Reset sorting to Overall descending",
+          "UX-04 linked Age sort must announce the next reset operation without changing aria-sort.");
+        assert(document.documentElement.scrollWidth <= innerWidth + 1,
+          "UX-04 linked filters/sort caused whole-page horizontal overflow.");
+      }
       assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
       finish(
         "passed",
@@ -3604,8 +3631,8 @@ const regressionScenarios = Object.freeze([
   ["database", "/database/attributes"],
   ["database-tablet", "/database/attributes", 800, 900],
   ["database-phone", "/database/attributes", 520, 900],
-  ["database-empty", "/database/attributes?overall.gte=99"],
-  ["database-linked-state", "/database/attributes?overall.gte=79&sort=age&direction=asc"],
+  ["database-empty", "/database/attributes?overall.gte=99", process.env.MFL_UX04_BROWSER_VIEWPORT === "phone" ? 390 : 1280, process.env.MFL_UX04_BROWSER_VIEWPORT === "phone" ? 844 : 900],
+  ["database-linked-state", "/database/attributes?overall.gte=79&sort=age&direction=asc", process.env.MFL_UX04_BROWSER_VIEWPORT === "phone" ? 390 : 1280, process.env.MFL_UX04_BROWSER_VIEWPORT === "phone" ? 844 : 900],
   ["player", "/players/1"],
   ["player-1444", "/players/1", 1444, 900],
   ["player-1363", "/players/1", 1363, 900],
@@ -3619,7 +3646,7 @@ const regressionScenarios = Object.freeze([
   ["player-980", "/players/1", 980, 900],
   ["player-901", "/players/1", 901, 900],
   ["watchlist", `/watchlist/${testWatchlistId}/current-season`],
-  ["watchlist-empty", `/watchlist/${testWatchlistId}/current-season?overall.gte=99`],
+  ["watchlist-empty", `/watchlist/${testWatchlistId}/current-season?overall.gte=99`, process.env.MFL_UX04_BROWSER_VIEWPORT === "phone" ? 390 : 1280, process.env.MFL_UX04_BROWSER_VIEWPORT === "phone" ? 844 : 900],
   ["myclubs-out", "/my-clubs"],
   ["myclubs-in", "/my-clubs#opted-in"],
   ["myclubs-competition-fail", "/my-clubs#competition-fail"],
