@@ -124,7 +124,8 @@ export async function auditControlSemantics(cdp, url, baseline) {
   }
   if (route === "planner") {
     assert.equal(state.planner?.pitchRole, "group");
-    assert.equal(state.planner?.pitchName, "Squad depth pitch");
+    assert.match(state.planner?.pitchName || "", /^Squad depth pitch — formation /);
+    assert.match(state.planner?.pitchName || "", /ST Browser Player/);
     assert.ok(["Share", "Revoke"].includes(state.planner?.shareText), "A11Y-02 Planner share action has an unexpected visible state.");
     assert.equal(state.planner?.shareName, state.planner?.shareText === "Revoke" ? "Revoke share" : "Share plan");
     assert.equal(state.planner?.undoName, "Undo Planner change");
