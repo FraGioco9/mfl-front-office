@@ -30,7 +30,11 @@ const [
 for (const required of [
   'sortButton.type = "button";',
   'sortButton.className = "tableSortButton";',
-  'sortButton.setAttribute("aria-label", `Sort by ${fullLabel || (column === "listing_price" ? "Listing" : column)}`);',
+  'const sortLabel = fullLabel || (column === "listing_price" ? "Listing" : column);',
+  'sortButton.setAttribute("aria-label", `Sort by ${sortLabel}`);',
+  'sortButton.setAttribute("aria-description", nextAction);',
+  "sortButton.title = nextAction;",
+  "if (restoreSortFocus) {",
   'cell.setAttribute("aria-sort", state.sortDirection === "asc" ? "ascending" : "descending");',
   'sortButton.addEventListener("click", () => {',
 ]) {
