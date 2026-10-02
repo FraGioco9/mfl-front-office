@@ -147,6 +147,8 @@ export async function auditAccessibility(cdp, url, baseline) {
       for (const type of ["keydown", "keypress", "keyup", "click"]) {
         slot.addEventListener(type, event => window.__mflA11yKeyTrace.push(type + ":" + (event.key || "mouse")), {capture: true});
       }
+      window.addEventListener("keydown", event => window.__mflA11yKeyTrace.push("window-keydown:" + event.key), true);
+      window.addEventListener("scroll", event => window.__mflA11yKeyTrace.push("scroll:" + (event.target.id || event.target.tagName || "document")), true);
       return document.activeElement === slot;
     })()`);
     assert.equal(ready, true, "A11Y-01 Planner picker is not keyboard reachable.");
@@ -159,6 +161,18 @@ export async function auditAccessibility(cdp, url, baseline) {
         current: document.querySelector('.plannerFormationSpot[data-slot-key="CB#1"] .plannerFormationSlotButton')?.getAttribute("aria-expanded"), trace: window.__mflA11yKeyTrace || [] };
     })()`);
     assert.equal(enter.opened, true, "A11Y-01 Enter did not open Planner position menu: " + JSON.stringify(enter));
+    const settled = await evaluate(`(async () => {
+      await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)));
+      await new Promise(done => setTimeout(done, 130));
+      return {
+        open: document.getElementById("plannerDepthPicker")?.hidden === false,
+        expanded: document.querySelectorAll('.plannerFormationSlotButton[aria-expanded="true"]').length,
+        focus: document.activeElement?.outerHTML.slice(0, 180),
+        trace: window.__mflA11yKeyTrace || []
+      };
+    })()`);
+    assert.equal(settled.open, true,
+      "A11Y-01 picker closed before Escape after Enter: " + JSON.stringify(settled));
     await key("Escape");
     assert.equal(await evaluate('document.getElementById("plannerDepthPicker")?.hidden === true'), true,
       "A11Y-01 Escape did not close the Planner position menu.");
