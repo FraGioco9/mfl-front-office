@@ -20,5 +20,9 @@ Intentionally not encoded in public filter URLs: page index, page size, selected
 - The existing Chromium browser routing regression adds two real direct-refresh pasted URLs at desktop 1280px and mobile 390px with duplicate quick flags, invalid numeric/unsupported sort, unknown parameter and encoded José value; checks parser first-paint count/header, hydrated controls, canonical URL and console errors.
 - Existing UX-04 browser matrix and validate-table-url-state.mjs still cover valid linked sorting/filtering and empty filters.
 
+## Reviewed CSP first-paint hash update
+
+The inline first-paint parser changed without adding or removing any scripts. The existing 12 SHA-256 hashes were independently reproduced from the generated HTML and matched the checked-in snapshot exactly. Rebuilding with the revised first-paint fragment changes only inline script #1 from `'sha256-yN/ZmKiORV6M5t+kOjf+rvexMS7OKHAHMDdtlKUCOVM='` to `'sha256-2yOfnR5276GFwUpwFc/m4qFv7d0ZKZsbd994d6MWciM='`; all 11 other approved hashes are unchanged. The regenerated tracked `index.html` and `csp-legacy-hash-snapshot.mjs` are committed together; no `unsafe-inline` allowance or CSP enforcement change.
+
 ## NAV-04C — Deferred final gate
 After the one final Vercel deployment for issue #1034: copy/paste, reload and Back/Forward across real Database/MFL/Progression/Watchlist for guest, opt-out and opt-in; Unicode and percent-encoded text, duplicate keys, multiple OR/between rules, invalid filters/sort and saved local fallback; Safari iPhone and actual wallet/permissions. Confirm correct initial HTML, hydration and CDN route responses; leave this checkbox open until then.

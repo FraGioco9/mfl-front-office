@@ -2,7 +2,7 @@
 // Keep this in sync with index.html via the validator; the proxy must NOT import
 // the filesystem-dependent hash calculator in an edge/middleware bundle.
 export const cspLegacyScriptHashSnapshot = Object.freeze([
-  "'sha256-yN/ZmKiORV6M5t+kOjf+rvexMS7OKHAHMDdtlKUCOVM='",
+  "'sha256-2yOfnR5276GFwUpwFc/m4qFv7d0ZKZsbd994d6MWciM='",
   "'sha256-faI8hwmLQezxYiYYcwmuoqRaWxrEnU/8uTkL2ty03SU='",
   "'sha256-We5grt2zDEamOi44mb9NMzFARpRNPigDTTTMdZn93+s='",
   "'sha256-n9rj2oy8dHUPrYyUk1l/1POrOkBztrTmVDcavSjqEF4='",
