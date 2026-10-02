@@ -13,7 +13,7 @@ assert.match(foundations, /--mfl-page-title-font-weight: 700;/);
 const rule = (css, selector) => {
   const pos = css.indexOf(selector);
   assert.ok(pos >= 0, "Missing selector " + selector);
-  const open = css.indexOf("{", pos + selector.length);
+  const open = css.indexOf("{", pos);
   const close = css.indexOf("}", open + 1);
   assert.ok(open > pos && close > open, "Unterminated rule " + selector);
   return css.slice(open + 1, close);
