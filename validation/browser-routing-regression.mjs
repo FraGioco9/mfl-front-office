@@ -117,12 +117,15 @@ function rowForColumns(columns) {
 
 let browserRegressionResult = null;
 let ux02TypedSearchFailedOnce = false;
+let ux03DeleteRequests = 0;
+let ux03PlanDeleted = false;
 
 const browserTestSource = String.raw`(() => {
   "use strict";
 
   const plannerBrowserFocused = ${JSON.stringify(process.env.MFL_PLANNER_BROWSER_FOCUSED === "1")};
   const plannerBrowserPhase = ${JSON.stringify(process.env.MFL_PLANNER_BROWSER_PHASE || "")};
+  const ux03BrowserFocused = ${JSON.stringify(process.env.MFL_UX03_BROWSER_FOCUSED === "1")};
 
   const filteredEmpty = window.location.search === "?overall.gte=99";
   const linkedTableRefresh = window.location.search === "?overall.gte=79&sort=age&direction=asc";
@@ -166,6 +169,7 @@ const browserTestSource = String.raw`(() => {
   const myClubsRequests = { ownership: 0, competitions: 0 };
   let mflStatsSummaryRequests = 0;
   let ux02HomeRetryClicked = false;
+  let ux03ClientDeleteAttempts = 0;
   document.addEventListener("click", (event) => {
     if (scenario === "ux02-home-retry" && event.target instanceof Element
       && event.target.closest("#homeSummaryRetryButton")) ux02HomeRetryClicked = true;
@@ -179,6 +183,11 @@ const browserTestSource = String.raw`(() => {
     if (!scenario.startsWith("ux02-") && !["myclubs-competition-fail", "myclubs-stale", "planner", "planner-selected"].includes(scenario)) return originalFetch(input, init);
     const headers = new Headers(init?.headers || {});
     headers.set("x-browser-regression-scenario", scenario);
+    if (ux03BrowserFocused && scenario === "planner") {
+      headers.set("x-browser-ux03-actions", "1");
+      if (new URL(typeof input === "string" ? input : input.url, window.location.origin).pathname === "/api/planner-save"
+        && String(init?.method || "GET").toUpperCase() === "DELETE") ux03ClientDeleteAttempts += 1;
+    }
     if (scenario === "ux02-home-retry" && ux02HomeRetryClicked) headers.set("x-browser-ux02-retry", "1");
     return originalFetch(input, { ...init, headers });
   };
@@ -2813,9 +2822,123 @@ const browserTestSource = String.raw`(() => {
     finish("passed", scenario + ": real Chromium DOM checked response, keyboard focus and viewport.");
   }
 
+
+  async function runUx03ActionMatrix() {
+    assert(scenario === "planner", "UX-03 browser regression must run on the synthetic opted-in Planner fixture.");
+    await waitFor(() => !document.getElementById("plannerPlansButton")?.disabled
+      && typeof window.__mflPlannerRoute?.render === "function",
+    "UX-03 Planner action controls did not initialize.", 10000);
+    const plansButton = document.getElementById("plannerPlansButton");
+    const modal = document.getElementById("plannerPlansModal");
+    const list = document.getElementById("plannerPlansList");
+    const status = document.getElementById("plannerPlansStatus");
+    const dialog = document.getElementById("plannerPlanDeleteModal");
+    const revokeDialog = document.getElementById("plannerPlanRevokeModal");
+    const nameDialog = document.getElementById("plannerPlanNameModal");
+    const actions = document.getElementById("plannerPlanBar");
+    const rowAction = (index, name) => {
+      const row = list?.querySelectorAll(".plannerPlanListRow")[index];
+      const button = row?.querySelector('button[aria-label="' + name + '"]');
+      assert(button instanceof HTMLButtonElement, "Missing saved-plan action: " + index + " " + name);
+      return button;
+    };
+    const key = (target, name, shift = false) => {
+      target.dispatchEvent(new KeyboardEvent("keydown", {
+        key: name, code: name, shiftKey: shift, bubbles: true, cancelable: true,
+      }));
+    };
+    const rowCount = () => list?.querySelectorAll(".plannerPlanListRow").length || 0;
+    plansButton.focus();
+    assert(document.activeElement === plansButton, "Plans opener is not keyboard-focusable.");
+    plansButton.click();
+    await waitFor(() => !modal.hidden && rowCount() === 2, "Synthetic Saved Plans list did not settle.", 8500);
+    assert(!document.documentElement.scrollWidth || document.documentElement.scrollWidth <= innerWidth + 1,
+      "Saved Plans overflows the viewport.");
+
+    // Name dialog: background inaccessible, lock held through async confirmation,
+    // Escape restores the list without saving a rename.
+    const rename = rowAction(0, "Rename plan");
+    rename.focus();
+    rename.click();
+    await waitFor(() => !nameDialog.hidden && modal.inert,
+      "Rename confirmation did not isolate the underlying Plans dialog.");
+    assert(modal.getAttribute("aria-hidden") === "true", "Rename leaves the Plans background accessible.");
+    assert(plansButton.disabled && rowAction(1, "Delete plan").disabled,
+      "Rename confirmation must lock toolbar and other saved-plan actions.");
+    await waitFor(() => document.activeElement === document.getElementById("plannerPlanNameInput"),
+      "Rename name input failed to receive focus.");
+    key(document.activeElement, "Escape");
+    await waitFor(() => nameDialog.hidden && !modal.inert && !plansButton.disabled,
+      "Escape failed to cancel Rename and unlock actions.");
+    assert(modal.getAttribute("aria-hidden") === null, "Rename cancellation did not restore accessibility.");
+    assert(ux03ClientDeleteAttempts === 0, "Cancel unexpectedly performed a remote deletion.");
+
+    // Revoke is destructive, but Cancel must never send a mutation.
+    rowAction(0, "Revoke share").click();
+    await waitFor(() => !revokeDialog.hidden && modal.inert,
+      "Revoke confirmation was not opened as an isolated dialog.");
+    await waitFor(() => document.activeElement === document.getElementById("plannerPlanRevokeCancelButton"),
+      "Revoke confirmation must initially focus Cancel.");
+    document.getElementById("plannerPlanRevokeCancelButton").click();
+    await waitFor(() => revokeDialog.hidden && !modal.inert && !plansButton.disabled,
+      "Cancel failed to restore saved-plan controls after Revoke.");
+
+    // Delete keyboard trap and cancel: Tab from last wraps to first; Shift+Tab from
+    // first wraps to last. No destructive request until explicit confirmation.
+    rowAction(0, "Delete plan").click();
+    await waitFor(() => !dialog.hidden && modal.inert,
+      "Delete confirmation was not opened.");
+    await waitFor(() => document.activeElement === document.getElementById("plannerPlanDeleteCancelButton"),
+      "Delete confirmation must initially focus Cancel.");
+    const first = document.getElementById("plannerPlanDeleteModalCloseButton");
+    const last = document.getElementById("plannerPlanDeleteConfirmButton");
+    last.focus();
+    key(last, "Tab");
+    assert(document.activeElement === first, "Tab escaped Delete confirmation instead of wrapping.");
+    first.focus();
+    key(first, "Tab", true);
+    assert(document.activeElement === last, "Shift+Tab escaped Delete confirmation instead of wrapping.");
+    key(last, "Escape");
+    await waitFor(() => dialog.hidden && !modal.inert && !plansButton.disabled,
+      "Escape failed to cancel Delete.");
+    assert(ux03ClientDeleteAttempts === 0 && rowCount() === 2,
+      "Cancellation deleted a saved plan.");
+
+    // First confirmed delete fails intentionally. All actions must remain
+    // unavailable during its network phase, then become retryable.
+    rowAction(0, "Delete plan").click();
+    await waitFor(() => !dialog.hidden, "Retryable Delete confirmation did not reopen.");
+    document.getElementById("plannerPlanDeleteConfirmButton").click();
+    await waitFor(() => ux03ClientDeleteAttempts === 1 && list.getAttribute("aria-busy") === "true",
+      "Delete request did not lock Saved Plans immediately.");
+    assert(plansButton.disabled && rowAction(1, "Delete plan").disabled,
+      "A competing row action remained enabled during Delete.");
+    await waitFor(() => String(status.textContent || "").includes("Fixture delete unavailable")
+      && !plansButton.disabled && list.getAttribute("aria-busy") === "false",
+    "Failed Delete did not provide an error and restore retry controls.", 8500);
+    assert(rowCount() === 2, "Failed Delete removed a saved plan.");
+
+    // A second confirmation succeeds, refreshes the list and does not issue
+    // duplicate DELETE requests. Remaining actions are usable afterwards.
+    rowAction(0, "Delete plan").click();
+    await waitFor(() => !dialog.hidden, "Delete retry modal did not reopen.");
+    document.getElementById("plannerPlanDeleteConfirmButton").click();
+    await waitFor(() => rowCount() === 1 && !plansButton.disabled,
+      "Successful Delete retry did not refresh Saved Plans.", 8500);
+    assert(ux03ClientDeleteAttempts === 2, "Unexpected number of confirmed DELETE requests.");
+    assert(rowAction(0, "Delete plan").disabled === false, "Surviving plan actions stayed disabled.");
+    assert(actions?.getAttribute("aria-busy") === "false",
+      "Planner toolbar retained a busy state after delete recovery.");
+    assert(!document.documentElement.scrollWidth || document.documentElement.scrollWidth <= innerWidth + 1,
+      "Saved Plans changed horizontal page overflow on this viewport.");
+    assert(errors.length === 0, "Console/runtime errors during UX-03: " + errors.join(" | "));
+    finish("passed", "UX-03: Chromium Saved Plans keyboard, confirmations, single-flight, fail/retry and viewport checks passed.");
+  }
+
   async function run() {
     try {
-      if (scenario.startsWith("ux02-")) await runUx02Recovery();
+      if (ux03BrowserFocused) await runUx03ActionMatrix();
+      else if (scenario.startsWith("ux02-")) await runUx02Recovery();
       else if (scenario === "stale") await runStaleNavigation();
       else await runRepresentativeRoute();
     } catch (error) {
@@ -3213,6 +3336,37 @@ async function createRegressionServer() {
       writeJson(response, { generatedAt, prices: {}, flowBlockHeight: 0 });
       return;
     }
+
+    // UX-03 is an opt-in synthetic wallet fixture. No Supabase, Dapper or
+    // public Vercel deployment is accessed by this local Chromium regression.
+    if (request.headers["x-browser-ux03-actions"] === "1" && url.pathname === "/api/planner-save") {
+      if (request.method === "GET") {
+        const plans = [
+          ...(!ux03PlanDeleted ? [{
+            id: "abcdef1234567890", name: "Browser Shared Plan", clubId: "9001",
+            revision: 1, payload: { clubId: "9001", formation: "442", squad: [] },
+          }] : []),
+          {
+            id: "abcdef1234567891", name: "Browser Other Plan", clubId: "9002",
+            revision: 1, payload: { clubId: "9002", formation: "433", squad: [] },
+          },
+        ];
+        writeJson(response, { plans });
+      } else if (request.method === "DELETE") {
+        ux03DeleteRequests += 1;
+        await new Promise(resolve => setTimeout(resolve, 280));
+        if (ux03DeleteRequests === 1) writeJson(response, { error: "Fixture delete unavailable" }, 503);
+        else { ux03PlanDeleted = true; writeJson(response, { deleted: true }); }
+      } else writeJson(response, { error: "Unexpected UX-03 method" }, 405);
+      return;
+    }
+    if (request.headers["x-browser-ux03-actions"] === "1" && url.pathname === "/api/planner-share") {
+      if (request.method === "GET") writeJson(response, {
+        shares: [{ id: "fedcba9876543210", sourcePlanId: "abcdef1234567890" }],
+      });
+      else writeJson(response, { error: "Unexpected UX-03 share mutation" }, 405);
+      return;
+    }
     if (url.pathname === "/api/wallet-preferences") {
       writeJson(response, walletPreferencesStub());
       return;
@@ -3411,7 +3565,7 @@ const regressionScenarios = Object.freeze([
   ["myclubs-competition-fail", "/my-clubs#competition-fail"],
   ["myclubs-stale", "/my-clubs#stale-proof"],
   ["mflstats", "/mfl/stats"],
-  ["planner", "/planner"],
+  ["planner", "/planner", process.env.MFL_UX03_BROWSER_VIEWPORT === "phone" ? 390 : 1280, process.env.MFL_UX03_BROWSER_VIEWPORT === "phone" ? 844 : 900],
   ["planner-out", "/planner#opted-out"],
   ["planner-selected", "/planner?club=9001"],
   ...(process.env.MFL_UX02_BROWSER_FOCUSED === "1" ? [
