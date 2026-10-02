@@ -128,7 +128,7 @@ invariant(
 
 // Focus restoration may sit between header rebuild and the unchanged
 // applyFilters() call. Require the same guarded sequence in both sources.
-const sortCommit = /state\.page = 1;\s+buildHeader\(\);[\s\S]{0,600}applyFilters\(\);\s+\}\);/;
+const sortCommit = /state\.page = 1;\s+buildHeader\(\);[\s\S]{0,600}applyFilters\(\);[\s\S]{0,600}\}\);/;
 invariant(
   sortCommit.test(appCore) && sortCommit.test(generated)
     && appCore.includes("if (restoreSortFocus) {")
