@@ -17,7 +17,7 @@ invariant(
 );
 
 invariant(
-  source.includes('function resetMainPageScroll() {\n    const main = document.querySelector("body > #appShell > main");\n    if (main instanceof HTMLElement) main.scrollTop = 0;\n  }'),
+  source.includes('function resetMainPageScroll() {\n    const main = canonicalMainScrollport();\n    if (main) main.scrollTop = 0;\n  }'),
   "Page navigation must reset the canonical main scrolling surface directly.",
 );
 invariant(
