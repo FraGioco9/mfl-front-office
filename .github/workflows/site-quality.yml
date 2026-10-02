@@ -190,6 +190,10 @@ jobs:
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-ux04-filter-state-regression.mjs
 
+      - name: RESP-01 Chromium narrow CSS reflow matrix
+        if: steps.changes.outputs.site == 'true'
+        run: node validation/browser-resp01-reflow-regression.mjs
+
       - name: Browser routing regression
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-routing-responsive-shell.mjs
