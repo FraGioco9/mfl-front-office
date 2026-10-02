@@ -389,7 +389,8 @@ invariant(
 );
 invariant(
   styles.includes(".plannerDepthHeader{display:flex;align-items:center;justify-content:space-between;gap:12px")
-    && styles.includes(".plannerPitchPanel h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0;font-size:16px")
+    && styles.includes(".plannerRosterHeader h3{display:flex;align-items:center;gap:6px;height:var(--mfl-control-height);margin:0;font-size:var(--mfl-section-title-font-size);font-weight:var(--mfl-section-title-font-weight);line-height:var(--mfl-section-title-line-height)")
+    && styles.includes(".plannerPitchPanel h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0;font-size:var(--mfl-section-title-font-size);font-weight:var(--mfl-section-title-font-weight);line-height:var(--mfl-section-title-line-height)")
     && styles.includes("#plannerAddPlayerButton{align-self:center"),
   "Planner Depth and Squad headings must align while the Depth formation selector sits beside the heading.",
 );
