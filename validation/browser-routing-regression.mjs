@@ -130,13 +130,16 @@ const browserTestSource = String.raw`(() => {
 
   const filteredEmpty = window.location.search === "?overall.gte=99";
   const linkedTableRefresh = window.location.search === "?overall.gte=79&sort=age&direction=asc";
+  const nav04UrlScenario = window.location.hash === "#nav04-url"
+    ? "database-nav04-url" : window.location.hash === "#nav04-url-phone"
+      ? "database-nav04-url-phone" : "";
   const expectedBrowserClubLogo = ${JSON.stringify(browserClubLogo9001)};
   const scenario = window.location.hash.startsWith("#ux02-")
     ? window.location.hash.slice(1)
     : window.location.pathname === "/privacy"
     ? "stale"
     : window.location.pathname.startsWith("/database/")
-      ? (linkedTableRefresh ? "database-linked-state" : filteredEmpty ? "database-empty" : "database")
+      ? (nav04UrlScenario || (linkedTableRefresh ? "database-linked-state" : filteredEmpty ? "database-empty" : "database"))
       : window.location.pathname.startsWith("/players/")
         ? "player"
         : window.location.pathname.startsWith("/watchlist/")
@@ -567,10 +570,17 @@ const browserTestSource = String.raw`(() => {
 
   function assertInitialFirstPaint() {
     assert(parserSnapshot, "Parser-time first-paint snapshot was not captured.");
-    if (scenario === "database" || scenario === "database-empty" || scenario === "database-linked-state") {
+    if (scenario === "database" || scenario === "database-empty" || scenario === "database-linked-state"
+        || scenario.startsWith("database-nav04-url")) {
       assert(parserSnapshot.initialPage === "database/attributes", "Database first paint has the wrong initial path.");
       assert(parserSnapshot.initialTablePage === "database", "Database first paint has the wrong table-page owner.");
       assert(parserSnapshot.initialTableView === "attributes", "Database first paint has the wrong view.");
+      if (scenario.startsWith("database-nav04-url")) {
+        assert(parserSnapshot.filterCount === "1",
+          "NAV-04 parser first paint should count only the valid Unicode rule.");
+        assert(parserSnapshot.sortedColumn === "overall" && parserSnapshot.sortDirection === "descending",
+          "NAV-04 invalid sort must return to Overall descending at first paint.");
+      }
       if (scenario === "database-linked-state") {
         assert(parserSnapshot.filterCount === "1", "Linked Database parser first paint exposed the wrong filter count: " + parserSnapshot.filterCount);
         assert(parserSnapshot.sortedColumn === "age", "Linked Database parser first paint sorted the wrong column: " + parserSnapshot.sortedColumn);
@@ -1586,6 +1596,27 @@ const browserTestSource = String.raw`(() => {
 
     await waitFor(() => document.documentElement.dataset.mflRouteReady === "true", scenario + " direct refresh never settled.");
     assertNav03Navigation("direct refresh");
+    if (scenario.startsWith("database-nav04-url")) {
+      const canonical = "?hideRetired=false&name.contains=Jos%C3%A9";
+      await waitFor(() => location.search === canonical,
+        "NAV-04 did not canonicalize duplicated, invalid and unknown URL parameters.");
+      assert(text("#filterSummary") === "1",
+        "NAV-04 first paint and hydrated Filter count disagree after dropping invalid rules.");
+      assert(document.getElementById("hideRetiredInput")?.checked === false,
+        "NAV-04 first quick filter occurrence must win over duplicate parameters.");
+      assert(document.querySelector('#tableHead th[data-table-column="overall"]')?.getAttribute("aria-sort") === "descending",
+        "NAV-04 invalid sort must use default Overall descending.");
+      const params = new URLSearchParams(location.search);
+      assert(params.get("name.contains") === "José",
+        "NAV-04 UTF-8 URLSearchParams roundtrip lost Unicode filter text.");
+      assert(!params.has("sort") && !params.has("age.gte") && !params.has("unexpected"),
+        "NAV-04 canonical query still contains invalid or unknown keys.");
+      assert(document.documentElement.scrollWidth <= innerWidth + 1,
+        "NAV-04 canonical URL introduced horizontal overflow.");
+      assert(errors.length === 0, "NAV-04 browser runtime error: " + errors.join(" | "));
+      finish("passed", "NAV-04: Unicode/duplicate/invalid URL canonicalizes consistently at first paint and hydration.");
+      return;
+    }
     if (scenario === "database-linked-state") {
       await delay(80);
       linkedTablePaintSampling = false;
@@ -3746,6 +3777,8 @@ const regressionScenarios = Object.freeze([
   ["database-phone", "/database/attributes", 520, 900],
   ["database-empty", "/database/attributes?overall.gte=99", process.env.MFL_UX04_BROWSER_VIEWPORT === "phone" ? 390 : 1280, process.env.MFL_UX04_BROWSER_VIEWPORT === "phone" ? 844 : 900],
   ["database-linked-state", "/database/attributes?overall.gte=79&sort=age&direction=asc", process.env.MFL_UX04_BROWSER_VIEWPORT === "phone" ? 390 : 1280, process.env.MFL_UX04_BROWSER_VIEWPORT === "phone" ? 844 : 900],
+  ["database-nav04-url", "/database/attributes?hideRetired=FALSE&hideRetired=true&age.gte=invalid&or.name.contains=Jos%C3%A9&sort=bogus&direction=asc&unexpected=ignored#nav04-url", 1280, 900],
+  ["database-nav04-url-phone", "/database/attributes?hideRetired=FALSE&hideRetired=true&age.gte=invalid&or.name.contains=Jos%C3%A9&sort=bogus&direction=asc&unexpected=ignored#nav04-url-phone", 390, 844],
   ["player", "/players/1"],
   ["player-1444", "/players/1", 1444, 900],
   ["player-1363", "/players/1", 1363, 900],
