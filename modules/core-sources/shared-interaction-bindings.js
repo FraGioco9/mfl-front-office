@@ -293,7 +293,7 @@ window.addEventListener("resize", () => hidePlayerNoteTooltip({ immediate: true 
 window.addEventListener("popstate", () => {
   // The loaded Club route handler already owns identity and view restoration.
   // Sending this same event through setPage starts a second async transition.
-  if (/^\\/(?:clubs|club)(?:\\/|$)/i.test(window.location.pathname)
+  if (/^\/(?:clubs|club)(?:\/|$)/i.test(window.location.pathname)
       && typeof window.__mflOpenClubPageRoute === "function") return;
   const staticUi = window.__mflStaticUiRuntime;
   const scrollToken = staticUi?.historyScrollToken?.();
