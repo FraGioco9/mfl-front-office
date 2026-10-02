@@ -883,7 +883,7 @@ function applyOverallBoxAppearance(box, overall) {
       primary.style.lineHeight = "1";
       primary.style.whiteSpace = "nowrap";
       primary.style.textDecoration = "none";
-      primary.style.color = unavailable ? "var(--text-soft)" : "#ffffff";
+      primary.style.color = unavailable ? "var(--text-soft)" : "";
       primary.style.opacity = unavailable ? "0.5" : "1";
       primary.style.cursor = unavailable ? "default" : "";
       primary.style.pointerEvents = unavailable ? "none" : "";
