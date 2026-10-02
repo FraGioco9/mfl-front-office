@@ -23,11 +23,11 @@ The desktop audits of Home, Database, Player, Planner and Settings returned **ze
 | Planner | `nested-interactive` | Serious | `.plannerPitch` |
 | Planner | `color-contrast` | Serious | `#plannerTeamDivision`, `#plannerRosterCount`, `#plannerSquadStatusPrimary`, `.plannerFormationControl > span` |
 
-The initial 390px Database audit identified a **critical** `button-name` failure in `#prevButton` and `#nextButton`, because compact CSS hides their text labels. Both now have persistent `aria-label` attributes in the canonical `html-sources/tables.html` and generated `index.html`; revalidation in progress.
+The initial 390px Database audit identified a **critical** `button-name` failure in `#prevButton` and `#nextButton`, because compact CSS hides their text labels. Both now have persistent `aria-label` attributes in the canonical `html-sources/tables.html` and generated `index.html`; the full seven-case A11Y-01 axe and keyboard matrix passed in [run 37028934139](https://github.com/FraGioco9/mfl-front-office/actions/runs/37028934139).
 
 A11Y-02 owns icon/control semantics and nested interactions; A11Y-03 owns light/dark contrast and accessible focus styling. A11Y-06 owns landmark and skip navigation checks. Findings are **not** marked remediated solely because the smoke test permits noncritical severity.
 
-The complete CI matrix and any new findings from Settings or phone must be reviewed before closing A11Y-01.
+The complete seven-case axe/keyboard matrix passed on head `1595d555`; Site Quality must pass after updating the mobile pager source contract before A11Y-01 can be merged. All seven axe scans had zero critical issues, while Settings and 390px Database had zero violations. Serious contrast/ARIA/nested-interactive findings remain for A11Y-02/A11Y-03.
 
 ## Manual release checks
 
