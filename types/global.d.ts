@@ -101,6 +101,9 @@ interface MflStaticUiRuntime {
   showLoadError?: (kind?: string) => unknown;
   destroy?: () => void;
   hideTooltips?: (options?: { immediate?: boolean; restore?: boolean }) => void;
+  captureHistoryScroll?: () => void;
+  historyScrollToken?: () => number;
+  restoreHistoryScroll?: (token: number) => void;
 }
 
 interface MflSharedTableUiRuntime {
