@@ -23,7 +23,8 @@
     "test:a11y": "node validation/browser-a11y01-route-audit.mjs",
     "test:a11y:controls": "node validation/browser-a11y02-control-semantics.mjs",
     "test:a11y:contrast": "node validation/browser-a11y03-contrast-regression.mjs",
-    "test:a11y:announcements": "node validation/a11y04-live-announcements.mjs && node validation/browser-a11y04-live-regression.mjs"
+    "test:a11y:announcements": "node validation/a11y04-live-announcements.mjs && node validation/browser-a11y04-live-regression.mjs",
+    "test:a11y:motion": "node validation/a11y05-reduced-motion.mjs && node validation/browser-a11y05-reduced-regression.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/titillium-web": "0.4.1",
