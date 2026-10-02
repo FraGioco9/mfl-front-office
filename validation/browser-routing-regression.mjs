@@ -970,7 +970,7 @@ const browserTestSource = String.raw`(() => {
       document.getElementById("hideMflPlayersInput")?.checked,
       document.getElementById("newMintsInput")?.checked,
     ].filter(Boolean).length;
-    assert(filtersButton.getAttribute("aria-label") === `Filters: 0 advanced rules, ${quickCount} active quick ${quickCount === 1 ? "filter" : "filters"}`,
+    assert(filtersButton.getAttribute("aria-label") === "Filters: 0 advanced rules, " + quickCount + " active quick " + (quickCount === 1 ? "filter" : "filters"),
       "Filter summary must distinguish advanced-rule badge and active quick filters.");
     const loadedHeaderColor = getComputedStyle(nameButton).color;
     nameButton.disabled = true;
