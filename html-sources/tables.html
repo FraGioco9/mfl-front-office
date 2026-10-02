@@ -38,6 +38,7 @@
                 }
                 if (openFiltersButton instanceof HTMLElement) {
                   openFiltersButton.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
+                  openFiltersButton.setAttribute("aria-label", activeRuleCount === 0 ? "Filters" : `Filters, ${activeRuleCount} active`);
                 }
               })();
             </script>
