@@ -175,6 +175,7 @@ export async function auditAccessibility(cdp, url, baseline) {
     assert.equal(settled.open, true,
       "A11Y-01 picker closed before Escape after Enter: " + JSON.stringify(settled));
     await key("Escape");
+    await evaluate('(async () => { await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))); return true; })()');
     assert.equal(await evaluate('document.getElementById("plannerDepthPicker")?.hidden === true'), true,
       "A11Y-01 Escape did not close the Planner position menu.");
     const focusAfterEscape = await evaluate(`(() => {
