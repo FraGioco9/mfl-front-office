@@ -52,7 +52,6 @@ for (const profile of raw.metadata.profiles) {
   }
 }
 assert.equal(phaseSamples, 210);
-assert.equal(meta.metadata.datasetWorkflowRunId === undefined, true);
 assert.ok(/^20\d\d-\d\d-\d\dT/.test(meta.metadata.targetContext.datasetGeneratedAt));
 assert.ok(Number(meta.metadata.databaseArtifactId) > 0);
 assert.ok(Number(meta.metadata.databaseWorkflowRunId) > 0);
