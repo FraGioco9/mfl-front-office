@@ -29,6 +29,15 @@ export async function auditAccessibility(cdp, url, baseline) {
       home: ["home", null], database: ["database", { view: "attributes" }],
       player: ["player", { playerId: "1" }], settings: ["settings", null]
     };
+    if (name === "settings") {
+      // This fixture has no real Dapper wallet. Supply an in-memory mock
+      // session only for this isolated page so the genuine Settings UI renders.
+      const address = "0xa110000000000000";
+      state.linkedWalletAddress = address;
+      state.linkedWalletProof = { type: "session", address,
+        message: "MFL Front Office Dapper Opt-In" };
+      if (!hasWalletOptIn()) throw new Error("A11Y Settings mock opt-in did not activate.");
+    }
     if (destinations[name]) {
       const [page, options] = destinations[name];
       if (typeof window.setPage !== "function") throw new Error("setPage is not ready");
