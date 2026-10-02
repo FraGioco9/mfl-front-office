@@ -1046,7 +1046,8 @@ function tableBuildHeaderOwner() {
         // The active header button is replaced on every sort. Keyboard users
         // must not lose their position when toggling its direction.
         if (restoreSortFocus) {
-          tableHead.querySelector(`th[data-table-column="${column}"] > .tableSortButton`)?.focus({ preventScroll: true });
+          const nextSortButton = tableHead.querySelector(`th[data-table-column="${column}"] > .tableSortButton`);
+          if (nextSortButton instanceof HTMLButtonElement) nextSortButton.focus({ preventScroll: true });
         }
         applyFilters();
       });
