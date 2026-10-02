@@ -108,6 +108,26 @@ jobs:
       - name: Validate RESP-02 long mobile table interactions
         run: node validation/browser-resp02-long-mobile-table.mjs
 
+  resp03-orientation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build canonical assets
+        run: npm run build
+
+      - name: Validate RESP-03 Player/Planner orientation transitions
+        run: node validation/browser-resp03-orientation-regression.mjs
+
   responsive-shell-breakpoint:
     runs-on: ubuntu-latest
     steps:
