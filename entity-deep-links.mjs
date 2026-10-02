@@ -30,9 +30,11 @@ export async function sqliteEntityExists(kind, id) {
   // The import is deliberately deferred for non-entity routes. DatabaseSync
   // initializes one cached read-only connection; player_id/club_id are probed
   // with LIMIT 1 instead of fetching profiles, rosters or aggregations.
+  // SQLite player_id/club_id are TEXT in CI and some snapshots: bind a string,
+  // because node:sqlite's numeric parameter does not match a TEXT ID there.
   const { queryOne, tableExists } = (await import("./api/_database.js")).default;
   if (kind === "player") {
-    return Boolean(queryOne("SELECT 1 AS present FROM players WHERE player_id = ? LIMIT 1", [id]));
+    return Boolean(queryOne("SELECT 1 AS present FROM players WHERE player_id = ? LIMIT 1", [String(id)]));
   }
   let hasClubTable = false;
   for (const table of ["runtime_clubs", "clubs"]) {
@@ -40,7 +42,7 @@ export async function sqliteEntityExists(kind, id) {
     hasClubTable = true;
     if (queryOne(
       "SELECT 1 AS present FROM " + table + " WHERE club_id = ? LIMIT 1",
-      [id],
+      [String(id)],
     )) return true;
   }
   // Some smoke/older datasets have no club identity table. Lack of an

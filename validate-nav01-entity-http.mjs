@@ -50,6 +50,11 @@ assert.equal(entityStatusMetadata("club", 200), null);
 const page = readFileSync(new URL("./pages/[...path].js", import.meta.url), "utf8");
 const workflow = readFileSync(new URL("./.github/workflows/site-quality.yml", import.meta.url), "utf8");
 const smoke = readFileSync(new URL("./scripts/ci/create-next-sqlite-smoke-fixture.cjs", import.meta.url), "utf8");
+const lookupSource = readFileSync(new URL("./entity-deep-links.mjs", import.meta.url), "utf8");
+assert.match(lookupSource, /WHERE player_id = \? LIMIT 1", \[String\(id\)\]/,
+  "Player TEXT identity columns require string-bound SQLite parameters.");
+assert.match(lookupSource, /WHERE club_id = \? LIMIT 1"[\s\S]*?\[String\(id\)\]/,
+  "Club TEXT identity columns require string-bound SQLite parameters.");
 assert.match(page, /const entity = await resolveEntityDeepLink\(context\.resolvedUrl\);/);
 assert.match(page, /context\.res\.statusCode = entity\.status;/);
 assert.match(page, /entityStatusMetadata\(entity\?\.kind, entity\?\.status\)/);
