@@ -137,7 +137,7 @@ Ordinary keyboard-focus affordances share:
 - Ring width: `2px` through `--mfl-focus-ring-width`
 - Standard ring offset: `2px` through `--mfl-focus-ring-offset`
 
-Equivalent ordinary controls should consume these tokens. Compact controls may keep a deliberately smaller local offset, while table action menus, selected/expanded controls, and other specialist interaction states retain their domain-owned focus behavior.
+Equivalent ordinary controls should consume these tokens. Compact controls may keep a deliberately smaller local offset, while table action menus, selected/expanded controls, and other specialist interaction states retain their domain-owned focus behavior. Icon-only Search, Evaluation and Planner clear buttons expose the shared focus color/width using an **inset** outline so keyboard focus is visible inside the existing 30px icon hit target, without changing hover appearance or layout.
 
 ## Icons
 
