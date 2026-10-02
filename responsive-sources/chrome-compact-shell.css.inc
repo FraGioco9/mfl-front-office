@@ -83,6 +83,9 @@
     max-width: 100%;
   }
 
+  /* Avoid an auto-sized grid column expanding under a clipped mobile shell. */
+  body { grid-template-columns: minmax(0, 1fr); }
+
   body > .topbar {
     grid-template-columns: minmax(0, 1fr) 44px auto;
     grid-template-areas: "brand search controls";
