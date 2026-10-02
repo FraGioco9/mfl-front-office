@@ -199,6 +199,9 @@ const browserTestSource = String.raw`(() => {
   const testWallet = "0x1111111111111111";
   const testWatchlistId = "browser1";
   const expectedPlayerName = "Browser Player";
+  // Freeze the test's layout target across SPA navigation (which removes URL hashes).
+  const resp01LayoutWidth = window.location.hash.startsWith("#resp01-")
+    ? Number(window.location.hash.slice("#resp01-".length)) : null;
   const errors = [];
   let parserSnapshot = null;
   let loadingSkeletonHeight = 0;
@@ -417,8 +420,8 @@ const browserTestSource = String.raw`(() => {
     const viewportWidth = document.documentElement.clientWidth;
     // RESP-01: verify the browser really rendered at the requested layout viewport.
     // Desktop headless Chromium otherwise clamps --window-size at narrow widths.
-    if (window.location.hash.startsWith("#resp01-")) {
-      const expected = Number(window.location.hash.slice("#resp01-".length));
+    if (Number.isInteger(resp01LayoutWidth)) {
+      const expected = resp01LayoutWidth;
       assert(Number.isInteger(expected) && expected > 0 && window.innerWidth === expected
         && viewportWidth === expected,
       "RESP-01 layout viewport was not emulated: " + JSON.stringify({
@@ -730,7 +733,7 @@ const browserTestSource = String.raw`(() => {
         path: window.location.pathname,
         title: document.title,
         hasPlayerName: text("#playerDetail").includes(
-          window.location.hash.startsWith("#resp01-") && document.documentElement.clientWidth <= 900
+          Number.isInteger(resp01LayoutWidth) && document.documentElement.clientWidth <= 900
             ? "B. Player" : expectedPlayerName,
         ),
         pageHidden: hidden("#playerPage"),
@@ -1703,7 +1706,7 @@ const browserTestSource = String.raw`(() => {
     } else {
       await delay(80);
     }
-    if (scenario === "player" && window.location.hash.startsWith("#resp01-")) {
+    if (scenario === "player" && Number.isInteger(resp01LayoutWidth)) {
       // Narrow Player intentionally displays the abbreviated identity (B. Player).
       // The full name remains in document.title and is separately asserted.
       try {
