@@ -1702,8 +1702,22 @@ const browserTestSource = String.raw`(() => {
     }
     if (scenario === "player" && window.location.hash.startsWith("#resp01-")) {
       // Route-ready marks the shell, not completion of the async player detail fetch.
-      await waitFor(() => text("#playerDetail").includes(expectedPlayerName),
-        "RESP-01 Player detail did not settle after the shell became ready.");
+      try {
+        await waitFor(() => text("#playerDetail").includes(expectedPlayerName),
+          "RESP-01 Player detail did not settle after the shell became ready.");
+      } catch (error) {
+        throw new Error(String(error?.message || error) + " " + JSON.stringify({
+          url: location.href,
+          title: document.title,
+          route: document.body.dataset.page,
+          playerPageHidden: hidden("#playerPage"),
+          detailSnippet: text("#playerDetail").slice(0, 250),
+          initialTitle: parserSnapshot?.title,
+          playerRows: document.querySelectorAll("#playerDetail .playerAttributeViewButton").length,
+          errors: errors.slice(-6),
+          recentEvents: timeline.snapshot().slice(-8),
+        }));
+      }
       assertSharedChromeGeometry();
     }
     const directState = routeState();
