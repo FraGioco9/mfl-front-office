@@ -858,7 +858,7 @@
     const resolvedDivision=typeof contractDivisionInfo==="function"?contractDivisionInfo(data?.division):null;
     const divisionInfo=resolvedDivision||(data.divisionName?{name:String(data.divisionName),color:String(data.divisionColor||"")}:null);
     savePlannerClub(data,divisionInfo);
-    if(teamDivision instanceof HTMLElement){teamDivision.textContent=divisionInfo?.name||"";teamDivision.style.color=divisionInfo?.color||"";teamDivision.hidden=!divisionInfo;}
+    if(teamDivision instanceof HTMLElement){teamDivision.textContent=divisionInfo?.name||"";teamDivision.style.color=divisionInfo?.color?accessibleDivisionLabelColor(divisionInfo.color):"";teamDivision.hidden=!divisionInfo;}
     if(teamLocation instanceof HTMLElement){
       const city=String(data?.city||"").trim(),nation=String(data?.nation||"").trim();
       const country=nation?(typeof formatNationality==="function"?formatNationality(nation):nation):"";
@@ -939,7 +939,7 @@
       if(divisionInfo){
         meta.append(document.createTextNode(" · "));
         const division=document.createElement("span");division.className="clubSearchDivision";
-        division.style.color=divisionInfo.color;division.textContent=divisionInfo.name;
+        division.style.color=accessibleDivisionLabelColor(divisionInfo.color);division.textContent=divisionInfo.name;
         meta.appendChild(division);
       }
       button.append(title,meta);

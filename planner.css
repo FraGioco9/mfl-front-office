@@ -58,10 +58,10 @@
 .plannerRosterPanel,.plannerPitchPanel{min-width:0}
 .plannerRosterHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:var(--mfl-control-height);margin:0 0 12px}
 .plannerRosterHeader h3{display:flex;align-items:center;gap:6px;height:var(--mfl-control-height);margin:0;font-size:var(--mfl-section-title-font-size);font-weight:var(--mfl-section-title-font-weight);line-height:var(--mfl-section-title-line-height)}
-.plannerSquadStatusStrip{display:flex;align-items:center;flex-wrap:wrap;gap:5px 10px;min-height:22px;margin:-5px 0 10px;color:var(--text-soft);font-size:11px;font-weight:700;line-height:18px}
+.plannerSquadStatusStrip{display:flex;align-items:center;flex-wrap:wrap;gap:5px 10px;min-height:22px;margin:-5px 0 10px;color:var(--text-muted);font-size:11px;font-weight:700;line-height:18px}
 .plannerDepthHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:var(--mfl-control-height);margin:0 0 12px}
 .plannerPitchPanel h3{display:flex;align-items:center;height:var(--mfl-control-height);margin:0;font-size:var(--mfl-section-title-font-size);font-weight:var(--mfl-section-title-font-weight);line-height:var(--mfl-section-title-line-height)}
-.plannerFormationControl{display:flex;align-items:center;gap:8px;min-width:0;color:var(--text-soft);font-size:12px;font-weight:700}
+.plannerFormationControl{display:flex;align-items:center;gap:8px;min-width:0;color:var(--text-muted);font-size:12px;font-weight:700}
 .plannerFormationSelect{box-sizing:border-box;width:132px;max-width:100%;height:var(--mfl-control-height);min-height:var(--mfl-control-height);align-items:center;align-content:center;padding-block:0;padding-right:10px;line-height:1}
 select.plannerFormationSelect.plannerFormationSelectCommitted,select.plannerFormationSelect.plannerFormationSelectCommitted:is(:hover,:focus,:focus-visible,:open){outline:0;border-color:var(--mfl-control-border-color);background:var(--mfl-control-background);color:var(--mfl-control-text-color);box-shadow:none}
 .plannerFormationPositions{position:absolute;inset:0;z-index:2;pointer-events:none}
@@ -118,7 +118,7 @@ select.plannerFormationSelect.plannerFormationSelectCommitted,select.plannerForm
 .plannerContractInput.plannerPendingContractInput{width:54px;height:24px;padding-inline:4px}
 .plannerPendingContractSuffix{color:var(--text-soft);font-size:12px;font-variant-numeric:tabular-nums}
 .plannerPlayerModalFooter{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:auto}
-#plannerRosterCount{color:var(--text-soft);font-size:12px;font-weight:600}
+#plannerRosterCount{color:var(--text-muted);font-size:12px;font-weight:600}
 .plannerRosterTable{width:100%;table-layout:fixed}
 .plannerRosterTable .plannerSlotColumn{width:48px}
 .plannerRosterTable .plannerNationalityColumn{width:28px}

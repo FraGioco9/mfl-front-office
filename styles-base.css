@@ -789,15 +789,15 @@ main > .pageView {
   min-width: 124px;
   height: 40px;
   margin-top: 2px;
-  border-color: #2fbf62;
-  background: #2fbf62;
+  border-color: #167c42;
+  background: #167c42;
   color: #ffffff;
   font-weight: 800;
 }
 
 .homeOptInButton:hover:not(:disabled) {
-  border-color: #249b50;
-  background: #249b50;
+  border-color: #10592e;
+  background: #10592e;
   color: #ffffff;
 }
 
@@ -4093,7 +4093,7 @@ button.playerIdText:active {
 
 .watchlistPlayerCount {
   margin-left: auto;
-  color: var(--text-soft);
+  color: var(--text-muted);
   font-weight: 800;
   white-space: nowrap;
 }
@@ -4507,6 +4507,17 @@ button.playerIdText:active {
   border-color: var(--primary);
   background: var(--primary);
   color: #ffffff;
+}
+
+:root[data-theme="dark"] :is(
+  .settingsToggleButton.active,
+  .settingsEmailActionButton.primary,
+  .playerEvaluateButton,
+  .playerExternalButton,
+  .playerEvaluateButton:hover,
+  .playerExternalButton:hover
+) {
+  color: var(--page-bg);
 }
 
 .settingsEmailActionButton:disabled {

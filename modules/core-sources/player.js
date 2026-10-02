@@ -883,7 +883,7 @@ function applyOverallBoxAppearance(box, overall) {
       primary.style.lineHeight = "1";
       primary.style.whiteSpace = "nowrap";
       primary.style.textDecoration = "none";
-      primary.style.color = unavailable ? "var(--text-soft)" : "#ffffff";
+      primary.style.color = unavailable ? "var(--text-soft)" : "";
       primary.style.opacity = unavailable ? "0.5" : "1";
       primary.style.cursor = unavailable ? "default" : "";
       primary.style.pointerEvents = unavailable ? "none" : "";
@@ -1200,7 +1200,7 @@ function animateReadyControls(container = document) {
     const divisionRaw = knownRawValue(context, "active_contract_club_division");
     const divisionInfo = divisionRaw !== "" ? contractDivisionInfo(divisionRaw) : null;
     division.textContent = divisionInfo?.name || knownDisplayValue(context, "active_contract_club_division") || loadingBlank();
-    if (divisionInfo?.color) division.style.color = divisionInfo.color;
+    if (divisionInfo?.color) division.style.color = accessibleDivisionLabelColor(divisionInfo.color);
     line.append(team, division);
     value.replaceChildren(line);
   }
@@ -2148,7 +2148,7 @@ function renderPlayerPageOwner(playerId) {
   const agentTooltipHtml = agentTooltip ? ` data-tooltip="${escapeHtml(agentTooltip)}" aria-label="${escapeHtml(agentTooltip)}"` : "";
   const agentLinkHtml = `<a class="agentTableLink playerAgentLink" href="${escapeHtml(agentRoute(agentWalletAddress))}"${agentTooltipHtml}>${escapeHtml(formatCellValue(row, "wallet_name"))}</a>`;
   const contractDivision = rowHasActiveContract(row) ? contractDivisionInfo(getValue(row, "active_contract_club_division")) : null;
-  const contractDivisionHtml = contractDivision ? `<span class="playerContractDivision" style="color: ${escapeHtml(contractDivision.color)}">${escapeHtml(contractDivision.name)}</span>` : "";
+  const contractDivisionHtml = contractDivision ? `<span class="playerContractDivision" style="color: ${escapeHtml(accessibleDivisionLabelColor(contractDivision.color))}">${escapeHtml(contractDivision.name)}</span>` : "";
   const contractTeamName = formatContractClubName(row);
   const contractClubId = String(getValue(row, "active_contract_club_id") || "").trim();
   const contractTeamHtml = contractClubId
