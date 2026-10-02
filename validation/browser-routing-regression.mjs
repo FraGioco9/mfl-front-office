@@ -2870,6 +2870,7 @@ const browserTestSource = String.raw`(() => {
     key(document.activeElement, "Escape");
     await waitFor(() => nameDialog.hidden && !modal.inert && !plansButton.disabled,
       "Escape failed to cancel Rename and unlock actions.");
+    assert(!modal.hidden, "Escape from nested Rename also closed the parent Saved Plans dialog.");
     assert(modal.getAttribute("aria-hidden") === null, "Rename cancellation did not restore accessibility.");
     assert(ux03ClientDeleteAttempts === 0, "Cancel unexpectedly performed a remote deletion.");
 
