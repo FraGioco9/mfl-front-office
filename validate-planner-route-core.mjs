@@ -125,17 +125,21 @@ invariant(
   "Planner plan-name input must use one light-blue interaction border without a second outline.",
 );
 invariant(
-  html.includes('id="plannerPlanMode" class="plannerPlanMode">Draft</span>')
-    && styles.includes(".plannerPlanModeDirty{")
+  html.includes('id="plannerPlanMode" class="plannerPlanMode" aria-live="polite">Draft</span>')
+    && html.includes('id="plannerUnsavedWarning" class="plannerUnsavedWarning" hidden')
+    && html.includes('id="plannerPlanConflict" class="plannerPlanConflict" role="status" aria-live="polite" hidden')
     && styles.includes(".plannerPlanModeSaved{")
+    && styles.includes(".plannerPlanConflict[hidden]{display:none}")
     && planner.includes("function plannerPayloadFingerprint(payload)")
     && planner.includes("function plannerHasUnsavedChanges()")
     && planner.includes("function syncPlannerDirtyState()")
-    && planner.includes('const mode=plannerReadOnly?"Shared":!selectedTeamId?"Draft":dirty||!activePlanId?"Unsaved":"Saved";')
+    && planner.includes('const mode=plannerReadOnly?"Shared":!activePlanId?"Draft":"Saved";')
+    && planner.includes("unsavedWarning.hidden=plannerReadOnly||!activePlanId||!dirty")
+    && planner.includes("planConflictNotice.hidden=plannerReadOnly||!activePlanId||plannerConflictPlanId!==activePlanId")
     && planner.includes('Reflect.set(window,"__mflPlannerConfirmNavigation",plannerConfirmNavigation)')
     && planner.includes('window.confirm("You have unsaved Planner changes. Leave without saving?")')
     && planner.includes('window.addEventListener("beforeunload",event=>'),
-  "Planner must continuously show Saved/Unsaved/Shared state and protect unsaved changes across navigation and unload.",
+  "Planner must distinguish Draft/Saved/Shared source, show unsaved edits/conflicts and protect navigation/unload.",
 );
 invariant(
   html.includes('if (initialPage !== "planner") return;')
@@ -269,7 +273,7 @@ invariant(
   "Planner polish must expose operation-aware Undo/Redo with keyboard shortcuts, information-only squad status and Squad↔Depth highlighting.",
 );
 invariant(
-  planner.includes('savePlanButton.disabled=plannerReadOnly||!selectedTeamId||(Boolean(activePlanId)&&!dirty);')
+  planner.includes('savePlanButton.disabled=plannerReadOnly||!selectedTeamId||(Boolean(activePlanId)&&!dirty)||plannerToolbarActionPending||plannerPlansActionPending;')
     && planner.includes('row.classList.toggle("plannerPlanListRowCurrent",isCurrent);')
     && planner.includes('current.textContent="Current";')
     && styles.includes(".plannerPlanListRowCurrent{border-color:var(--primary);background:var(--row-hover)}")

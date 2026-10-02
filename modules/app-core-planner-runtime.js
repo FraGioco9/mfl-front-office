@@ -51,6 +51,7 @@
   const planNameLabel=document.getElementById("plannerPlanName");
   const planModeLabel=document.getElementById("plannerPlanMode");
   const unsavedWarning=document.getElementById("plannerUnsavedWarning");
+  const planConflictNotice=document.getElementById("plannerPlanConflict");
   const plansButton=document.getElementById("plannerPlansButton");
   const newPlanButton=document.getElementById("plannerNewPlanButton");
   const savePlanButton=document.getElementById("plannerSavePlanButton");
@@ -88,6 +89,7 @@
   let pendingPlayers=new Map();
   let activeContractEditor=null;
   let activePlanId="",activePlanName="",activePlanPayload=null,activePlanRevision=0,activeShareId="",plannerReadOnly=false,loadedPlanRouteIdentity="";
+  let plannerConflictPlanId="";
   let planNameRequest=null,planDeleteRequest=null,planRevokeRequest=null;
   let plannerToolbarActionPending=false;
   let plannerPlansActionPending=false;
@@ -1093,16 +1095,19 @@
   }
   function syncPlannerDirtyState(){
     const dirty=plannerHasUnsavedChanges();
-    if(unsavedWarning instanceof HTMLElement)unsavedWarning.hidden=true;
+    // The mode describes the saved source; unsaved edits are an independent,
+    // visible warning rather than replacing the source with "Unsaved".
+    if(unsavedWarning instanceof HTMLElement)unsavedWarning.hidden=plannerReadOnly||!activePlanId||!dirty;
+    if(planConflictNotice instanceof HTMLElement)planConflictNotice.hidden=plannerReadOnly||!activePlanId||plannerConflictPlanId!==activePlanId;
     if(planModeLabel instanceof HTMLElement){
-      const mode=plannerReadOnly?"Shared":!selectedTeamId?"Draft":dirty||!activePlanId?"Unsaved":"Saved";
+      const mode=plannerReadOnly?"Shared":!activePlanId?"Draft":"Saved";
       planModeLabel.textContent=mode;
-      planModeLabel.classList.toggle("plannerPlanModeDirty",mode==="Unsaved");
+      planModeLabel.classList.toggle("plannerPlanModeDirty",false);
       planModeLabel.classList.toggle("plannerPlanModeSaved",mode==="Saved");
       planModeLabel.classList.toggle("plannerPlanModeShared",mode==="Shared");
     }
     if(savePlanButton instanceof HTMLButtonElement){
-      savePlanButton.disabled=plannerReadOnly||!selectedTeamId||(Boolean(activePlanId)&&!dirty);
+      savePlanButton.disabled=plannerReadOnly||!selectedTeamId||(Boolean(activePlanId)&&!dirty)||plannerToolbarActionPending||plannerPlansActionPending;
     }
     Reflect.set(window,"__mflPlannerDirty",dirty);
     return dirty;
@@ -1274,6 +1279,7 @@
     try{
       return await action();
     }catch(error){
+      if(Number(error?.status)===409&&activePlanId)plannerConflictPlanId=activePlanId;
       setStatus(error?.message||failureMessage);
       return false;
     }finally{
@@ -1324,6 +1330,7 @@
     const clubId=String(payload?.clubId||entry?.clubId||"").trim();
     if(!payload||!clubId)throw new Error("Plan is invalid.");
     plannerReadOnly=Boolean(readOnly);
+    plannerConflictPlanId="";
     activePlanId=plannerReadOnly?"":String(savedId||entry?.id||"");
     activePlanRevision=plannerReadOnly?0:plannerPlanRevision(entry?.revision);
     activeShareId="";
@@ -1361,7 +1368,7 @@
     const data=await savePlannerPayload(payload,name,{savedId:overwriting?activePlanId:"",expectedRevision:overwriting?activePlanRevision:0});
     const plan=data?.plan;
     if(!plan?.id)throw new Error("Could not save plan.");
-    activePlanId=String(plan.id);activePlanName=String(plan.name||name);activePlanPayload=plan.payload||payload;activePlanRevision=plannerPlanRevision(plan.revision);plannerReadOnly=false;loadedPlanRouteIdentity="saved:"+activePlanId;
+    plannerConflictPlanId="";activePlanId=String(plan.id);activePlanName=String(plan.name||name);activePlanPayload=plan.payload||payload;activePlanRevision=plannerPlanRevision(plan.revision);plannerReadOnly=false;loadedPlanRouteIdentity="saved:"+activePlanId;
     history.replaceState({},"",plannerStablePlanPath(activePlanId));
     await refreshActivePlannerShare();
     syncPlanUi();
@@ -1444,7 +1451,7 @@
     if(!confirmPlannerDiscard())return false;
     const clubId=String(selectedTeamId||"").trim();
     closePlansModal();closePlayerModal();
-    plannerReadOnly=false;activePlanId="";activePlanName="";activePlanPayload=null;activePlanRevision=0;activeShareId="";loadedPlanRouteIdentity="";
+    plannerConflictPlanId="";plannerReadOnly=false;activePlanId="";activePlanName="";activePlanPayload=null;activePlanRevision=0;activeShareId="";loadedPlanRouteIdentity="";
     resetPlannerHistory();setStatus("");
     if(clubId){
       history.replaceState({},"","/planner?club="+encodeURIComponent(clubId));
@@ -1698,7 +1705,7 @@
       if(first instanceof HTMLButtonElement){event.preventDefault();first.click();}
     }else if(event.key==="Escape"){input.blur();}
   });
-  function clearSelection(){if(!(input instanceof HTMLInputElement)||plannerReadOnly)return;if(!confirmPlannerDiscard())return;clearTimeout(searchTimer);closePlayerModal();activePlanId="";activePlanName="";activePlanPayload=null;activePlanRevision=0;activeShareId="";loadedPlanRouteIdentity="";selectedTeamId="";showTeam();input.value="";clearResults();syncClearButton();setStatus("");syncPlanUi();updatePlannerUrl("",{replace:true});void requestOwnedClubs();input.focus();}
+  function clearSelection(){if(!(input instanceof HTMLInputElement)||plannerReadOnly)return;if(!confirmPlannerDiscard())return;clearTimeout(searchTimer);closePlayerModal();plannerConflictPlanId="";activePlanId="";activePlanName="";activePlanPayload=null;activePlanRevision=0;activeShareId="";loadedPlanRouteIdentity="";selectedTeamId="";showTeam();input.value="";clearResults();syncClearButton();setStatus("");syncPlanUi();updatePlannerUrl("",{replace:true});void requestOwnedClubs();input.focus();}
   clearButton?.addEventListener("click",clearSelection);
   plansButton?.addEventListener("click",()=>void openPlansModal());
   newPlanButton?.addEventListener("click",()=>void runPlannerToolbarAction(()=>newPlannerPlan(),"Could not create a new plan."));

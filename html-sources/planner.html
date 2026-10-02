@@ -4,8 +4,9 @@
             <div class="plannerPlanIdentity">
               <span class="plannerPlanEyebrow">Plan</span>
               <strong id="plannerPlanName">Unsaved plan</strong>
-              <span id="plannerPlanMode" class="plannerPlanMode">Draft</span>
+              <span id="plannerPlanMode" class="plannerPlanMode" aria-live="polite">Draft</span>
               <span id="plannerUnsavedWarning" class="plannerUnsavedWarning" hidden>Unsaved changes</span>
+              <span id="plannerPlanConflict" class="plannerPlanConflict" role="status" aria-live="polite" hidden>Plan changed elsewhere. Reopen it from Plans before saving again.</span>
             </div>
             <div class="plannerPlanActions">
               <button id="plannerPlansButton" class="compactButton" type="button">Plans</button>

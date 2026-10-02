@@ -7519,10 +7519,11 @@ html.mflDataLoading #pageSizeSelect {
 /* Source: planner.css */
 .plannerPage{width:100%;max-width:none;margin:0}
 .plannerPlanBar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
-.plannerPlanIdentity{display:flex;align-items:center;gap:8px;min-width:0}
+.plannerPlanIdentity{display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
 .plannerPlanEyebrow{color:var(--text-soft);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
 #plannerPlanName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
 .plannerPlanMode{display:inline-flex;align-items:center;min-height:20px;padding:0 6px;border-radius:999px;background:var(--surface-muted);color:var(--text-soft);font-size:10px;font-weight:800}.plannerPlanModeDirty{background:color-mix(in srgb,var(--danger) 10%,var(--surface-muted));color:var(--danger)}.plannerPlanModeSaved{background:color-mix(in srgb,#05f82c 10%,var(--surface-muted));color:#05b925}.plannerPlanModeShared{background:color-mix(in srgb,var(--primary) 10%,var(--surface-muted));color:var(--primary)}.plannerUnsavedWarning{display:inline-flex;align-items:center;min-height:20px;padding:0 7px;border:1px solid var(--border);border-radius:6px;background:var(--surface-muted);color:var(--danger);font-size:10px;font-weight:800;white-space:nowrap}.plannerUnsavedWarning[hidden]{display:none}
+.plannerPlanConflict{color:var(--danger);font-size:11px;font-weight:700;line-height:1.4}.plannerPlanConflict[hidden]{display:none}
 .plannerPlanActions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}.plannerPlanActions>.compactButton{flex:0 0 78px;width:78px;padding-inline:8px}
 .plannerSharedBanner{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:9px 12px;border:1px solid var(--primary);border-radius:8px;background:color-mix(in srgb,var(--primary) 8%,var(--surface));font-size:12px}
 .plannerSharedBanner[hidden]{display:none}
