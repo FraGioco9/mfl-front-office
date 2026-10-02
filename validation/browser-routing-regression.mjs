@@ -415,6 +415,16 @@ const browserTestSource = String.raw`(() => {
 
   function assertSharedChromeGeometry() {
     const viewportWidth = document.documentElement.clientWidth;
+    // RESP-01: verify the browser really rendered at the requested layout viewport.
+    // Desktop headless Chromium otherwise clamps --window-size at narrow widths.
+    if (window.location.hash.startsWith("#resp01-")) {
+      const expected = Number(window.location.hash.slice("#resp01-".length));
+      assert(Number.isInteger(expected) && expected > 0 && window.innerWidth === expected
+        && viewportWidth === expected,
+      "RESP-01 layout viewport was not emulated: " + JSON.stringify({
+        expected, innerWidth: window.innerWidth, clientWidth: viewportWidth,
+      }));
+    }
     assert(
       document.documentElement.scrollWidth <= viewportWidth + 1,
       "The document is wider than the viewport: " + JSON.stringify({
@@ -3732,6 +3742,7 @@ async function waitForBrowserRegression(cdp) {
 }
 
 async function runChromeRegression(executable, url, width = 1280, height = 900) {
+  const reflowMatrix = new URL(url).hash.startsWith("#resp01-");
   const debuggingPort = await reserveTcpPort();
   const userDataDirectory = await mkdtemp(join(tmpdir(), "mfl-browser-routing-"));
   const child = spawn(executable, [
@@ -3743,7 +3754,7 @@ async function runChromeRegression(executable, url, width = 1280, height = 900) 
     `--remote-debugging-port=${debuggingPort}`,
     "--remote-debugging-address=127.0.0.1",
     `--user-data-dir=${userDataDirectory}`,
-    url,
+    reflowMatrix ? "about:blank" : url,
   ], { stdio: ["ignore", "ignore", "pipe"] });
   let stderr = "";
   child.stderr.setEncoding("utf8");
@@ -3752,9 +3763,17 @@ async function runChromeRegression(executable, url, width = 1280, height = 900) 
   let cdp = null;
   try {
     browserRegressionResult = null;
-    const target = await waitForPageTarget(debuggingPort, url);
+    const target = await waitForPageTarget(debuggingPort, reflowMatrix ? "about:blank" : url);
     cdp = await connectCdp(target.webSocketDebuggerUrl);
     await cdp.send("Runtime.enable");
+    if (reflowMatrix) {
+      // Apply dimensions before loading app scripts and first-paint CSS.
+      await cdp.send("Page.enable");
+      await cdp.send("Emulation.setDeviceMetricsOverride", {
+        width, height, deviceScaleFactor: 1, mobile: false,
+      });
+      await cdp.send("Page.navigate", { url });
+    }
     return await waitForBrowserRegression(cdp);
   } catch (error) {
     throw new Error(`${error.message}\n${stderr.slice(-2000)}`, { cause: error });
@@ -3775,6 +3794,17 @@ const regressionScenarios = Object.freeze([
   ["database", "/database/attributes"],
   ["database-tablet", "/database/attributes", 800, 900],
   ["database-phone", "/database/attributes", 520, 900],
+  // RESP-01 synthetic CSS-layout equivalents of 1280px desktop at 200% (640)
+  // and 400% (320), plus real breakpoint boundaries; no claim of OS text zoom.
+  ["database-resp01-320", "/database/attributes#resp01-320", 320, 844],
+  ["database-resp01-360", "/database/attributes#resp01-360", 360, 780],
+  ["database-resp01-520", "/database/attributes#resp01-520", 520, 844],
+  ["database-resp01-640", "/database/attributes#resp01-640", 640, 900],
+  ["database-resp01-900", "/database/attributes#resp01-900", 900, 780],
+  ["database-resp01-901", "/database/attributes#resp01-901", 901, 780],
+  ["database-resp01-landscape", "/database/attributes#resp01-900", 900, 360],
+  ["player-resp01-320", "/players/1#resp01-320", 320, 844],
+  ["planner-resp01-320", "/planner#resp01-320", 320, 844],
   ["database-empty", "/database/attributes?overall.gte=99", process.env.MFL_UX04_BROWSER_VIEWPORT === "phone" ? 390 : 1280, process.env.MFL_UX04_BROWSER_VIEWPORT === "phone" ? 844 : 900],
   ["database-linked-state", "/database/attributes?overall.gte=79&sort=age&direction=asc", process.env.MFL_UX04_BROWSER_VIEWPORT === "phone" ? 390 : 1280, process.env.MFL_UX04_BROWSER_VIEWPORT === "phone" ? 844 : 900],
   ["database-nav04-url", "/database/attributes?hideRetired=FALSE&hideRetired=true&age.gte=invalid&or.name.contains=Jos%C3%A9&sort=bogus&direction=asc&unexpected=ignored#nav04-url", 1280, 900],
