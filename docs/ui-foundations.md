@@ -270,6 +270,7 @@ Inline selectors such as the Evaluation position selector may intentionally use 
 - Compact size: `5px`
 - Track end inset: `4px`
 - Theme-derived thumb, hover, and active colors
+- Modal scroll lock applies to visible body-child `.modalBackdrop` elements; Planner Saved Plans/Save/Delete/Revoke now use this same body-level portal as Add players, preserving scrollport width and restoring scroll once every backdrop closes.
 
 ## Stacking
 

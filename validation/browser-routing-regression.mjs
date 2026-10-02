@@ -2922,6 +2922,12 @@ const browserTestSource = String.raw`(() => {
     const revokeDialog = document.getElementById("plannerPlanRevokeModal");
     const nameDialog = document.getElementById("plannerPlanNameModal");
     const actions = document.getElementById("plannerPlanBar");
+    const mainScrollport = document.querySelector("#appShell > main");
+    assert(mainScrollport instanceof HTMLElement, "Planner app scrollport must exist.");
+    for (const overlay of [modal, nameDialog, dialog, revokeDialog]) {
+      assert(overlay?.parentElement === document.body && overlay.hidden,
+        "Saved Plans and confirmations must portal directly to body while initially hidden.");
+    }
     const rowAction = (index, name) => {
       const row = list?.querySelectorAll(".plannerPlanListRow")[index];
       const button = row?.querySelector('button[aria-label="' + name + '"]');
@@ -2938,6 +2944,10 @@ const browserTestSource = String.raw`(() => {
     assert(document.activeElement === plansButton, "Plans opener is not keyboard-focusable.");
     plansButton.click();
     await waitFor(() => !modal.hidden && rowCount() === 2, "Synthetic Saved Plans list did not settle.", 8500);
+    assert(getComputedStyle(mainScrollport).overflowY === "hidden",
+      "Opening Saved Plans must lock the page scrollport just like Add players.");
+    assert(Number(getComputedStyle(modal).zIndex) > Number(getComputedStyle(document.querySelector(".topbar")).zIndex),
+      "Body-level Plans dialog must outrank fixed application header chrome.");
     assert(!document.documentElement.scrollWidth || document.documentElement.scrollWidth <= innerWidth + 1,
       "Saved Plans overflows the viewport.");
 
@@ -2949,6 +2959,9 @@ const browserTestSource = String.raw`(() => {
     await waitFor(() => !nameDialog.hidden && modal.inert,
       "Rename confirmation did not isolate the underlying Plans dialog.");
     assert(modal.getAttribute("aria-hidden") === "true", "Rename leaves the Plans background accessible.");
+    assert(getComputedStyle(mainScrollport).overflowY === "hidden"
+      && Number(getComputedStyle(nameDialog).zIndex) > Number(getComputedStyle(modal).zIndex),
+      "Nested name dialog must outrank Saved Plans without releasing the page scroll lock.");
     assert(plansButton.disabled && rowAction(1, "Delete plan").disabled,
       "Rename confirmation must lock toolbar and other saved-plan actions.");
     await waitFor(() => document.activeElement === document.getElementById("plannerPlanNameInput"),
@@ -2956,7 +2969,8 @@ const browserTestSource = String.raw`(() => {
     key(document.activeElement, "Escape");
     await waitFor(() => nameDialog.hidden && !modal.inert && !plansButton.disabled,
       "Escape failed to cancel Rename and unlock actions.");
-    assert(!modal.hidden, "Escape from nested Rename also closed the parent Saved Plans dialog.");
+    assert(!modal.hidden && getComputedStyle(mainScrollport).overflowY === "hidden",
+      "Escape from nested Rename must keep the parent Plans dialog open and page locked.");
     assert(modal.getAttribute("aria-hidden") === null, "Rename cancellation did not restore accessibility.");
     assert(ux03ClientDeleteAttempts === 0, "Cancel unexpectedly performed a remote deletion.");
 
@@ -2990,6 +3004,8 @@ const browserTestSource = String.raw`(() => {
       "Escape failed to cancel Delete.");
     assert(ux03ClientDeleteAttempts === 0 && rowCount() === 2,
       "Cancellation deleted a saved plan.");
+    assert(getComputedStyle(mainScrollport).overflowY === "hidden",
+      "Closing Delete confirmation must keep the underlying Saved Plans scroll lock.");
 
     // First confirmed delete fails intentionally. All actions must remain
     // unavailable during its network phase, then become retryable.
@@ -3018,6 +3034,9 @@ const browserTestSource = String.raw`(() => {
       "Planner toolbar retained a busy state after delete recovery.");
     assert(!document.documentElement.scrollWidth || document.documentElement.scrollWidth <= innerWidth + 1,
       "Saved Plans changed horizontal page overflow on this viewport.");
+    document.getElementById("plannerPlansModalCloseButton").click();
+    await waitFor(() => modal.hidden && getComputedStyle(mainScrollport).overflowY === "scroll",
+      "Closing all Planner dialogs must restore the shared page scrollbar.");
     assert(errors.length === 0, "Console/runtime errors during UX-03: " + errors.join(" | "));
     finish("passed", "UX-03: Chromium Saved Plans keyboard, confirmations, single-flight, fail/retry and viewport checks passed.");
   }
