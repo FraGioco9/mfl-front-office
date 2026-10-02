@@ -31,17 +31,7 @@ PUBLISHED_ADAPTER_BLOB="$(git -C production-site rev-parse HEAD:api/_database.js
 CURRENT_ADAPTER_BLOB="$(git -C production-site hash-object api/_database.js)"
 test "$CURRENT_ADAPTER_BLOB" = "$PUBLISHED_ADAPTER_BLOB"
 
-UNEXPECTED_TRACKED_CHANGES="$(
-  git -C production-site diff --name-only -- . \
-    ':(exclude)api/data-files/**' \
-    ':(exclude)modules/app-core-runtime.js' \
-    ':(exclude)modules/app-core-*-runtime.js'
-)"
-if [ -n "$UNEXPECTED_TRACKED_CHANGES" ]; then
-  echo "Database checkpoint changed published site source files:" >&2
-  printf '%s\n' "$UNEXPECTED_TRACKED_CHANGES" >&2
-  exit 1
-fi
+bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-assert-published-site-source.sh" production-site
 
 mkdir -p production-site/.vercel
 printf '{"orgId":"%s","projectId":"%s"}' \
@@ -63,6 +53,11 @@ printf '{"orgId":"%s","projectId":"%s"}' \
   ALLOW_VERCEL_ACTION_DEPLOY=1 vercel build --prod --yes \
     --token "${VERCEL_TOKEN:?VERCEL_TOKEN is required}"
   node "$GITHUB_WORKSPACE/builder/scripts/workflows/verify-prebuilt-deployment-commit.mjs" "$EXPECTED_SHA"
+  # Vercel/Next's dependency installation can rewrite package-lock.json even
+  # when the checkpoint was built from the exact published site commit.
+  # Reconcile only that tracked lockfile after the successful build, then
+  # reject any other unexpected source mutations before deploying.
+  bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-assert-published-site-source.sh" . reconcile-build
   node "$GITHUB_WORKSPACE/builder/scripts/workflows/stage-vercel-prebuilt-for-remote-root.mjs"
   # A transient network failure during the large prebuilt upload must not force
   # the entire database refresh to rebuild the same checkpoint.
