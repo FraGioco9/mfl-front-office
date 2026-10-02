@@ -61,11 +61,24 @@ commit_verification_required = (
     and "MFL_DEPLOY_COMMIT" in runtime_identity_path.read_text(encoding="utf-8")
 )
 
+# Pin route expectations to the *published* site source, not this builder's
+# latest routing code. Old production revisions intentionally serve the static
+# index.html for app routes; the current Next router provides per-page SSR heads.
+vercel_config = json.loads((root / "vercel.json").read_text(encoding="utf-8"))
+legacy_static_routes = any(
+    isinstance(rule, dict)
+    and str(rule.get("source", "")).startswith("/:app(")
+    and rule.get("destination") == "/index.html"
+    for rule in vercel_config.get("rewrites", [])
+)
+route_verification_mode = "legacy-static" if legacy_static_routes else "next-ssr"
+
 expected = {
     "siteCommit": site_commit,
     "version": version,
     "description": description,
     "commitVerificationRequired": commit_verification_required,
+    "routeVerificationMode": route_verification_mode,
     "database": {
         "playerCount": player_count,
         "walletCount": wallet_count,
@@ -78,7 +91,8 @@ output_path.write_text(json.dumps(expected, indent=2) + "\n", encoding="utf-8")
 print(
     "Expected production identity: "
     f"commit {site_commit}, v{version}, generatedAt {generated_at}, "
-    f"{player_count} players, {wallet_count} wallets."
+    f"{player_count} players, {wallet_count} wallets; "
+    f"routes: {route_verification_mode}."
 )
 
 summary_path = os.environ.get("GITHUB_STEP_SUMMARY", "").strip()
@@ -93,6 +107,7 @@ if summary_path:
         summary.write(f"| Wallets | `{wallet_count}` |\n")
         summary.write(
             f"| Live commit verification required | "
-            f"`{str(commit_verification_required).lower()}` |\n\n"
+            f"`{str(commit_verification_required).lower()}` |\n"
+            f"| Route verification mode | `{route_verification_mode}` |\n\n"
         )
 PY
