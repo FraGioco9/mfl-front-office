@@ -162,9 +162,22 @@ export async function auditAccessibility(cdp, url, baseline) {
     await key("Escape");
     assert.equal(await evaluate('document.getElementById("plannerDepthPicker")?.hidden === true'), true,
       "A11Y-01 Escape did not close the Planner position menu.");
+    const focusAfterEscape = await evaluate(`(() => {
+      const slot = document.querySelector('.plannerFormationSpot[data-slot-key="CB#1"] .plannerFormationSlotButton');
+      return { restored: document.activeElement === slot, focus: document.activeElement?.outerHTML.slice(0, 220),
+        trace: window.__mflA11yKeyTrace || [] };
+    })()`);
+    assert.equal(focusAfterEscape.restored, true,
+      "A11Y-01 Escape did not restore position focus: " + JSON.stringify(focusAfterEscape));
     await key(" ");
-    assert.equal(await evaluate('document.getElementById("plannerDepthPicker")?.hidden === false'), true,
-      "A11Y-01 Space did not open Planner position menu.");
+    const space = await evaluate(`(() => ({
+      opened: document.getElementById("plannerDepthPicker")?.hidden === false,
+      expanded: document.querySelectorAll('.plannerFormationSlotButton[aria-expanded="true"]').length,
+      trace: window.__mflA11yKeyTrace || [],
+      focus: document.activeElement?.outerHTML.slice(0, 220)
+    }))()`);
+    assert.equal(space.opened, true,
+      "A11Y-01 Space did not open Planner position menu: " + JSON.stringify(space));
     await key("Escape");
     assert.equal(await evaluate('document.getElementById("plannerDepthPicker")?.hidden === true'), true,
       "A11Y-01 Escape did not close the Space-opened menu.");
