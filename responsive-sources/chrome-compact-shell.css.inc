@@ -83,9 +83,6 @@
     max-width: 100%;
   }
 
-  /* Avoid an auto-sized grid column expanding under a clipped mobile shell. */
-  body { grid-template-columns: minmax(0, 1fr); }
-
   body > .topbar {
     grid-template-columns: minmax(0, 1fr) 44px auto;
     grid-template-areas: "brand search controls";
@@ -218,10 +215,6 @@
   .appShell {
     --sidebar-offset: 0px;
     position: relative;
-    /* Body is a grid: prevent the Player's intrinsic pitch/hero width from
-       setting the implicit grid column wider than the phone viewport. */
-    min-width: 0;
-    width: 100%;
   }
 
   .menuRail {
