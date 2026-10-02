@@ -33,6 +33,7 @@ const validators = [
   "validate-nav01-entity-http.mjs",
   "validate-nav02-history-scroll.mjs",
   "validate-nav03-navigation-state.mjs",
+  "validate-nav04-shareable-urls.mjs",
   "validate-performance-foundations.mjs",
   "validate-core-type-diagnostic-baseline.mjs",
   "validate-accessibility-navigation-lifecycle.mjs",

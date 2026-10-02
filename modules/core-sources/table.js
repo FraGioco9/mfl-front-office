@@ -1797,17 +1797,19 @@ function tableUrlRulesFromParams(pageName, viewName, params) {
     });
   }
 
+  // Determine the leading connector *after* rejecting invalid rules.
+  // Otherwise an invalid first rule can leave a valid initial OR rule.
   return entries
-    .map((entry, index) => ({
-      ...entry,
-      connector: index === 0 ? "and" : entry.connector,
-    }))
     .filter((entry) => tableUrlRuleIsValid(
       entry.column,
       entry.operator,
       entry.value,
       entry.valueTo,
-    ));
+    ))
+    .map((entry, index) => ({
+      ...entry,
+      connector: index === 0 ? "and" : entry.connector,
+    }));
 }
 
 function tableUrlSearchForState(pageName, viewName, tableState) {
@@ -1838,13 +1840,15 @@ function tableUrlSearchForState(pageName, viewName, tableState) {
 
   const allowedColumns = new Set(availableFilterColumns(pageName, viewName));
   const rules = Array.isArray(source.rules) ? source.rules : [];
-  rules.forEach((rule, index) => {
+  let emittedRuleCount = 0;
+  rules.forEach((rule) => {
     if (!allowedColumns.has(rule?.column)) return;
-    const connector = index === 0 ? "and" : (rule.connector === "or" ? "or" : "and");
     if (!tableUrlRuleIsValid(rule.column, rule.operator, rule.value, rule.valueTo)) return;
     const operatorToken = TABLE_URL_OPERATOR_TOKENS[rule.operator];
     if (!operatorToken) return;
+    const connector = emittedRuleCount === 0 ? "and" : (rule.connector === "or" ? "or" : "and");
     const connectorPrefix = connector === "or" ? "or." : "";
+    emittedRuleCount += 1;
     const key = `${connectorPrefix}${rule.column}.${operatorToken}`;
     if (rule.operator === "between" || rule.operator === "during") {
       params.append(`${key}.from`, String(rule.value));
@@ -1869,10 +1873,15 @@ function tableUrlStateFromSearch(pageName, viewName, search, fallbackState) {
   const parsedQuick = {};
   const parsedRules = [];
   let parsedSortState = null;
+  const seenQuickKeys = new Set();
 
   for (const [key, value] of params.entries()) {
     if (TABLE_URL_QUICK_FILTER_KEYS.has(key)) {
       explicit = true;
+      // A repeated parameter cannot silently override the first user choice.
+      // Invalid first values resolve to the page default, not a later value.
+      if (seenQuickKeys.has(key)) continue;
+      seenQuickKeys.add(key);
       const booleanValue = String(value || "").toLowerCase();
       const booleanIsValid = booleanValue === "true" || booleanValue === "false";
       if (key === "hideRetired" && booleanIsValid) parsedQuick.hideRetired = booleanValue === "true";
