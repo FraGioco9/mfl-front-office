@@ -12,6 +12,12 @@ Use a real Chromium fixture, with the application fully loaded **before** changi
 ## Automated test
 Run `node validation/browser-resp03-orientation-regression.mjs` after `npm run build`. It reuses the existing Chromium routing fixture and CDP pre-navigation narrow viewport. For each route, the test checks actual CSS/document widths and height, root horizontal overflow, Player/Planner pitch bounds, and retained route state. For Planner, it also checks the goalkeeper label, picker close/reopen/arrow/aria state, and Add player(s) modal boundaries. Its outcome is gated in the Mobile first-paint workflow.
 
+## Reproduced findings and fixes
+- The Player's min-content width expanded the mobile body grid to about 701px inside a 390px viewport. The canonical ≤900px responsive shell now uses `minmax(0, 1fr)` for the body track and constrains the app shell with `min-width: 0; width: 100%`. Generated CSS remains derived from that owner.
+- The initial landscape test called `scrollIntoView()` and `.click()` in the same JavaScript task. Chromium delivered the preceding scroll event after the picker opened, correctly invoking the application's scroll-to-close handler. This was reproduced locally on the unchanged PR head; it was a test interaction race, not evidence for changing the Planner focus behavior.
+- The corrected test scrolls instantly, waits two animation frames for layout and scroll delivery, verifies the slot is hit-testable, and sends actual CDP mouse press/release input. After the click settles, the picker must still be open with exactly one expanded slot and its pointer. Rotation, Escape and a subsequent real main-scroll must still close it. The inline Planner script and its CSP hashes are unchanged.
+- The injected orientation test is kept as readable source and serialized only at the existing CDP fixture hook so the assertions and interactions can be reviewed independently.
+
 ## Deferred manual release checks
 At the **single** final release of issue #1034: rotate a real iPhone Safari device while the position menu is open and while the Add player(s) dialog is open; exercise touch scrolling, selecting a starter, closing with Escape/accessible action, on-screen keyboard, long names, GK caption, safe-area/notch in both orientations, home/footer bars and page scroll restoration. Repeat with accessibility text enlargement/VoiceOver and with a saved private Planner session. Record visual artifacts and only make source-owned CSS/runtime changes if there is a reproducible failure.
 
