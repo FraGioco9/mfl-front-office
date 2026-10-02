@@ -639,7 +639,10 @@
       entry.operator,
       entry.value,
       entry.valueTo,
-    ));
+    )).map((entry, index) => ({
+      ...entry,
+      connector: index === 0 ? "and" : entry.connector,
+    }));
   }
 
   function firstPaintTableUrlControlState(pageName, viewName, urlLike, savedState = {}) {
@@ -658,8 +661,10 @@
       rules: firstPaintTableUrlRules(normalizedPage, viewName, params),
     };
 
+    const seenQuickKeys = new Set();
     for (const [key, value] of params.entries()) {
-      if (!FIRST_PAINT_TABLE_URL_QUICK_FILTER_KEYS.has(key)) continue;
+      if (!FIRST_PAINT_TABLE_URL_QUICK_FILTER_KEYS.has(key) || seenQuickKeys.has(key)) continue;
+      seenQuickKeys.add(key);
       const booleanValue = String(value || "").toLowerCase();
       if (booleanValue !== "true" && booleanValue !== "false") continue;
       const enabled = booleanValue === "true";
