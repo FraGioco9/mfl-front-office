@@ -729,7 +729,10 @@ const browserTestSource = String.raw`(() => {
       return {
         path: window.location.pathname,
         title: document.title,
-        hasPlayerName: text("#playerDetail").includes(expectedPlayerName),
+        hasPlayerName: text("#playerDetail").includes(
+          window.location.hash.startsWith("#resp01-") && document.documentElement.clientWidth <= 900
+            ? "B. Player" : expectedPlayerName,
+        ),
         pageHidden: hidden("#playerPage"),
         selectedPlayerView: typeof state !== "undefined" ? String(state.playerAttributeView || "") : "",
         activePlayerViews: activeViews,
@@ -1701,9 +1704,10 @@ const browserTestSource = String.raw`(() => {
       await delay(80);
     }
     if (scenario === "player" && window.location.hash.startsWith("#resp01-")) {
-      // Route-ready marks the shell, not completion of the async player detail fetch.
+      // Narrow Player intentionally displays the abbreviated identity (B. Player).
+      // The full name remains in document.title and is separately asserted.
       try {
-        await waitFor(() => text("#playerDetail").includes(expectedPlayerName),
+        await waitFor(() => text("#playerDetail").includes("B. Player"),
           "RESP-01 Player detail did not settle after the shell became ready.");
       } catch (error) {
         throw new Error(String(error?.message || error) + " " + JSON.stringify({
