@@ -88,7 +88,7 @@ try {
     INSERT INTO wallets (wallet_address) VALUES ('0x2222222222222222');
   `);
 
-  // Only the HTTP smoke fixture includes a club identity, proving that a
+  // The shared CI-only SQLite smoke fixture includes a club identity, proving that a
   // real indexed club lookup returns 200 and an absent club returns 404.
   database.exec(`
     CREATE TABLE runtime_clubs (club_id TEXT PRIMARY KEY, name TEXT NOT NULL);

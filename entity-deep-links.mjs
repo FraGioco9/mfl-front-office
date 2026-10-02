@@ -70,7 +70,10 @@ export async function resolveEntityDeepLink(rawUrl, lookup = sqliteEntityExists)
     return { kind: route.kind, status: exists ? 200 : 404, reason: exists ? "found" : "missing" };
   } catch (error) {
     // Keep diagnostic details on the server (never in public metadata).
-    console.error("[NAV-01] Entity existence probe failed", route.kind, error);
+    // Public requests must not print query values, local paths or error stacks
+    // into operational logs. The client sees only generic HTTP 503 metadata.
+    console.error("[NAV-01] Entity existence probe failed", route.kind,
+      error?.code || error?.name || "unknown");
     return { kind: route.kind, status: 503, reason: "unavailable" };
   }
 }
