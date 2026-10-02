@@ -89,10 +89,15 @@ def verify_route(path: str, token: str) -> None:
     titles = re.findall(r"<title\b[^>]*>([^<]*)</title>", head, flags=re.IGNORECASE)
     # A legacy static rewrite has one app-wide title in index.html. A modern
     # Next route must deliver the page title and canonical metadata before JS.
-    expected_title = "MFL Front Office" if route_mode == "legacy-static" else expected_titles[path]
-    if titles != [expected_title]:
+    allowed_titles = {expected_titles[path]}
+    if route_mode == "legacy-static":
+        # Some legacy Next pages render their own title before a static rewrite;
+        # both the generic shell and the known page title are valid in this mode.
+        allowed_titles.add("MFL Front Office")
+    if len(titles) != 1 or titles[0] not in allowed_titles:
         raise RuntimeError(
-            f"{path} initial HTML title mismatch ({route_mode}); expected {expected_title!r}, observed {titles!r}. "
+            f"{path} initial HTML title mismatch ({route_mode}); "
+            f"expected one of {sorted(allowed_titles)!r}, observed {titles!r}. "
             "Check Vercel static rewrites versus Next SSR routing."
         )
     if route_mode == "next-ssr" and (
