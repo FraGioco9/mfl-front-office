@@ -66,12 +66,12 @@ invariant(
   "Next must reuse the site's right-facing line-arrow geometry.",
 );
 invariant(
-  index.includes('<button id="prevButton" type="button"><span class="pagerButtonLabel">Previous</span></button>'),
-  "Previous must retain its desktop/accessibility label in an independently hideable span.",
+  index.includes('<button id="prevButton" type="button" aria-label="Previous page"><span class="pagerButtonLabel">Previous</span></button>'),
+  "Previous must retain its visible desktop text and have a permanent accessible name on mobile.",
 );
 invariant(
-  index.includes('<button id="nextButton" type="button"><span class="pagerButtonLabel">Next</span></button>'),
-  "Next must retain its desktop/accessibility label in an independently hideable span.",
+  index.includes('<button id="nextButton" type="button" aria-label="Next page"><span class="pagerButtonLabel">Next</span></button>'),
+  "Next must retain its visible desktop text and have a permanent accessible name on mobile.",
 );
 
 const pagerButtonStart = sharedUi.indexOf("#progressionPage nav.pager > :is(#prevButton, #nextButton) {");
