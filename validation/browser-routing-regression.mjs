@@ -1819,6 +1819,18 @@ const browserTestSource = String.raw`(() => {
         return;
       }
 
+      // Focused phases inject their own synthetic depth roster. Wait until
+      // the real selected-club fetch has fully painted its squad so an
+      // in-flight loadRoster() cannot overwrite that fixture mid-assertion.
+      // The shell phase already waits for the same roster before returning.
+      if (plannerBrowserFocused) {
+        await waitFor(
+          () => document.querySelector("#plannerRosterBody tr[data-player-id]")
+            && document.getElementById("plannerRosterBody")?.getAttribute("aria-busy") !== "true",
+          "Planner focused fixture roster load to settle",
+        );
+      }
+
       if (!plannerBrowserFocused) {
       assert(formation instanceof HTMLSelectElement, "Planner must offer a formation selector.");
       assert(JSON.stringify(Array.from(formation.options, option => option.value)) === JSON.stringify(formationCodes), "Planner formation choices or order differ from the requested list.");
