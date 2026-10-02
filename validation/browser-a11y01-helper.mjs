@@ -126,13 +126,21 @@ export async function auditAccessibility(cdp, url, baseline) {
       if (!(slot instanceof HTMLButtonElement)) return false;
       slot.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" });
       await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)));
+      await new Promise(done => setTimeout(done, 120));
       slot.focus({ preventScroll: true });
+      await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)));
       return document.activeElement === slot;
     })()`);
     assert.equal(ready, true, "A11Y-01 Planner picker is not keyboard reachable.");
     await key("Enter");
-    const enter = await evaluate('document.getElementById("plannerDepthPicker")?.hidden === false');
-    assert.equal(enter, true, "A11Y-01 Enter did not open Planner position menu.");
+    const enter = await evaluate(`(() => {
+      const picker = document.getElementById("plannerDepthPicker");
+      return { opened: picker?.hidden === false,
+        expanded: document.querySelectorAll('.plannerFormationSlotButton[aria-expanded="true"]').length,
+        focus: document.activeElement?.outerHTML.slice(0, 260),
+        current: document.querySelector('.plannerFormationSpot[data-slot-key="CB#1"] .plannerFormationSlotButton')?.getAttribute("aria-expanded") };
+    })()`);
+    assert.equal(enter.opened, true, "A11Y-01 Enter did not open Planner position menu: " + JSON.stringify(enter));
     await key("Escape");
     assert.equal(await evaluate('document.getElementById("plannerDepthPicker")?.hidden === true'), true,
       "A11Y-01 Escape did not close the Planner position menu.");
