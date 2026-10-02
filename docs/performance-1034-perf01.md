@@ -49,7 +49,7 @@ Each pair of settled values is **median / observed slowest**. Render phase is th
 | Evaluation | 110.0 / 118.4 | 0.0 | — | 0.0000 | 0.0 |
 | MFL Stats | 199.6 / 220.1 | 165.0 | 70.2 | 0.0000 | 0.0 |
 
-All 14 cached profile/journey combinations had **zero API requests in every captured repetition**; that does **not** mean zero total network traffic. Each slow-mobile cached journey still observed a median of one total request.
+All 14 cached profile/journey combinations had **zero API requests in every captured repetition**; that does **not** mean zero total network traffic. Each slow-mobile cached journey still observed a median of one total request. **Home** cached revisits transferred a median **50,169 bytes (~49.0 KiB) of non-API data** even though API requests were zero; the request category and cache policy should be inspected before inferring a fully network-free Home revisit.
 
 ### Main observations
 
