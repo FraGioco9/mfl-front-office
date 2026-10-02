@@ -12,7 +12,7 @@ The audit covers the **hydrated visible page** on Home, Database/Attributes, Pla
 
 ## Initial desktop findings (02 October 2026)
 
-The first four audited routes returned **zero critical** violations. These noncritical but actionable findings remain open for targeted work under the existing A11Y tasks:
+The desktop audits of Home, Database, Player, Planner and Settings returned **zero critical** violations (Settings: zero axe violations). These noncritical but actionable findings remain open for targeted work under the existing A11Y tasks:
 
 | Route | Axe rule | Severity | Affected element |
 | --- | --- | --- | --- |
@@ -22,6 +22,8 @@ The first four audited routes returned **zero critical** violations. These noncr
 | Planner | `aria-prohibited-attr` | Serious | `.retirementMarker` |
 | Planner | `nested-interactive` | Serious | `.plannerPitch` |
 | Planner | `color-contrast` | Serious | `#plannerTeamDivision`, `#plannerRosterCount`, `#plannerSquadStatusPrimary`, `.plannerFormationControl > span` |
+
+The initial 390px Database audit identified a **critical** `button-name` failure in `#prevButton` and `#nextButton`, because compact CSS hides their text labels. Both now have persistent `aria-label` attributes in the canonical `html-sources/tables.html` and generated `index.html`; revalidation in progress.
 
 A11Y-02 owns icon/control semantics and nested interactions; A11Y-03 owns light/dark contrast and accessible focus styling. A11Y-06 owns landmark and skip navigation checks. Findings are **not** marked remediated solely because the smoke test permits noncritical severity.
 
