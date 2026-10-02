@@ -194,6 +194,12 @@ async function discoverRepresentativeEntities() {
 function journeysFor({ playerId, clubId }) {
   return Object.freeze([
     Object.freeze({
+      id: "home",
+      path: "/",
+      page: "home",
+      options: Object.freeze({}),
+    }),
+    Object.freeze({
       id: "database",
       path: "/database/attributes",
       page: "database",
@@ -1165,8 +1171,13 @@ async function runJourney(executable, profile, journey) {
 
     await waitForSpaNavigationReady(cdp, routeTimeoutMs);
     await applyPreParkRenderProbe(cdp, journey.preParkProbe);
-    await navigateSpa(cdp, "home", {});
-    await waitForRouteReady(cdp, "/", routeTimeoutMs);
+    // Home must be revisited from a different page. Navigating Home -> Home
+    // would record a same-route no-op rather than a cached SPA journey.
+    const parkingPage = journey.page === "home" ? "database" : "home";
+    const parkingOptions = journey.page === "home" ? { view: "attributes" } : {};
+    const parkingPath = journey.page === "home" ? "/database/attributes" : "/";
+    await navigateSpa(cdp, parkingPage, parkingOptions);
+    await waitForRouteReady(cdp, parkingPath, routeTimeoutMs);
     await applyCachedRenderProbe(cdp, journey.cachedProbe);
     const cached = await runMeasuredPhase(
       cdp,
