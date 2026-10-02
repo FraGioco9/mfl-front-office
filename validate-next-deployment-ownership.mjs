@@ -67,10 +67,12 @@ invariant(
   "Planner must be served by an explicit Next page, not only by a static rewrite fallback.",
 );
 invariant(
-  deepRoutePage.includes("export function getServerSideProps(context)")
+  deepRoutePage.includes("export async function getServerSideProps(context)")
+    && deepRoutePage.includes("const entity = await resolveEntityDeepLink(context.resolvedUrl);")
+    && deepRoutePage.includes("context.res.statusCode = entity.status;")
     && deepRoutePage.includes("initialPageMetadata(context.resolvedUrl)")
-    && deepRoutePage.includes("return { props: { initialMetadata: initialPageMetadata(context.resolvedUrl) } };"),
-  "Production deep routes must stay server-resolved so Vercel can match arbitrary direct app URLs.",
+    && deepRoutePage.includes("return { props: {"),
+  "Production deep routes must stay server-resolved and preserve entity HTTP status/metadata for arbitrary direct app URLs.",
 );
 invariant(
   vercelRewrites.some((rule) =>

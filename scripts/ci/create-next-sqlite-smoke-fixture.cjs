@@ -87,6 +87,14 @@ try {
     INSERT INTO wallets (wallet_address) VALUES ('0xff8d2bbed8164db0');
     INSERT INTO wallets (wallet_address) VALUES ('0x2222222222222222');
   `);
+
+  // The shared CI-only SQLite smoke fixture includes a club identity, proving that a
+  // real indexed club lookup returns 200 and an absent club returns 404.
+  database.exec(`
+    CREATE TABLE runtime_clubs (club_id TEXT PRIMARY KEY, name TEXT NOT NULL);
+    INSERT INTO runtime_clubs (club_id, name) VALUES ('123', 'HTTP Smoke Club');
+  `);
+
 } finally {
   database.close();
 }
