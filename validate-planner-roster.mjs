@@ -47,7 +47,7 @@ const window = {
   },
 };
 const history = Object.fromEntries(["replaceState", "pushState"].map(key => [key, (_, __, path) => { const url = new URL(path, "https://example.test"); location.pathname = url.pathname; location.search = url.search; }]));
-vm.runInNewContext(source, { window, document, location, history, localStorage, state: {}, HTMLElement: Element, HTMLInputElement: Input, HTMLImageElement: Image, HTMLButtonElement: Button, Node: Element, URLSearchParams, AbortController, setTimeout, clearTimeout, walletProofHeaders: () => ({}), contractDivisionInfo: () => ({ name: "Diamond", color: "blue" }), rarityColorForOverall: overall => Number(overall) >= 75 ? "#0077ff" : "#bebebe" });
+vm.runInNewContext(source, { window, document, location, history, localStorage, state: {}, HTMLElement: Element, HTMLInputElement: Input, HTMLImageElement: Image, HTMLButtonElement: Button, Node: Element, URLSearchParams, AbortController, setTimeout, clearTimeout, walletProofHeaders: () => ({}), contractDivisionInfo: () => ({ name: "Diamond", color: "blue" }), accessibleDivisionLabelColor: color => "color-mix(in srgb, var(--text) 65%, " + color + " 35%)", rarityColorForOverall: overall => Number(overall) >= 75 ? "#0077ff" : "#bebebe" });
 const route = window.__mflPlannerRoute;
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const payload = { columns: ["player_id", "name", "positions", "age", "overall", "retirement_years", "player_seasons", "active_contract_revenue_share"], rows: [[1, "First Player", "GK", 23, 80, 2, 5, 1250], [2, "Second Player", "ST", 25, 75, 5, 1, 800]], totalRows: 2, club: { clubId: "9001", name: "First Club", division: 1, city: "Rome", nation: "Italy", primaryColor: "#112233", secondaryColor: "#445566" } };
