@@ -28,6 +28,7 @@ const validators = [
   "validate-ux05-planner-plan-state.mjs",
   "validate-ux06-microcopy.mjs",
   "validate-ui01-typography.mjs",
+  "validate-ui02-overlay-scroll.mjs",
   "validate-performance-foundations.mjs",
   "validate-core-type-diagnostic-baseline.mjs",
   "validate-accessibility-navigation-lifecycle.mjs",

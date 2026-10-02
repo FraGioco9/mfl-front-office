@@ -82,6 +82,12 @@
   const planRevokeName=document.getElementById("plannerPlanRevokeName");
   const planRevokeCancelButton=document.getElementById("plannerPlanRevokeCancelButton");
   const planRevokeConfirmButton=document.getElementById("plannerPlanRevokeConfirmButton");
+  // Match Add players and other site dialogs: fixed Planner overlays must live
+  // directly under body, outside the isolated appShell stacking context.
+  // The shared scrollbar lock also targets body-level visible backdrops.
+  for(const modal of [plansModal,planNameModal,planDeleteModal,planRevokeModal]){
+    if(modal instanceof HTMLElement&&modal.parentElement!==document.body)document.body.appendChild(modal);
+  }
   let roster=[],rosterSequence=0,rosterController=null;
   let searchTimer=0,searchSequence=0,selectedTeamId="",selectedTeamData=null;
   let playerSearchTimer=0,playerSearchSequence=0;
