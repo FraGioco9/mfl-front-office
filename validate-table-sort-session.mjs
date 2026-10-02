@@ -50,7 +50,7 @@ const incrementalPageSource = sourceBetween(core, "const setIncrementalPage = as
 assert.ok(incrementalPageSource.indexOf("resetTableSortSession(pageName, options);") < incrementalPageSource.indexOf("runPageTransition"), "Page sorting must reset before the destination transition can paint.");
 
 const sortClickSource = sourceBetween(core, "function buildHeader()", "function isMissingSortValue");
-assert.match(sortClickSource, /rememberTableSortState\(\);\s*state\.page = 1;\s*buildHeader\(\);\s*applyFilters\(\);/u, "Only a deliberate header sort click should commit a new page-level sort intent.");
+assert.match(sortClickSource, /rememberTableSortState\(\);\s*state\.page = 1;\s*buildHeader\(\);[\s\S]{0,600}applyFilters\(\);/u, "Only a deliberate header sort click should commit a new page-level sort intent after restoring keyboard focus.");
 assert.doesNotMatch(core, /function applyFilters\(options = \{\}\) \{\s*rememberTableSortState/u, "Filter application must not overwrite page-level sorting during a view fallback.");
 
 const commitViewSource = sourceBetween(core, "function commitViewTransition", "function commitPageTransition");

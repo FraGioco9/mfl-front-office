@@ -126,10 +126,14 @@ invariant(
   "Applied filter changes must clear player selection in the canonical generated table owner.",
 );
 
-const sortCommit = 'state.page = 1;\n        buildHeader();\n        applyFilters();';
+// Focus restoration may sit between header rebuild and the unchanged
+// applyFilters() call. Require the same guarded sequence in both sources.
+const sortCommit = /state\.page = 1;\s+buildHeader\(\);[\s\S]{0,600}applyFilters\(\);[\s\S]{0,600}\}\);/;
 invariant(
-  appCore.includes(sortCommit) && generated.includes(sortCommit),
-  "Source and generated sorting must reapply unchanged filters instead of owning a separate selection reset.",
+  sortCommit.test(appCore) && sortCommit.test(generated)
+    && appCore.includes("if (restoreSortFocus) {")
+    && generated.includes("if (restoreSortFocus) {"),
+  "Source and generated sorting must reapply unchanged filters while restoring header focus, without owning a separate selection reset.",
 );
 
 invariant(
