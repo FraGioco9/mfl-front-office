@@ -139,8 +139,8 @@ export async function auditControlSemantics(cdp, url, baseline) {
     assert.equal(state.planner?.deleteConfirm, "Delete");
   }
   if (route === "watchlist") {
-    assert.equal(state.watchlist?.labelledBy, "deleteWatchlistModalTitle");
-    assert.equal(state.watchlist?.describedBy, "deleteWatchlistModalDescription");
+    assert.equal(state.watchlist?.labelledBy, "deleteWatchlistTitle");
+    assert.equal(state.watchlist?.describedBy, "deleteWatchlistDescription");
     assert.equal(state.watchlist?.confirm, "Delete");
     assert.equal(state.watchlist?.cancel, "Cancel");
     assert.equal(state.watchlist?.close, "Close delete watchlist");
