@@ -801,6 +801,16 @@
                 }
                 if (openFiltersButton instanceof HTMLElement) {
                   openFiltersButton.classList.toggle("hasActiveFilters", activeRuleCount >= 1);
+                  const quickCount = state?.pageName === "club" ? 0 : [
+                    state?.hideRetired,
+                    state?.hideRetiring,
+                    state?.pageName === "database" && state?.hideMflPlayers,
+                    state?.pageName === "mfl" && state?.mflPackable,
+                    state?.newMints,
+                  ].filter(Boolean).length;
+                  const description = `Filters: ${activeRuleCount} advanced ${activeRuleCount === 1 ? "rule" : "rules"}, ${quickCount} active quick ${quickCount === 1 ? "filter" : "filters"}`;
+                  openFiltersButton.setAttribute("aria-label", description);
+                  openFiltersButton.title = description;
                 }
               })();
             </script>
@@ -3838,7 +3848,7 @@
         </section>
 
         <footer class="mflDialogFooter">
-          <button id="clearFiltersButton" type="button">Clear</button>
+          <button id="clearFiltersButton" type="button">Clear rules</button>
           <button id="applyFiltersButton" type="button">Apply</button>
         </footer>
       </section>

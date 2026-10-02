@@ -921,6 +921,13 @@ function tableBuildTableColGroupOwner() {
   tableColGroup.replaceChildren(fragment);
 }
 function tableBuildHeaderOwner() {
+  // Header updates can occur again after an incremental sort request settles.
+  // Remember any focused native sort button before replacing its DOM node.
+  const focused = document.activeElement;
+  const focusedSortColumn = focused instanceof HTMLButtonElement
+    && focused.classList.contains("tableSortButton")
+    && tableHead.contains(focused)
+    ? focused.closest("th")?.getAttribute("data-table-column") : "";
   buildTableColGroup();
   const headerRow = document.createElement("tr");
   const selectionHeader = document.createElement("th");
@@ -1001,7 +1008,19 @@ function tableBuildHeaderOwner() {
       const sortButton = document.createElement("button");
       sortButton.type = "button";
       sortButton.className = "tableSortButton";
-      sortButton.setAttribute("aria-label", `Sort by ${fullLabel || (column === "listing_price" ? "Listing" : column)}`);
+      const sortLabel = fullLabel || (column === "listing_price" ? "Listing" : column);
+      const defaultSortDirection = numberColumns.has(column) ? "desc" : "asc";
+      const nextSortDirection = !isSorted
+        ? defaultSortDirection
+        : state.sortDirection === defaultSortDirection
+          ? (defaultSortDirection === "asc" ? "desc" : "asc")
+          : column === "overall" ? defaultSortDirection : null;
+      const nextAction = nextSortDirection
+        ? `Sort ${sortLabel} ${nextSortDirection === "asc" ? "ascending" : "descending"}`
+        : "Reset sorting to Overall descending";
+      sortButton.setAttribute("aria-label", `Sort by ${sortLabel}`);
+      sortButton.setAttribute("aria-description", nextAction);
+      sortButton.title = nextAction;
       sortButton.appendChild(label);
       if (isSorted) {
         const arrow = document.createElement("span");
@@ -1012,6 +1031,7 @@ function tableBuildHeaderOwner() {
       cell.replaceChildren(sortButton);
 
       sortButton.addEventListener("click", () => {
+        const restoreSortFocus = document.activeElement === sortButton;
         const defaultDirection = numberColumns.has(column) ? "desc" : "asc";
         const resetDirection = "desc";
         const reverseDirection = defaultDirection === "desc" ? "asc" : "desc";
@@ -1032,6 +1052,12 @@ function tableBuildHeaderOwner() {
         state.page = 1;
         buildHeader();
         applyFilters();
+        // Applying the table state can rebuild its header again, especially
+        // when returning to default Overall sorting. Restore focus afterwards.
+        if (restoreSortFocus) {
+          const nextSortButton = tableHead.querySelector(`th[data-table-column="${column}"] > .tableSortButton`);
+          if (nextSortButton instanceof HTMLButtonElement) nextSortButton.focus({ preventScroll: true });
+        }
       });
     }
 
@@ -1039,6 +1065,10 @@ function tableBuildHeaderOwner() {
   });
 
   tableHead.replaceChildren(headerRow);
+  if (focusedSortColumn) {
+    const replacement = tableHead.querySelector(`th[data-table-column="${focusedSortColumn}"] > .tableSortButton`);
+    if (replacement instanceof HTMLButtonElement) replacement.focus({ preventScroll: true });
+  }
 }
 
 function isMissingSortValue(value) {
@@ -1123,9 +1153,23 @@ function updateFilterSummary(count = activeFilterCount()) {
   const numericCount = Number(count);
   const normalizedCount = Number.isFinite(numericCount) ? Math.max(0, Math.trunc(numericCount)) : 0;
   const active = normalizedCount >= 1;
+  // The visible badge intentionally counts advanced rules only. Quick toggles
+  // have their own controls and may be enabled by default.
+  const quickCount = state.currentPage === "club" ? 0 : [
+    hideRetiredInput?.checked,
+    hideRetiringInput?.checked,
+    state.currentPage === "database" && hideMflPlayersInput?.checked,
+    state.currentPage === "mfl" && packablePlayersInput?.checked,
+    newMintsInput?.checked,
+  ].filter(Boolean).length;
+  const filterDescription = `Filters: ${normalizedCount} advanced ${normalizedCount === 1 ? "rule" : "rules"}, ${quickCount} active quick ${quickCount === 1 ? "filter" : "filters"}`;
   filterSummary.textContent = String(normalizedCount);
   filterSummary.classList.toggle("hasActiveFilters", active);
   openFiltersButton?.classList.toggle("hasActiveFilters", active);
+  if (openFiltersButton) {
+    openFiltersButton.setAttribute("aria-label", filterDescription);
+    openFiltersButton.title = filterDescription;
+  }
 }
 
 function selectedFilterColumns(exceptRule = null) {
@@ -1556,6 +1600,7 @@ function tableAddFilterRuleOwner(column, options = {}) {
       return;
     }
     rule.dataset.filterColumn = nextColumn;
+    remove.setAttribute("aria-label", `Remove ${filterLabel(nextColumn)} filter`);
     replaceOperatorSelect(rule, nextColumn);
     replaceValueControl(rule, nextColumn);
     populateAddFilterSelect();
@@ -2426,6 +2471,9 @@ function tableApplyFiltersOwner(options = {}) {
   const recordRouteStage = Reflect.get(window, "__mflRecordRoutePerformanceStage");
   if (typeof recordRouteStage === "function") recordRouteStage("route-loader-filter-prep-start", { page: state.currentPage });
   if (state.currentPage === "club") {
+    // Club has no quick/advanced filters. Reset a prior route's visible badge
+    // and accessible description when moving between Table pages.
+    updateFilterSummary(0);
     state.tableSourceRowsCount = state.rows.length;
     state.filteredRows = [...state.rows];
     state.filteredRows.sort(compareRows);
