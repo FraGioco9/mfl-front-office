@@ -88,6 +88,9 @@ jobs:
       - name: Validate live mobile table breakpoint crossings
         run: node validation/browser-mobile-table-responsive-resize.mjs
 
+      - name: Validate RESP-02 long mobile table interactions
+        run: node validation/browser-resp02-long-mobile-table.mjs
+
   responsive-shell-breakpoint:
     runs-on: ubuntu-latest
     steps:
