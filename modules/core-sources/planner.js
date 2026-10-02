@@ -138,7 +138,7 @@
   function showOnly(target){document.querySelectorAll("main > .pageView").forEach(candidate=>{if(candidate instanceof HTMLElement)candidate.hidden=candidate!==target;});}
   function syncNavigation(){document.querySelectorAll("#sidebar .navButton[data-page]").forEach(button=>{if(button instanceof HTMLElement)button.classList.toggle("active",String(button.dataset.page||"")===PAGE);});}
   function syncClearButton(){if(!(input instanceof HTMLInputElement)||!(clearButton instanceof HTMLElement))return;const hidden=!input.value.trim();clearButton.hidden=hidden;clearButton.toggleAttribute("hidden",hidden);}
-  function setStatus(message=""){if(!(status instanceof HTMLElement))return;status.textContent=message;status.hidden=!message;}
+  function setStatus(message="",options={}){if(!(status instanceof HTMLElement))return;status.textContent=message;status.hidden=!message;if(message&&typeof announceActionStatus==="function")announceActionStatus(message,{urgent:options.urgent===true});}
   function clearResults(){searchSequence+=1;if(results instanceof HTMLElement){results.hidden=true;results.replaceChildren();}}
   function plannerPath(clubId=""){const id=String(clubId||"").trim();return id?"/planner?club="+encodeURIComponent(id):"/planner";}
   function updatePlannerUrl(clubId="",{replace=false}={}){const next=plannerPath(clubId);if(location.pathname+location.search===next)return;history[replace?"replaceState":"pushState"]({},"",next);Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();}
@@ -204,6 +204,7 @@
   }
   function rosterMessage(message=""){
     if(rosterStatus instanceof HTMLElement){rosterStatus.textContent=message;rosterStatus.hidden=!message;}
+    if(message&&typeof announceActionStatus==="function")announceActionStatus(message,{urgent:/^(could not|failed|unable|error)/i.test(String(message))});
   }
   function normalizeContractValue(value){
     const numeric=Number(value);
@@ -570,6 +571,7 @@
         ? {...payload,columns:playerSearchPayload.columns,rows:[...playerSearchPayload.rows,...(Array.isArray(payload.rows)?payload.rows:[])]}
         : payload;
       renderPlayerResults(playerSearchPayload,q);
+      if(typeof announceActionStatus==="function")announceActionStatus(playerSearchBody?.querySelectorAll("tr[data-player-id]")?.length+" player search results for "+q+".");
       return playerSearchPayload;
     }catch(error){
       if(seq!==playerSearchSequence)return null;
@@ -972,7 +974,7 @@
     results.setAttribute?.("role",hasOptions?"listbox":"status");
     results.replaceChildren(fragment);results.hidden=!results.childNodes.length;
   }
-  async function requestTeams(query){const q=String(query||"").trim();if(!q){clearResults();return [];}const seq=++searchSequence;const params=new URLSearchParams({mode:"search",type:"clubs",limit:"10",q});try{const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"}});const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload?.error||"Could not search teams.");if(seq!==searchSequence||input?.value.trim()!==q)return[];const teams=(Array.isArray(payload?.results)?payload.results:[]).sort((a,b)=>((Number(a?.division)||Infinity)-(Number(b?.division)||Infinity)||String(a?.name||"").localeCompare(String(b?.name||""))));renderResults(teams,q);return teams;}catch(error){if(seq!==searchSequence||input?.value.trim()!==q)return[];renderResults([],q,{error:error?.message||"Could not search teams."});setStatus("");return[];}}
+  async function requestTeams(query){const q=String(query||"").trim();if(!q){clearResults();return [];}const seq=++searchSequence;const params=new URLSearchParams({mode:"search",type:"clubs",limit:"10",q});try{const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"}});const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload?.error||"Could not search teams.");if(seq!==searchSequence||input?.value.trim()!==q)return[];const teams=(Array.isArray(payload?.results)?payload.results:[]).sort((a,b)=>((Number(a?.division)||Infinity)-(Number(b?.division)||Infinity)||String(a?.name||"").localeCompare(String(b?.name||""))));renderResults(teams,q);if(typeof announceActionStatus==="function")announceActionStatus(teams.length+" team"+(teams.length===1?"":"s")+" found for "+q+".");return teams;}catch(error){if(seq!==searchSequence||input?.value.trim()!==q)return[];renderResults([],q,{error:error?.message||"Could not search teams."});if(typeof announceActionStatus==="function")announceActionStatus(error?.message||"Could not search teams.",{urgent:true});setStatus("");return[];}}
   async function restoreSelectedTeam(clubId){const id=String(clubId||"").trim();if(!id||!(input instanceof HTMLInputElement))return false;const cached=cachedPlannerClub(id);if(cached)return selectTeam({...cached,clubId:id},{updateUrl:false});input.value=id;syncClearButton();const teams=await requestTeams(id);const exact=teams.find(team=>String(team?.clubId||team?.id||"").trim()===id);if(exact)return selectTeam(exact,{updateUrl:false});if(input.value!==id)return false;showTeam();setStatus("Team not found.");return false;}
   function currentPlannerPayload(){
     if(!selectedTeamId)return null;
@@ -1286,7 +1288,7 @@
       return await action();
     }catch(error){
       if(Number(error?.status)===409&&activePlanId)plannerConflictPlanId=activePlanId;
-      setStatus(error?.message||failureMessage);
+      setStatus(error?.message||failureMessage,{urgent:true});
       return false;
     }finally{
       plannerToolbarActionPending=false;
@@ -1505,6 +1507,7 @@
       return await action();
     }catch(error){
       if(plansStatus)plansStatus.textContent=error?.message||"Plan action failed.";
+      if(typeof announceActionStatus==="function")announceActionStatus(error?.message||"Plan action failed.",{urgent:true});
       return false;
     }finally{
       plannerPlansActionPending=false;
@@ -1585,13 +1588,14 @@
   }
   async function openPlansModal(){
     if(!(plansModal instanceof HTMLElement)||!(plansList instanceof HTMLElement))return;
-    plansModal.hidden=false;plansModal.classList.add("modalOpen");if(plansStatus)plansStatus.textContent="Loading saved plans…";plansList.replaceChildren();
+    plansModal.hidden=false;plansModal.classList.add("modalOpen");if(plansStatus)plansStatus.textContent="Loading saved plans…";if(typeof announceActionStatus==="function")announceActionStatus("Loading saved plans.");plansList.replaceChildren();
     try{
       const [data,shareData]=await Promise.all([plannerPrivateRequest("/api/planner-save"),plannerPrivateRequest("/api/planner-share?owned=1")]);
       if(plansStatus)plansStatus.textContent="";
       renderPlannerPlans(data?.plans,shareData?.shares);
     }catch(error){
       if(plansStatus)plansStatus.textContent=error?.message||"Could not load saved plans.";
+      if(typeof announceActionStatus==="function")announceActionStatus(error?.message||"Could not load saved plans.",{urgent:true});
       if(Number(error?.status)!==401){
         const retry=document.createElement("button");retry.type="button";retry.className="compactButton";retry.textContent="Retry";
         retry.addEventListener("click",()=>void openPlansModal());

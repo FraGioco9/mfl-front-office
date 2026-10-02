@@ -619,7 +619,10 @@ function updateTablePlayerCount(options = {}) {
 
   const visibleCount = state.incrementalMode ? state.incrementalTotalRows : state.filteredRows.length;
   const totalCount = state.incrementalMode ? state.incrementalSourceRows : state.tableSourceRowsCount;
-  watchlistPlayerCount.textContent = `Showing ${formatCount(visibleCount)}/${formatCount(totalCount)} players`;
+  const summary = `Showing ${formatCount(visibleCount)}/${formatCount(totalCount)} players`;
+  const changed = watchlistPlayerCount.textContent !== summary;
+  watchlistPlayerCount.textContent = summary;
+  if (changed && typeof announceActionStatus === "function") announceActionStatus(summary);
 }
 
 function playerIsInAnyWatchlist(playerId) {
