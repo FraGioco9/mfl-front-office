@@ -109,7 +109,8 @@ includes(indexHtml, '<div id="clubIdentityOwner" class="clubIdentityOwner">', "C
 includes(indexHtml, '<a id="clubIdentityOwnerName" class="clubIdentityOwnerName agentTableLink"></a>', "Only the Owner agent name must be interactive and it must reuse the canonical table Agent link behavior.");
 excludes(indexHtml, 'id="clubInfoPanel"', "Club first paint must not ship the retired Info content shell.");
 includes(staticUi, "function syncTableViews(page, view) {", "First paint and loaded application state must share one view-button renderer.");
-includes(staticUi, "Object.freeze({ sync, syncTableViews, showNotFound, showLoadError, hideTooltips, destroy })", "The application core must reuse passive route chrome, shared not-found rendering, and its global tooltip cleanup API.");
+includes(staticUi, "sync, syncTableViews, showNotFound, showLoadError, hideTooltips, destroy,", "The application core must reuse passive route chrome, shared not-found rendering, and its global tooltip cleanup API.");
+includes(staticUi, "captureHistoryScroll, historyScrollToken, restoreHistoryScroll,", "NAV-02 history methods must extend the one canonical static chrome runtime instead of introducing a second owner.");
 includes(staticUi, 'const routes = window.__mflAppConfig?.routes;', "Static route chrome must consume the canonical route configuration.");
 includes(staticUi, 'routes.canonicalRequest(url.pathname)', "Static route chrome must consume the canonical route classifier.");
 includes(staticUi, 'const requestShellId = window.__mflAppConfig?.routes?.requestShellId;', "Static route chrome must consume canonical route-shell ownership.");
