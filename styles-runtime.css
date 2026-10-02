@@ -5557,6 +5557,48 @@ html.mflInitialChromePreparing body[data-page="player"] #playerDetail .playerAtt
   font-size: 13px;
   line-height: 1.4;
 }
+
+/* A11Y-05: specialist movement not covered by shared timing variables.
+ * Preserve full-color/border feedback and normal-motion visuals, but give
+ * reduced-motion users static charts, feedback and dialog presentation.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .buttonGear,
+  .mflStatsHistogramFill {
+    animation: none;
+  }
+
+  .modalBackdrop > section,
+  .modalBackdrop.modalOpen > section,
+  .modalBackdrop.modalClosing > section {
+    transform: none;
+  }
+
+  .toastMessage,
+  .toastMessage.visible {
+    transform: none;
+    transition: none;
+  }
+
+  .selectionBar,
+  .selectionBar.mflSelectionActionDismissed {
+    transition: none;
+  }
+
+  .selectionBar.mflSelectionActionDismissed {
+    --mfl-selection-exit-y: 0px;
+  }
+
+  [data-tooltip]::before,
+  [data-tooltip]::after,
+  [data-note-tooltip]::before,
+  [data-note-tooltip]::after,
+  .floatingActionTooltip,
+  .playerNoteFloatingTooltip,
+  .evaluationDiscountTooltipPortal {
+    transition: none;
+  }
+}
 /* Source: scrollbars.css */
 /* Canonical scrollbar owner for MFL Front Office. */
 
