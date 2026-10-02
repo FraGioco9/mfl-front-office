@@ -65,6 +65,24 @@
             };
             syncSettingsNavPlacement();
             mobileNavigationMedia.addEventListener("change", syncSettingsNavPlacement);
+
+            // Expose the current destination to assistive tech from first
+            // paint; the visual .active state remains the route chrome's job.
+            const root = document.documentElement;
+            const initialPage = String(root.dataset.initialTablePage || root.dataset.initialPage || "home")
+              .split("/")[0].toLowerCase();
+            const currentPage = initialPage === "my-players" ? "myplayers"
+              : initialPage === "myclubs" ? "my-clubs"
+                : initialPage;
+            sidebar.querySelectorAll(".navButton[data-page]").forEach((link) => {
+              if (link.dataset.page === currentPage) link.setAttribute("aria-current", "page");
+              else link.removeAttribute("aria-current");
+            });
+            const brandLink = document.querySelector(".brandLink[data-page='home']");
+            if (brandLink instanceof HTMLAnchorElement) {
+              if (currentPage === "home") brandLink.setAttribute("aria-current", "page");
+              else brandLink.removeAttribute("aria-current");
+            }
           })();
         </script>
       </div>

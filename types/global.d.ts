@@ -104,6 +104,7 @@ interface MflStaticUiRuntime {
   captureHistoryScroll?: () => void;
   historyScrollToken?: () => number;
   restoreHistoryScroll?: (token: number) => void;
+  syncNavigationAccess?: () => void;
 }
 
 interface MflSharedTableUiRuntime {

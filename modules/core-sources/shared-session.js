@@ -75,6 +75,13 @@ function progressionAccessMessage() {
 }
 
 function updateMenuVisibility() {
+  // First-paint flags are snapshots; live permission changes must update
+  // both desktop and mobile navigation without requiring a hard refresh.
+  const optedIn = hasWalletOptIn();
+  const progressionAllowed = hasProgressionAccess();
+  document.documentElement.dataset.storedWalletOptIn = optedIn ? "true" : "false";
+  document.documentElement.dataset.storedProgressionAccess = progressionAllowed ? "true" : "false";
+  window.__mflStaticUiRuntime?.syncNavigationAccess?.();
   state.menuOpen = true;
   document.body.classList.toggle("guest", state.currentPage === "progression" && !hasProgressionAccess());
   menuRail.hidden = false;
