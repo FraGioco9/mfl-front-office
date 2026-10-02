@@ -58,9 +58,9 @@ export async function resolveEntityDeepLink(rawUrl, lookup = sqliteEntityExists)
       return { kind: route.kind, status: 200, reason: "unverified" };
     }
     return { kind: route.kind, status: exists ? 200 : 404, reason: exists ? "found" : "missing" };
-  } catch {
-    // An inaccessible/corrupt SQLite snapshot is a 503, never "not found".
-    // Do not surface internal SQL/host errors in publicly rendered metadata.
+  } catch (error) {
+    // Keep diagnostic details on the server (never in public metadata).
+    console.error("[NAV-01] Entity existence probe failed", route.kind, error);
     return { kind: route.kind, status: 503, reason: "unavailable" };
   }
 }
