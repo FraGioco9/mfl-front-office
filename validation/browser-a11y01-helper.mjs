@@ -95,7 +95,10 @@ export async function auditAccessibility(cdp, url, baseline) {
     const codes = { Tab: 9, Enter: 13, " ": 32, Escape: 27 };
     const code = { Tab: "Tab", Enter: "Enter", " ": "Space", Escape: "Escape" }[key];
     await cdp.send("Input.dispatchKeyEvent", {
-      type: "rawKeyDown", key, code,
+      // A normal keyDown with its text payload, not rawKeyDown, is required
+      // for Chromium to synthesize the native Enter/Space button click.
+      type: key === "Enter" || key === " " ? "keyDown" : "rawKeyDown", key, code,
+      ...(key === "Enter" || key === " " ? { text: key === "Enter" ? "\\r" : " ", unmodifiedText: key === "Enter" ? "\\r" : " " } : {}),
       windowsVirtualKeyCode: codes[key], nativeVirtualKeyCode: codes[key],
       modifiers: shift ? 8 : 0
     });
@@ -140,6 +143,10 @@ export async function auditAccessibility(cdp, url, baseline) {
       await new Promise(done => setTimeout(done, 120));
       slot.focus({ preventScroll: true });
       await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)));
+      window.__mflA11yKeyTrace = [];
+      for (const type of ["keydown", "keypress", "keyup", "click"]) {
+        slot.addEventListener(type, event => window.__mflA11yKeyTrace.push(type + ":" + (event.key || "mouse")), {capture: true});
+      }
       return document.activeElement === slot;
     })()`);
     assert.equal(ready, true, "A11Y-01 Planner picker is not keyboard reachable.");
@@ -149,7 +156,7 @@ export async function auditAccessibility(cdp, url, baseline) {
       return { opened: picker?.hidden === false,
         expanded: document.querySelectorAll('.plannerFormationSlotButton[aria-expanded="true"]').length,
         focus: document.activeElement?.outerHTML.slice(0, 260),
-        current: document.querySelector('.plannerFormationSpot[data-slot-key="CB#1"] .plannerFormationSlotButton')?.getAttribute("aria-expanded") };
+        current: document.querySelector('.plannerFormationSpot[data-slot-key="CB#1"] .plannerFormationSlotButton')?.getAttribute("aria-expanded"), trace: window.__mflA11yKeyTrace || [] };
     })()`);
     assert.equal(enter.opened, true, "A11Y-01 Enter did not open Planner position menu: " + JSON.stringify(enter));
     await key("Escape");
