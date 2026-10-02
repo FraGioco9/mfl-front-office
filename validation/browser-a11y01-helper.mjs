@@ -143,6 +143,7 @@ export async function auditAccessibility(cdp, url, baseline) {
       await new Promise(done => setTimeout(done, 120));
       slot.focus({ preventScroll: true });
       await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)));
+      window.__mflA11ySlotRef = slot;
       window.__mflA11yKeyTrace = [];
       for (const type of ["keydown", "keypress", "keyup", "click"]) {
         slot.addEventListener(type, event => window.__mflA11yKeyTrace.push(type + ":" + (event.key || "mouse")), {capture: true});
@@ -179,6 +180,9 @@ export async function auditAccessibility(cdp, url, baseline) {
     const focusAfterEscape = await evaluate(`(() => {
       const slot = document.querySelector('.plannerFormationSpot[data-slot-key="CB#1"] .plannerFormationSlotButton');
       return { restored: document.activeElement === slot, focus: document.activeElement?.outerHTML.slice(0, 220),
+        originalConnected: window.__mflA11ySlotRef?.isConnected,
+        originalDisabled: window.__mflA11ySlotRef?.disabled,
+        sameNode: window.__mflA11ySlotRef === slot, currentDisabled: slot?.disabled,
         trace: window.__mflA11yKeyTrace || [] };
     })()`);
     assert.equal(focusAfterEscape.restored, true,
