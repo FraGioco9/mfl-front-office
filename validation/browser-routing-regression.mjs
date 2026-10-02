@@ -1700,6 +1700,12 @@ const browserTestSource = String.raw`(() => {
     } else {
       await delay(80);
     }
+    if (scenario === "player" && window.location.hash.startsWith("#resp01-")) {
+      // Route-ready marks the shell, not completion of the async player detail fetch.
+      await waitFor(() => text("#playerDetail").includes(expectedPlayerName),
+        "RESP-01 Player detail did not settle after the shell became ready.");
+      assertSharedChromeGeometry();
+    }
     const directState = routeState();
     assertRouteState(directState);
 
