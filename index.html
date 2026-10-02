@@ -1207,7 +1207,7 @@
                   <button id="plannerClearDepthButton" class="compactButton plannerClearDepthButton" type="button" disabled>Clear</button>
                 </div>
               </div>
-              <div class="pitch plannerPitch" role="img" aria-label="Squad depth pitch">
+              <div class="pitch plannerPitch" role="group" aria-label="Squad depth pitch">
 
                 <div id="plannerFormationPositions" class="plannerFormationPositions" role="group" aria-label="Formation starting positions"></div>
               </div>
@@ -3928,13 +3928,13 @@
     </div>
 
     <div id="deleteWatchlistModal" class="modalBackdrop" hidden>
-      <section class="mflDialog deleteWatchlistDialog" role="dialog" aria-modal="true" aria-labelledby="deleteWatchlistTitle">
+      <section class="mflDialog deleteWatchlistDialog" role="dialog" aria-modal="true" aria-labelledby="deleteWatchlistTitle" aria-describedby="deleteWatchlistDescription">
         <header class="mflDialogHeader">
           <h2 id="deleteWatchlistTitle">Delete watchlist</h2>
           <button id="closeDeleteWatchlistButton" class="iconButton popupCloseButton" type="button" aria-label="Close delete watchlist"></button>
         </header>
         <section class="deleteWatchlistBody">
-          <p>Delete <strong id="deleteWatchlistName">this watchlist</strong>?</p>
+          <p id="deleteWatchlistDescription">Delete <strong id="deleteWatchlistName">this watchlist</strong>?</p>
         </section>
         <footer class="mflDialogFooter deleteWatchlistFooter">
           <button id="cancelDeleteWatchlistButton" type="button">Cancel</button>

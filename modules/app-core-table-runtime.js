@@ -451,6 +451,7 @@ function appendNameMarker(cell, marker, className) {
 
   const markerElement = document.createElement("span");
   markerElement.className = `${className} retirementMarker--${marker.status || "default"}`;
+  markerElement.setAttribute("role", "img");
   if (marker.icon) {
     const markerIcon = document.createElement("img");
     markerIcon.src = `/retirement-${marker.icon}.svg`;
