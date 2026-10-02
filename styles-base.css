@@ -138,6 +138,36 @@ input[type="checkbox"]:disabled:indeterminate {
   background-color: var(--border-strong);
 }
 
+/* Keyboard skip navigation is first in DOM order but only displayed on focus.
+ * Use the existing toast layer to stay visible above the pinned top bar.
+ */
+.mflSkipLink {
+  position: fixed;
+  top: 12px;
+  left: 16px;
+  z-index: var(--mfl-z-toast);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 8px 16px;
+  border: 2px solid var(--primary);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  transform: translateY(calc(-100% - 24px));
+}
+
+.mflSkipLink:focus {
+  transform: none;
+  outline: var(--mfl-focus-ring-width) solid var(--mfl-focus-ring-color);
+  outline-offset: 2px;
+}
+
 .topbar {
   grid-row: 1;
   position: relative;
