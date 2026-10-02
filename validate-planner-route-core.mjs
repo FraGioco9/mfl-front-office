@@ -273,7 +273,7 @@ invariant(
   "Planner polish must expose operation-aware Undo/Redo with keyboard shortcuts, information-only squad status and Squad↔Depth highlighting.",
 );
 invariant(
-  planner.includes('savePlanButton.disabled=plannerReadOnly||!selectedTeamId||(Boolean(activePlanId)&&!dirty);')
+  planner.includes('savePlanButton.disabled=plannerReadOnly||!selectedTeamId||(Boolean(activePlanId)&&!dirty)||plannerToolbarActionPending||plannerPlansActionPending;')
     && planner.includes('row.classList.toggle("plannerPlanListRowCurrent",isCurrent);')
     && planner.includes('current.textContent="Current";')
     && styles.includes(".plannerPlanListRowCurrent{border-color:var(--primary);background:var(--row-hover)}")
