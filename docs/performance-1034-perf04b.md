@@ -37,6 +37,21 @@ New opt-in `validation/perf04b-cross-release-cache.mjs` uses a real local HTTP s
 
 A temporary GitHub Actions workflow `perf04b-prebuilt-build-only.yml` uses the repository's established Vercel project connection to run `vercel pull` and **`vercel build --prod` only**, with a synthetic SQLite fixture and no deployment command. It validates actual generated `.vercel/output/config.json` against the existing CSP checker and the new read-only route inspector, and uploads **only a route/header summary** (not environment files or functions). The workflow is removed **before merging the PR**. Failed or unavailable authorization/build artifacts must be noted as incomplete evidence, never replaced with assumptions.
 
+## Verified actual prebuilt evidence — 2026-10-03
+
+- [Build-only run #37126668639](https://github.com/FraGioco9/mfl-front-office/actions/runs/37126668639) succeeded. It ran `vercel pull` and **`vercel build --prod`**, **no `vercel deploy`**. The job used a minimal SQLite fixture, not live production data, and wrote output only inside the GitHub runner.
+- [Sanitized header/asset artifact #11275178061](https://github.com/FraGioco9/mfl-front-office/actions/runs/37126668639/artifacts/11275178061) stores the actual prebuilt report with **no function code, project tokens, secrets, or environment files**.
+- Genuine `.vercel/output/config.json`: **Build Output API v3, 8 routes**. The inspector found **no explicit `Cache-Control` in matching route-header declarations** for Home, `index.html`, `/database/attributes`, `release.json`, stable CSS, core JS (with or without `mfl_core`), operational health or identity API. These are matching `routes[].headers` candidates, **not the effective CDN or function-response policy**. The 4-path CSP security-header validator passed.
+- Genuine `.vercel/output/static/styles-runtime.css`: **370,079 bytes**, SHA-256 **`e677ca5e6febd1e952e7ef71af00cb14d5fa1ffd0565f63f44545d297d3d1811`**, byte-identical to canonical generated CSS.
+- No `styles-runtime.<64-hex-digest>.css` files appeared in the prebuilt static root, and no relevant `config.overrides` entries were found. The output exposes **only the mutable `styles-runtime.css` name**; the current deployment pipeline does not ensure historical hashed CSS availability at the same production origin.
+- The temporary build-only GitHub Actions workflow was **deleted from the branch after collecting evidence**. Read-only CLI inspectors remain available for future builds. This avoids retaining a PR-triggered job with Vercel environment permissions.
+
+### Current outcome: NO CHANGE
+
+The **cross-release correctness gate rejects** `immutable` CSS on the current stable URL (or a query-only revision): no actual content-addressed path/retention exists. The HTTP fixture demonstrates an unsafe old-query→new-release collision and a safe two-version path *only when synthetic retention is provided*. The actual prebuilt inventory confirms that this retention is **not** implemented.
+
+A Chrome/Safari speedup A/B for immutable CSS **was not performed**, because the proposed change fails the prerequisite correctness gate. Do not claim a speed benefit or that a Browser/old-release deployment experiment passed. Keep existing CSS revalidation, Next/Vercel cache code, and runtime unchanged. Separate production release checks (real Safari, HTTP conditional behavior, private/wallet cache) remain deferred to the final issue #1034 deployment.
+
 ## Decision gate
 
 A CSS immutable optimization requires all conditions, not merely a smaller local transfer measurement:
@@ -47,7 +62,7 @@ A CSS immutable optimization requires all conditions, not merely a smaller local
 4. Paired same-runner browser experiments cold, refreshed, cached return and slow-mobile first use with encoded/transferred bytes. No new initial requests, missing CSS, flash of unstyled content, wrong deep-link style or wallet/private cache regression.
 5. Final iPhone/Safari and Vercel observations deferred until the single planned deployment for issue #1034.
 
-**Current decision:** preserve `max-age=0, must-revalidate` on the stable CSS URL; do not extend JavaScript `immutable` rules to unretained query-only CSS. Actual build-only capture and CI results should be appended here. If cross-release retention and observable speedup cannot be demonstrated, close the optimization as **NO CHANGE**; do not introduce potentially stale or mixed assets.
+**Confirmed NO-CHANGE decision:** preserve `max-age=0, must-revalidate` on the stable CSS URL; do not extend JavaScript `immutable` rules to unretained query-only CSS. Actual prebuilt output was captured and verified without deployment as above. If cross-release retention and observable speedup cannot be demonstrated, close the optimization as **NO CHANGE**; do not introduce potentially stale or mixed assets.
 
 ## Validation
 
