@@ -23,6 +23,7 @@ const stickyEnd = mobileTableStyles.lastIndexOf("\n}");
 invariant(stickyStart >= 0 && stickyEnd > stickyStart, "The small-screen sticky Name subsection is missing.");
 const stickyStyles = mobileTableStyles.slice(stickyStart, stickyEnd);
 const desktopTableStyles = `${styles.slice(0, mobileStart)}${styles.slice(mobileEnd + 2)}`;
+invariant(!stickyStyles.includes("background-image: linear-gradient("), "Mobile sticky Name cells must use opaque background colors without painting redundant same-color gradients.");
 
 for (const token of [
   "th.col-name,",
@@ -43,11 +44,11 @@ for (const token of [
   "border-right: 1px solid var(--border-strong);",
   "pointer-events: none;",
   "#progressionPage .playerTableScroller th.col-name {\n    z-index: 6;\n    background: var(--mfl-table-header-background);",
-  "z-index: 5;\n    isolation: isolate;\n    background: var(--mfl-table-surface);\n    background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));\n    background-clip: border-box;",
+  "z-index: 5;\n    isolation: isolate;\n    background: var(--mfl-table-surface);\n    background-clip: border-box;",
   "#progressionPage #tableBody tr.tableRowHovered > :is(",
-  "background: var(--mfl-table-row-hover-background);\n    background-image: linear-gradient(var(--mfl-table-row-hover-background), var(--mfl-table-row-hover-background));",
+  "background: var(--mfl-table-row-hover-background);",
   "#progressionPage #tableBody > .mflTableLoadingRow > td:has(> .playerNameCell) {",
-  "background: var(--mfl-table-surface);\n    background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));",
+  "background: var(--mfl-table-surface);",
 ]) {
   invariant(stickyStyles.includes(token), `Small-screen sticky Name contract is missing: ${token}`);
 }

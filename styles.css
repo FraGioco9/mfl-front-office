@@ -154,7 +154,6 @@ table :is(th, td) > :is(button, img, input, select, svg) {
     z-index: 5;
     isolation: isolate;
     background: var(--mfl-table-surface);
-    background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));
     background-clip: border-box;
   }
 
@@ -163,12 +162,10 @@ table :is(th, td) > :is(button, img, input, select, svg) {
     td:has(> .playerNameCell)
   ) {
     background: var(--mfl-table-row-hover-background);
-    background-image: linear-gradient(var(--mfl-table-row-hover-background), var(--mfl-table-row-hover-background));
   }
 
   #progressionPage #tableBody > .mflTableLoadingRow > td:has(> .playerNameCell) {
     background: var(--mfl-table-surface);
-    background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));
   }
 }
 
