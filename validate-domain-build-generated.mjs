@@ -7,6 +7,7 @@ const validators = [
   "validate-core-source-ownership.mjs",
   "validate-shared-core-route-ownership.mjs",
   "validate-asset-cache-policy.mjs",
+  "validate-perf04-cache-contract.mjs",
   "validate-production-core-sources.mjs",
   "validate-generated-core-bindings.mjs",
 ];
