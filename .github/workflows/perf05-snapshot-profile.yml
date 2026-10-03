@@ -31,7 +31,15 @@ jobs:
           gh run download 37113407333 --repo "$GITHUB_REPOSITORY" --name mfl_database --dir .
           test -s mfl_database.db
           sha256sum mfl_database.db
-          node -e 'const { DatabaseSync }=require("node:sqlite");const db=new DatabaseSync("mfl_database.db",{readOnly:true});db.exec("PRAGMA query_only=ON");const m=Object.fromEntries(db.prepare("SELECT key, value FROM runtime_metadata WHERE key IN ('row_count','wallet_count','generated_at')").all().map(x=>[x.key,x.value]));console.log(JSON.stringify(m));if(Number(m.row_count)!==387258||Number(m.wallet_count)!==7866)process.exit(1);db.close()'
+          node <<'NODE'
+          const { DatabaseSync } = require('node:sqlite');
+          const db = new DatabaseSync('mfl_database.db', { readOnly:true });
+          db.exec('PRAGMA query_only=ON');
+          const metadata = Object.fromEntries(db.prepare("SELECT key, value FROM runtime_metadata WHERE key IN ('row_count', 'wallet_count', 'generated_at')").all().map(x=>[x.key,x.value]));
+          console.log(JSON.stringify(metadata));
+          if (Number(metadata.row_count) !== 387258 || Number(metadata.wallet_count) !== 7866) process.exitCode = 1;
+          db.close();
+          NODE
       - name: Capture actual API SQL with EXPLAIN and same-runner timings
         env:
           MFL_DATABASE_PATH: mfl_database.db
