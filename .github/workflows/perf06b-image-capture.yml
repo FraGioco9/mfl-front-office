@@ -66,6 +66,7 @@ jobs:
         env:
           MFL_BASE_URL: http://127.0.0.1:4000
           MFL_PERF06B_OUTPUT: perf06b-images-current.json
+          MFL_PERF06B_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node validation/perf06b-image-runner.mjs
       - name: Upload run evidence
         if: always()
