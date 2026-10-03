@@ -108,6 +108,9 @@ jobs:
       - name: Validate RESP-02 long mobile table interactions
         run: node validation/browser-resp02-long-mobile-table.mjs
 
+      - name: PERF-02C sticky Name light/dark scroll and paint regression
+        run: node validation/browser-perf02c-sticky-theme-regression.mjs
+
   resp03-orientation:
     runs-on: ubuntu-latest
     steps:
