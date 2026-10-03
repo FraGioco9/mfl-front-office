@@ -116,7 +116,11 @@ table :is(th, td) > :is(button, img, input, select, svg) {
     --mfl-table-col-overall: var(--mfl-table-col-next-overall);
   }
 
-  #progressionPage .playerTableScroller :is(th.col-name, td.col-name) {
+  #progressionPage .playerTableScroller :is(
+    th.col-name,
+    td.col-name,
+    td:has(> .playerNameCell)
+  ) {
     position: sticky;
     left: 0;
     padding-left: 10px;
@@ -143,22 +147,25 @@ table :is(th, td) > :is(button, img, input, select, svg) {
     background: var(--mfl-table-header-background);
   }
 
-  #progressionPage .playerTableScroller td.col-name {
+  #progressionPage .playerTableScroller :is(
+    td.col-name,
+    td:has(> .playerNameCell)
+  ) {
     z-index: 5;
     isolation: isolate;
     background: var(--mfl-table-surface);
-    background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));
     background-clip: border-box;
   }
 
-  #progressionPage #tableBody tr.tableRowHovered > td.col-name {
+  #progressionPage #tableBody tr.tableRowHovered > :is(
+    td.col-name,
+    td:has(> .playerNameCell)
+  ) {
     background: var(--mfl-table-row-hover-background);
-    background-image: linear-gradient(var(--mfl-table-row-hover-background), var(--mfl-table-row-hover-background));
   }
 
-  #progressionPage #tableBody > .mflTableLoadingRow > td.col-name {
+  #progressionPage #tableBody > .mflTableLoadingRow > td:has(> .playerNameCell) {
     background: var(--mfl-table-surface);
-    background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));
   }
 }
 
