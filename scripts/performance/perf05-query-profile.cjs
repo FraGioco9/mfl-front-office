@@ -91,6 +91,7 @@ const median = ns => {
   const sorted = [...ns].sort((a,b)=>a-b);
   return Number((sorted[Math.floor(sorted.length/2)] / 1e6).toFixed(3));
 };
+async function main() {
 const results = [];
 let responseCount = 0;
 for (const scenario of cases) {
@@ -154,3 +155,5 @@ const output = {
   caveat:"Same-runner query-only timings; no production RUM, marketplace fixture prices are synthetic. Parameter values deliberately excluded.",
 };
 process.stdout.write(JSON.stringify(output,null,2)+"\n");
+}
+main().catch(error => { console.error(error); process.exitCode = 1; });
