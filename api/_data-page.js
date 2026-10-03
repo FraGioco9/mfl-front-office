@@ -28,6 +28,8 @@ const {
   runtimeMetadataCount,
 } = require("./_data-query");
 
+const { reverseOrderSql } = require("./_data-page-order");
+
 const LISTING_COLUMN = "listing_price";
 const LISTING_PRICE_SQL = "marketplace_price(player_id)";
 const PAGE_COUNT_CACHE_MAX_ENTRIES = 256;
@@ -576,10 +578,21 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression, ti
     sortKey,
     String(query.sortDirection || (scope === "club" ? "asc" : "desc")),
   );
-  const rows = measureSync(timings, "sqlite", () => queryRows(
-    `SELECT ${selectListWithListing(columns)} FROM players${where} ORDER BY ${order} LIMIT ? OFFSET ?`,
-    [...parameters, pageSize, offset],
-  ));
+  // Deep page numbers are part of the public API contract: no cursor parameter
+  // or approximate seek is allowed. For the last third of the result set,
+  // scan from its tail and reverse the few returned rows in memory instead.
+  // The unique player_id tie-break keeps NULLs, collations and sorts stable.
+  const remaining = Math.max(0, totalRows - offset);
+  const tailOffset = Math.max(0, remaining - pageSize);
+  const reverseTail = !allRows && offset > 0 && tailOffset * 2 < offset;
+  const queryOrder = reverseTail ? reverseOrderSql(order) : order;
+  const rows = measureSync(timings, "sqlite", () => {
+    const selectedRows = queryRows(
+      `SELECT ${selectListWithListing(columns)} FROM players${where} ORDER BY ${queryOrder} LIMIT ? OFFSET ?`,
+      [...parameters, reverseTail ? Math.min(pageSize, remaining) : pageSize, reverseTail ? tailOffset : offset],
+    );
+    return reverseTail ? selectedRows.reverse() : selectedRows;
+  });
 
   const club = scope === "club" ? clubProfileData(query.clubId) : null;
   const playerClubId = scope === "player" && rows.length
