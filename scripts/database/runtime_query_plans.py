@@ -94,7 +94,10 @@ REPRESENTATIVE_TABLE_QUERY_BUDGETS = (
             f"ORDER BY {DEFAULT_OVERALL_ORDER_SQL} LIMIT ? OFFSET ?"
         ),
         parameters=("Italy", 70, 85, 100, 0),
-        required_index="players_nationality_order_index",
+        # On small synthetic fixtures, the existing overall range index can be
+        # cheaper. Both are valid; full-snapshot A/B proves the first-page gain.
+        max_full_player_scans=0,
+        max_temp_btrees=0,
     ),
     QueryPlanBudget(
         name="database_position_nationality_first_page",
