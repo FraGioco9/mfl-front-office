@@ -34,6 +34,7 @@ const { reverseOrderSql } = require("./_data-page-order");
 const LISTING_COLUMN = "listing_price";
 const LISTING_PRICE_SQL = "marketplace_price(player_id)";
 const PAGE_COUNT_CACHE_MAX_ENTRIES = 256;
+const PERF05D2_MAX_LISTING_IDS = 9_000;
 const pageCountCache = new Map();
 let pageCountCacheGeneration = "";
 const TABLE_PAYLOAD_SCOPES = new Set([...TABLE_SCOPES, "club"]);
@@ -377,9 +378,12 @@ function syncPageCountCacheGeneration() {
   return generation;
 }
 
-function countRows(where, parameters) {
-  syncPageCountCacheGeneration();
-  const cacheKey = pageCountCacheKey(where, parameters);
+function countRows(where, parameters, cacheAllowed = true) {
+  if (cacheAllowed) syncPageCountCacheGeneration();
+  const cacheKey = cacheAllowed ? pageCountCacheKey(where, parameters) : "";
+  if (!cacheAllowed) {
+    return Number(queryOne(`SELECT count(*) AS count FROM players${where}`, parameters)?.count || 0);
+  }
   if (pageCountCache.has(cacheKey)) {
     const cached = pageCountCache.get(cacheKey);
     pageCountCache.delete(cacheKey);
@@ -556,6 +560,32 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression, ti
   appendAdvancedRules(conditions, parameters, rules, exactNameFastPath);
 
   const where = conditions.length ? ` WHERE ${conditions.join(" AND ")}` : "";
+  // Dynamic marketplace prices are not part of the immutable SQLite database.
+  // Never cache a price-sensitive COUNT across changes to the listing snapshot.
+  const listingFiltered = rules.some((r) => String(r?.column || "") === LISTING_COLUMN);
+  const simpleForSale = rules.length === 1
+    && String(rules[0]?.column || "") === LISTING_COLUMN
+    && String(rules[0]?.value || "") === "for_sale";
+  let saleWhere = where, saleParameters = parameters, saleIdsCount = -1;
+  if (simpleForSale && marketplace && marketplace.prices) {
+    // Stop counting after cap+1: dense marketplace states would allocate too
+    // much JSON/heap and regress ordinary first pages in both pinned A/B runs.
+    let count = 0;
+    for (const key in marketplace.prices) {
+      if (Object.hasOwn(marketplace.prices, key) && ++count > PERF05D2_MAX_LISTING_IDS) break;
+    }
+    if (count <= PERF05D2_MAX_LISTING_IDS) {
+      const ids = Object.entries(marketplace.prices)
+        .filter(([id,price]) => Number.isSafeInteger(Number(id))
+          && Number(id) > 0 && Number.isFinite(Number(price)) && Number(price) >= 0)
+        .map(([id]) => Number(id));
+      saleIdsCount = ids.length;
+      saleWhere = where.replace(`${LISTING_PRICE_SQL} IS NOT NULL`,
+        "player_id IN (SELECT CAST(value AS INTEGER) FROM json_each(?))");
+      // This is the single last rule; the new bind follows the scope/base binds.
+      saleParameters = [...parameters, JSON.stringify(ids)];
+    }
+  }
   const sameResultSet = where === sourceWhere && parametersEqual(parameters, baseParameters);
   const canonicalMflStatsSource = scope === "mflstats"
     && sourceWhere === ` WHERE ${mflCondition()}`
@@ -565,7 +595,11 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression, ti
     : null;
   const totalRows = sameResultSet && precomputedSourceRows !== null
     ? precomputedSourceRows
-    : measureSync(timings, "sqlite", () => countRows(where, parameters));
+    : measureSync(timings, "sqlite", () => countRows(
+      saleIdsCount >= 0 ? saleWhere : where,
+      saleIdsCount >= 0 ? saleParameters : parameters,
+      !listingFiltered,
+    ));
   const sourceRows = sameResultSet
     ? totalRows
     : precomputedSourceRows ?? measureSync(timings, "sqlite", () => countRows(sourceWhere, baseParameters));
@@ -606,10 +640,15 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression, ti
   const tailOffset = Math.max(0, remaining - pageSize);
   const reverseTail = !allRows && offset > 0 && tailOffset * 2 < offset;
   const queryOrder = reverseTail ? reverseOrderSql(order) : order;
+  // The bounded JSON membership strategy is measured safe for single for_sale
+  // with price sorting, but not general overall/age sorts or mixed OR rules.
+  const salePricePage = saleIdsCount >= 0 && sortKey === LISTING_COLUMN;
+  const pageWhere = salePricePage ? saleWhere : where;
+  const pageParameters = salePricePage ? saleParameters : parameters;
   const rows = measureSync(timings, "sqlite", () => {
     const selectedRows = queryRows(
-      `SELECT ${selectListWithListing(columns)} FROM players${where} ORDER BY ${queryOrder} LIMIT ? OFFSET ?`,
-      [...parameters, reverseTail ? Math.min(pageSize, remaining) : pageSize, reverseTail ? tailOffset : offset],
+      `SELECT ${selectListWithListing(columns)} FROM players${pageWhere} ORDER BY ${queryOrder} LIMIT ? OFFSET ?`,
+      [...pageParameters, reverseTail ? Math.min(pageSize, remaining) : pageSize, reverseTail ? tailOffset : offset],
     );
     return reverseTail ? selectedRows.reverse() : selectedRows;
   });
