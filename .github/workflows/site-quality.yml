@@ -207,6 +207,10 @@ jobs:
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-evaluation-rate-route-commit.mjs
 
+      - name: PERF-06B5 isolated populated Planner image A/B
+        if: steps.changes.outputs.site == 'true'
+        run: node validation/browser-perf06b5-image-ab.mjs
+
       - name: Planner browser regression
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-planner-regression.mjs
