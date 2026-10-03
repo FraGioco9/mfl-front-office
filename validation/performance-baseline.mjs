@@ -1259,7 +1259,7 @@ async function runJourney(executable, profile, journey) {
       progressLabel,
     );
 
-    return { cold, refresh, cached, ...(imageAuditEnabled ? { imageScroll } : {}) };
+    return { cold: imageAuditEnabled ? { ...cold, imageScroll } : cold, refresh, cached };
   } catch (error) {
     throw new Error(`${profile.id}/${journey.id}: ${error.message}\n${stderr.slice(-2000)}`, { cause: error });
   } finally {
