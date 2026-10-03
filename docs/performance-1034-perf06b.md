@@ -21,10 +21,36 @@
 
 **Initial state:** results not yet available. Do not implement eager loading, `fetchPriority`, `srcset`, WebP resizing, image proxying, or social-preview caching without a repeatable same-runner test establishing a meaningful benefit without layout/fallback/ownership regressions.
 
+## Captured mobile-slow results — 3 October 2026 (completed)
+
+The first attempt [run #37144762791](https://github.com/FraGioco9/mfl-front-office/actions/runs/37144762791) completed Player and Club measurements, but failed on the guest Planner canonical route because it expected `/planner` instead of the actual `/planner/opted-out`. The harness expectation was corrected without altering the application or bypassing opt-in.
+
+The second attempt [run #37144910896](https://github.com/FraGioco9/mfl-front-office/actions/runs/37144910896) **succeeded** on source head `2c138819c912578dc274bb2885a12d309b801477`, using read-only pinned snapshot generated `2026-10-02T17:17:23.160Z`, **Google Chrome 154.0.8037.57**, synthetic 390px mobile-slow (4× CPU, 150ms latency, 200,000 bytes/s down), two completed repetitions for every journey. These are **median CDP** image requests/transferred bytes, not all page traffic:
+
+| Journey | Cold image requests | Cold image bytes | Refresh requests | Refresh bytes | Cached SPA image requests / bytes | Scroll extra requests / bytes |
+| --- | ---: | ---: | ---: | ---: | --- | --- |
+| Player | 5 | 113,042.5 B | 5 | 0 B | 0 / 0 B | 0 / 0 B |
+| Club | 26 | 75,251.5 B | 26 | 2,339 B | 0 / 0 B | 0 / 0 B |
+| Planner guest opt-out | 0 | 0 B | 0 | 0 B | 0 / 0 B | 0 / 0 B |
+
+No image fetch **failures** were recorded in those samples. In refresh, Chrome reports five Player image cache events and 25 Club image cache events (medians); image request events include browser-cache-served objects and must not be confused with new network transfers. Cold-to-refresh byte changes are paired **phase comparisons**, not an experimental performance optimization of this PR.
+
+| Route | Cold visually settled median | Refresh settled median | Cached settled median | Explicit DOM decode after settle: sample count / median |
+| --- | ---: | ---: | ---: | --- |
+| Player | 1,883.8ms | 805.75ms | 202ms | 2 DOM images / 2.9ms |
+| Club | 2,311.8ms | 1,371.75ms | 154.55ms | 16 DOM images / 1.15ms |
+| Planner guest | 1,238.1ms | 377.4ms | 90.5ms | 0 images / 0ms |
+
+The Player hero is an off-DOM `new Image()` painted to canvas, and its decode is **not** measured by `document.images`. The explicit decode duration here is **post-load**; it cannot be used to infer LCP or critical-path image decoding. Planner guest is opted out, and zero pictures cannot represent a genuine populated roster. The test scroll returned zero additional image requests across all six samples, which **does not establish** scroll behavior in a full Planner lineup or future production CDN conditions.
+
+**Decision:** these measurements demonstrate effective cache behavior on sampled Player and Club revisits (zero additional image transfer), but show **no evidence-based improvement worth implementing in application code** on this PR. In particular, changing Player hero priority, Planner `loading=lazy`, image compression or preview cache from these samples would be speculative. Further authenticated Planner fixture and real-device raster/decode tests remain required for release.
+
+The first report's `sourceCommit` value was the GitHub Actions synthetic merge SHA rather than the PR's source head. The diagnostic workflow has since been corrected to record `github.event.pull_request.head.sha` explicitly on subsequent captures, avoiding incorrect provenance.
+
 ## Validations and release
 
-- [ ] Dedicated diagnostic workflow completes all Player/Club/Planner journeys and scroll observations; report actual errors, image request counts and transferred bytes.
-- [ ] Verify A/B-style paired measurements; document whether an application change is warranted. If a production fix is supported, use a **separate PR** with regression tests and its own exact-head CI.
+- [x] Dedicated pinned-snapshot [run #37144910896](https://github.com/FraGioco9/mfl-front-office/actions/runs/37144910896) captured two full repetitions with Player/Club and **guest opt-out Planner**. Documented actual counts, bytes, failures and scroll.
+- [x] Paired cold/refresh/cached/scroll observations reviewed: **no application change justified**; additional test-only authenticated Planner evidence remains a follow-up if needed. No separate production PR.
 - [ ] Full exact-head ordinary Site Quality, Mobile (including Age/Listing), Table Header and A11Y workflow checks green; do not mistake a `action_required` bot run for success.
 - [ ] Document slow-mobile/DPR/scroll/revisit/failure limits; **PERF-06.5** and **TEST-04B6.6** remain pending for final real-device Safari/iPhone release QA.
 
