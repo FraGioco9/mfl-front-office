@@ -26,3 +26,9 @@ A dedicated Site Quality step runs the validator. Compare its exact-head full br
 ## Rollback and exclusions
 
 Revert the specific route-sync invocation plus validator/workflow/report, requiring no database or Vercel actions. No merge, live database refresh, Supabase configuration changes or Vercel deployment are authorized at this stage.
+
+## First end-to-end CI measurements (source head before generated-asset commit)
+
+[Site Quality #37139698748](https://github.com/FraGioco9/mfl-front-office/actions/runs/37139698748) on source head `40ade4743f8cecf828e647acc10f3a293646b6dc` completed successfully. The **canonical broad browser routing** step took **39 seconds** versus **218 seconds** on pre-fix [Site Quality #37137941454](https://github.com/FraGioco9/mfl-front-office/actions/runs/37137941454). This is a **179-second reduction** with all 25 routing scenarios retained. The focused Planner step took **8 seconds**, unchanged from the pre-fix 8 seconds. The separate new real-event readiness regression completed in **2 seconds**. Total `quality` job elapsed **147 seconds** versus **328 seconds** on the pre-fix full-scope `main` run.
+
+The CI `Commit generated site artifacts` step created a second commit on the PR head, updating `modules/app-core-runtime.js` and `table-width-runtime.js`. GitHub marks Actions triggered by that bot-authored push `action_required`; this is a permission/trigger gate, **not** a green test run. This report update is a normal branch commit after generated assets to trigger a fresh **exact-final-head CI**. Do not mark release/merge gates complete until all workflows and jobs actually succeed on that final SHA.
