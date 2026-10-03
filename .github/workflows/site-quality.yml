@@ -179,6 +179,10 @@ jobs:
         if: steps.changes.outputs.quality == 'true'
         run: npm run validate
 
+      - name: PERF-06A portrait retention same-runner A/B
+        if: steps.changes.outputs.site == 'true'
+        run: node validation/perf06-portrait-cache-ab.mjs
+
       - name: UX-02 recovery browser matrix
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-ux02-recovery-regression.mjs
