@@ -1,0 +1,58 @@
+name: PERF-05 representative SQL plan capture (temporary)
+
+# Exact successful full-database refresh fixture. Purely local, read-only.
+# Deliberately remove this workflow before merging PERF-05A audit PR.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/perf05-snapshot-profile.yml"
+      - "scripts/performance/perf05-query-profile.cjs"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  sql-profile:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Download immutable successful refresh snapshot
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 37113407333 --repo "$GITHUB_REPOSITORY" --name mfl_database --dir .
+          test -s mfl_database.db
+          sha256sum mfl_database.db
+          node -e 'const { DatabaseSync }=require("node:sqlite");const db=new DatabaseSync("mfl_database.db",{readOnly:true});db.exec("PRAGMA query_only=ON");const m=Object.fromEntries(db.prepare("SELECT key, value FROM runtime_metadata WHERE key IN ('row_count','wallet_count','generated_at')").all().map(x=>[x.key,x.value]));console.log(JSON.stringify(m));if(Number(m.row_count)!==387258||Number(m.wallet_count)!==7866)process.exit(1);db.close()'
+      - name: Capture actual API SQL with EXPLAIN and same-runner timings
+        env:
+          MFL_DATABASE_PATH: mfl_database.db
+          PERF05_REPETITIONS: "3"
+        run: |
+          set -euo pipefail
+          export PERF05_SOURCE_SHA="$GITHUB_SHA"
+          node scripts/performance/perf05-query-profile.cjs > perf05-snapshot-query-profile.json
+          node - <<'NODE'
+          const r=require("./perf05-snapshot-query-profile.json");
+          for (const s of r.scenarios) {
+            const details = s.statements.map(x=>x.kind + ": " + x.medianMs + "ms full_scans=" + x.fullPlayerScans + " sorts=" + x.temporarySorts + " index=" + x.indexNames.join("|"));
+            console.log(JSON.stringify({scenario:s.name,rows:s.response.totalRows,page:s.response.page,pages:s.response.totalPages,statements:details}));
+          }
+          if(r.scenarios.length < 10)process.exit(1);
+          NODE
+      - name: Preserve sanitized read-only query plan and timing report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf05-real-database-query-plans-${{ github.run_id }}
+          path: perf05-snapshot-query-profile.json
+          retention-days: 90
+          if-no-files-found: warn
