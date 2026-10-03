@@ -282,6 +282,63 @@ class RuntimeQueryPlanTests(unittest.TestCase):
                 precomputed_plan,
             )
 
+    def test_nationality_order_index_preserves_filters_and_page_boundaries(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = self.prepare_database(directory)
+            nationality_sql = (
+                "SELECT player_id, overall FROM players "
+                "WHERE nationality = ? "
+                "AND overall BETWEEN ? AND ? "
+                f"ORDER BY {runtime_query_plans.DEFAULT_OVERALL_ORDER_SQL} LIMIT ? OFFSET ?"
+            )
+            position_sql = (
+                "SELECT player_id, overall FROM players "
+                "WHERE nationality = ? "
+                "AND (',' || replace(coalesce(positions, ''), ' ', '') || ',') "
+                "LIKE '%,' || replace(?, ' ', '') || ',%' "
+                f"ORDER BY {runtime_query_plans.DEFAULT_OVERALL_ORDER_SQL} LIMIT ? OFFSET ?"
+            )
+            queries = (
+                (nationality_sql, ("Italy", 70, 85, 100, 0)),
+                (nationality_sql, ("France", 70, 85, 100, 300)),
+                (position_sql, ("Italy", "CM", 100, 0)),
+                (position_sql, ("France", "ST", 100, 100)),
+            )
+
+            with sqlite3.connect(database_path) as connection:
+                connection.execute("DROP INDEX players_nationality_order_index")
+                connection.execute("ANALYZE")
+                unindexed = tuple(
+                    runtime_query_plans.measure_query_work(connection, sql, params)
+                    for sql, params in queries
+                )
+
+                connection.execute(
+                    "CREATE INDEX players_nationality_order_index "
+                    "ON players(nationality, (overall IS NULL), overall DESC, player_id DESC)"
+                )
+                connection.execute("ANALYZE")
+                indexed = tuple(
+                    runtime_query_plans.measure_query_work(connection, sql, params)
+                    for sql, params in queries
+                )
+                plans = tuple(
+                    runtime_query_plans.explain_query_plan(connection, sql, params)
+                    for sql, params in queries
+                )
+
+            for before, after, details in zip(unindexed, indexed, plans):
+                self.assertEqual(before.rows, after.rows, "Index changed page results or ordering")
+                self.assertTrue(
+                    any("players_nationality_order_index" in detail for detail in details),
+                    details,
+                )
+                self.assertFalse(
+                    any("USE TEMP B-TREE" in detail for detail in details),
+                    details,
+                )
+            self.assertGreater(len(unindexed[0].rows), 0)
+
     def test_budget_detects_loss_of_production_overall_order_index(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             database_path = self.prepare_database(directory)
