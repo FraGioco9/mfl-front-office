@@ -30,9 +30,9 @@ const injection = `    await cdp.send("Runtime.enable");
       assert.equal(sample.zIndex, "5", label + ": Name body stacking order changed");
       assert.equal(sample.isolation, "isolate", label + ": Name opacity isolation changed");
       assert.equal(sample.clip, "border-box", label + ": Name paint clipping changed");
-      assert.match(sample.color, /^rgb\\(/, label + ": Name background must be opaque computed RGB");
+      assert.ok(sample.color.startsWith("rgb("), label + ": Name background must be opaque computed RGB");
       assert.equal(sample.image, "none", label + ": PERF-02B gradient layers returned");
-      assert.match(sample.hoverColor, /^rgb\\(/, label + ": hovered Name background must be opaque");
+      assert.ok(sample.hoverColor.startsWith("rgb("), label + ": hovered Name background must be opaque");
       assert.notEqual(sample.hoverColor, sample.color, label + ": hovered Name color should change");
       if (sample.position === "start") {
         assert.equal(sample.canLeft, false, label + ": left fade should be hidden");
