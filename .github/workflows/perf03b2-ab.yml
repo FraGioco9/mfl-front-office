@@ -1,0 +1,114 @@
+name: PERF-03B2 same-runner search A-B (temporary)
+
+# Capture-only workflow. Deliberately removed before merging the audit PR.
+# No production Vercel, Supabase writes, wallet secrets or environment access.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/perf03b2-ab.yml"
+      - "validation/perf03b2-*"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  paired-search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Fetch pinned validated database snapshot
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Successful four-checkpoint refresh, never a live production query.
+          gh run download 37113407333 --repo "$GITHUB_REPOSITORY" --name mfl_database --dir .
+          test -f mfl_database.db
+          python -m scripts.database.prepare_runtime_database mfl_database.db --validate-only
+          mkdir -p api/data-files
+          mv mfl_database.db api/data-files/mfl_database.db
+
+      - name: Install exact Node dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build ONE canonical local Next production site
+        run: |
+          set -euo pipefail
+          npm run build:legacy
+          npm run build:public
+          npx next build --webpack
+
+      - name: Launch local Next and symmetric control/candidate proxies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx next start -p 4000 > perf03b2-next.log 2>&1 &
+          echo "NEXT_PID=$!" >> "$GITHUB_ENV"
+          for attempt in $(seq 1 100); do
+            if curl --silent --fail http://127.0.0.1:4000/api/data?mode=summary > /tmp/perf03b2-next-ready.json; then break; fi
+            sleep 0.5
+          done
+          test -s /tmp/perf03b2-next-ready.json || { cat perf03b2-next.log; exit 1; }
+          node validation/perf03b2-candidate-proxy.mjs > perf03b2-proxy.log 2>&1 &
+          echo "PROXY_PID=$!" >> "$GITHUB_ENV"
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail http://127.0.0.1:4001/modules/app-core-runtime.js >/dev/null \
+              && curl --silent --fail http://127.0.0.1:4002/modules/app-core-runtime.js >/dev/null \
+              && curl --silent --fail http://127.0.0.1:4002/global-search-runtime.js >/dev/null; then
+              break
+            fi
+            sleep 0.5
+          done
+          test -s perf03b2-payload-sizes.json || { cat perf03b2-proxy.log; exit 1; }
+
+      - name: Same-runner Chrome CDP paired ABBA experiment
+        shell: bash
+        env:
+          MFL_BASELINE_ACCESS_CONTEXT: guest/public-database
+          MFL_BASELINE_LABEL: perf03b2-canonical-pinned-db
+          MFL_BASELINE_PROFILES: desktop,mobile-slow
+          MFL_BASELINE_JOURNEYS: home,database,evaluation
+          MFL_BASELINE_RUNS: "1"
+          MFL_BASELINE_SOURCE_REF: "PERF-03B2 experimental branch"
+        run: |
+          set -euo pipefail
+          export MFL_BASELINE_SOURCE_COMMIT="$(git rev-parse HEAD)"
+          for entry in control:1:4001 candidate:1:4002 candidate:2:4002 control:2:4001; do
+            IFS=: read -r variant repetition port <<< "$entry"
+            echo "PERF-03B2 same-runner $variant repetition $repetition on port $port"
+            export MFL_BASE_URL="http://127.0.0.1:$port"
+            export MFL_BASELINE_OUTPUT="perf03b2-$variant-$repetition.json"
+            node validation/perf03b2-measure.mjs 2>&1 | tee "perf03b2-$variant-$repetition.log"
+          done
+
+      - name: Analyze paired evidence without automatic speedup claims
+        run: node validation/perf03b2-compare.mjs
+
+      - name: Publish GitHub Actions evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf03b2-search-ab-${{ github.run_id }}
+          path: |
+            perf03b2-*.json
+            perf03b2-*.md
+            perf03b2-*.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Stop only local test servers
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${PROXY_PID:-}" ]; then kill "${PROXY_PID:-}" >/dev/null 2>&1 || true; fi
+          if [ -n "${NEXT_PID:-}" ]; then kill "${NEXT_PID:-}" >/dev/null 2>&1 || true; fi
