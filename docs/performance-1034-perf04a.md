@@ -19,6 +19,28 @@ Canonical CSS is assembled in deterministic order by `build-styles.mjs` / `style
 
 The project's Vercel prebuilt deployment path is also distinct from local `next start`: `scripts/workflows/sync-vercel-security-headers.mjs` and `verify-prebuilt-security-headers.mjs` explicitly handle CSP in generated `.vercel/output/config.json`. An audit of local Next headers alone **cannot** certify the equivalent Vercel edge policy. A separate PERF-04B proof must inspect the Build Output API rules and then browser/network effects, still with no deployment until the final release.
 
+## Verified local Next HTTP capture — October 3, 2026
+
+[Site Quality run #37119707783](https://github.com/FraGioco9/mfl-front-office/actions/runs/37119707783) passed the new source and HTTP contract checks against its built **local production Next server** (`127.0.0.1:4010`) and the CI-controlled generated artifacts:
+
+| Response / measurement | Observed |
+| --- | --- |
+| Primary CSS URL | `/styles-runtime.css` (same Home/deep link) |
+| CSS SHA-256 | `e677ca5e6febd1e952e7ef71af00cb14d5fa1ffd0565f63f44545d297d3d1811` |
+| CSS decoded body bytes | **370,079**, exact match to generated artifact |
+| CSS `Cache-Control` | `public, max-age=0, must-revalidate` |
+| CSS `ETag` present | **Yes** |
+| Same-URL `If-None-Match` response | **HTTP 200**, not 304 (full-body fallback byte-matched current CSS) |
+| Repeated CSS GET | HTTP 200, decoded **370,079 bytes**, byte-identical |
+| Home shell / release metadata | `no-store, max-age=0` |
+| Deep-link HTML | `private, no-store` |
+| Unversioned core JS | `no-store, max-age=0` |
+| Core JS with `mfl_core` query | `public, max-age=31536000, immutable`; bytes matched unversioned core |
+
+**Interpretation:** The current local Next path **did not** return a 304 for a matching conditional CSS request in this CI run, despite emitting an ETag. The client-visible payload is **370,079 decoded bytes**, *not* proof of 370 KB sent on the wire (compression can reduce encoded transfer). No controlled repeated browser-navigation/network/CDN capture was run; these tests deliberately avoid claiming real RUM or remote edge equivalence.
+
+This is useful evidence for considering PERF-04B's conditional-cache efficacy and release-safe asset identity. It is **not** a reason to mark stable-path CSS `immutable`: a 304 optimization would require correct validators/edge behavior without risking stale content, while a longer TTL requires a genuinely versioned path and retained previous-version bytes.
+
 ## Automated gates added in PERF-04A
 
 1. `validate-perf04-cache-contract.mjs` is called from the build/generated validation domain (via `npm run validate`). It checks deterministic generated CSS bytes and digest, stable shell CSS href, production/development header ownership, public zero-age CSS revalidation, uncached shell/release/unversioned JS, and no premature `mfl_style` immutable rule.
