@@ -1,0 +1,98 @@
+name: PERF-05D pinned text and listing SQL A/B (temporary)
+
+# Research-only workflow. Remove before merge. No database refresh or deploy.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/perf05d-text-listing-ab.yml"
+      - "scripts/performance/perf05d-text-listing-ab.cjs"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  same-runner-sql-ab:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Download the exact pinned validated snapshot (read-only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 37113407333 --repo "$GITHUB_REPOSITORY" --name mfl_database --dir .
+          test -s mfl_database.db
+          sha256sum mfl_database.db
+          node <<'NODE'
+          const {DatabaseSync}=require('node:sqlite');
+          const db=new DatabaseSync('mfl_database.db',{readOnly:true});
+          const n=Number(db.prepare('SELECT count(*) AS n FROM players').get().n);
+          const meta=Object.fromEntries(db.prepare(
+            "SELECT key,value FROM runtime_metadata WHERE key IN ('row_count','wallet_count','generated_at')"
+          ).all().map(x=>[x.key,x.value]));
+          console.log(JSON.stringify({players:n,metadata:meta}));
+          if(n!==387258||Number(meta.wallet_count)!==7866)process.exitCode=1;
+          db.close();
+          NODE
+      - name: Syntax and isolated smoke with known offline players
+        run: |
+          set -euo pipefail
+          node --check scripts/performance/perf05d-text-listing-ab.cjs
+          node scripts/ci/create-next-sqlite-smoke-fixture.cjs /tmp/perf05d-smoke.db
+          node <<'NODE'
+          const {DatabaseSync}=require("node:sqlite");
+          const {normalizeSearchText}=require("./api/_database.js");
+          const db=new DatabaseSync("/tmp/perf05d-smoke.db");
+          db.exec("CREATE TABLE runtime_player_search(player_id TEXT PRIMARY KEY,normalized_name TEXT NOT NULL)");
+          const ins=db.prepare("INSERT INTO runtime_player_search VALUES (?,?)");
+          for(const p of db.prepare("SELECT player_id,name FROM players").all())ins.run(p.player_id,normalizeSearchText(p.name));
+          db.close();
+          NODE
+          MFL_DATABASE_PATH=/tmp/perf05d-smoke.db PERF05D_REPETITIONS=1 node scripts/performance/perf05d-text-listing-ab.cjs >/tmp/perf05d-smoke.json
+          node - <<'NODE'
+          const assert=require("node:assert/strict");
+          const r=require("/tmp/perf05d-smoke.json");
+          assert.equal(r.normalizedLookupMismatchRows,0);
+          assert.equal(r.scenarios.length,15);
+          assert.ok(r.pairedStatements>10);
+          assert.ok(r.scenarios.every(x=>x.statements.length>0));
+          console.log("Smoke SQL scenarios:",r.scenarios.length,"paired:",r.pairedStatements);
+          NODE
+      - name: Paired A-B-B-A query timings with EXPLAIN on unchanged snapshot
+        env:
+          MFL_DATABASE_PATH: mfl_database.db
+          PERF05D_REPETITIONS: "3"
+        run: |
+          set -euo pipefail
+          node scripts/performance/perf05d-text-listing-ab.cjs > perf05d-same-runner.json
+          node <<'NODE'
+          const assert=require("node:assert/strict");
+          const r=require("./perf05d-same-runner.json");
+          assert.equal(r.snapshot.playerCount,387258);
+          assert.equal(r.snapshot.walletCount,7866);
+          assert.equal(r.scenarios.length,15);
+          assert.ok(r.pairedStatements>=3);
+          for(const x of r.scenarios){
+            for(const s of x.statements){
+              console.log(JSON.stringify({scenario:x.scenario,kind:s.kind,strategy:s.strategy,
+                A:s.latencyMs.A,B:s.latencyMs.B,delta:s.latencyMs.pairedDeltaMs,
+                planA:s.plans.A,planB:s.plans.B}));
+            }
+          }
+          console.log("NORMALIZATION_MISMATCH_ROWS",r.normalizedLookupMismatchRows);
+          console.log("PAIRED_STATEMENTS",r.pairedStatements);
+          NODE
+      - name: Archive sanitized query plans and timings
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf05d-same-runner-${{ github.run_id }}
+          path: perf05d-same-runner.json
+          if-no-files-found: warn
+          retention-days: 90
