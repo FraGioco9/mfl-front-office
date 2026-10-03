@@ -1,4 +1,4 @@
-name: PERF-02B paired Table selectors (temporary)
+name: PERF-02B paired opaque backgrounds (temporary)
 on:
   push:
     branches: [audit-1034-perf02b-selector-ab]
