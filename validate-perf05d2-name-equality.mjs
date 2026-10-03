@@ -54,7 +54,8 @@ const independent=(query)=>query.replaceAll(
   const response=await pagedData({query},"",true,false);
   assert.ok(response&&Array.isArray(response.rows));
   const sql=captured.filter(c=>/^SELECT\s/i.test(c.sql));
-  assert.ok(sql.length>=2,"missing COUNT/page queries");
+  // An identical predicate may reuse the deliberate COUNT LRU across sorts.
+  assert.ok(sql.some((entry)=>entry.kind==="page"),"missing canonical page query");
   for(const item of sql){
     const optimized=item.sql.includes("runtime_player_search WHERE normalized_name");
     const applies=item.sql.includes('normalize_search("name") = ?') || optimized;
