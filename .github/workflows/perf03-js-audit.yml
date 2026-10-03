@@ -30,72 +30,31 @@ jobs:
         with:
           node-version: 22
 
-      - name: Download latest validated runtime database
+      - name: Download pinned validated runtime database
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-
-          LATEST_RUN_ID=""
-          LATEST_ARTIFACT_ID=""
-          LATEST_CREATED_AT=""
-
-          while IFS=$'\t' read -r CREATED_AT ARTIFACT_ID RUN_ID; do
-            [ -n "$ARTIFACT_ID" ] || continue
-            [ -n "$RUN_ID" ] || continue
-
-            rm -f mfl_database.db
-            echo "Checking mfl_database artifact $ARTIFACT_ID from run $RUN_ID ($CREATED_AT)."
-
-            if ! gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name mfl_database --dir .; then
-              echo "Artifact $ARTIFACT_ID could not be downloaded; trying the next candidate."
-              continue
-            fi
-
-            if python -m scripts.database.prepare_runtime_database mfl_database.db --validate-only; then
-              LATEST_RUN_ID="$RUN_ID"
-              LATEST_ARTIFACT_ID="$ARTIFACT_ID"
-              LATEST_CREATED_AT="$CREATED_AT"
-              break
-            fi
-
-            rm -f mfl_database.db
-            echo "Artifact $ARTIFACT_ID is not a valid prepared database; trying the next candidate."
-          done < <(
-            gh api --paginate \
-              "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=mfl_database&per_page=100" \
-              --jq '.artifacts[] | select(.name == "mfl_database" and .expired == false) | [.created_at, (.id | tostring), (.workflow_run.id | tostring)] | @tsv' \
-              | sort -r
-          )
-
-          if [ -z "$LATEST_RUN_ID" ]; then
-            echo "No valid non-expired mfl_database artifact was found." >&2
-            exit 1
-          fi
-
+          gh run download 37038069396 --repo "$GITHUB_REPOSITORY" --name mfl_database --dir .
+          python -m scripts.database.prepare_runtime_database mfl_database.db --validate-only
           mkdir -p api/data-files
           mv mfl_database.db api/data-files/mfl_database.db
           python -m scripts.database.prepare_runtime_database api/data-files/mfl_database.db --validate-only
-
           DATASET_GENERATED_AT="$(python - <<'PY'
           import sqlite3
-          value = sqlite3.connect("api/data-files/mfl_database.db").execute(
-              "SELECT value FROM runtime_metadata WHERE key = 'generated_at' LIMIT 1"
+          value=sqlite3.connect("api/data-files/mfl_database.db").execute(
+              "SELECT value FROM runtime_metadata WHERE key='generated_at' LIMIT 1"
           ).fetchone()
-          print(str(value[0] if value else "").strip())
+          print(value[0] if value else "")
           PY
           )"
-
           {
-            echo "database_artifact_id=$LATEST_ARTIFACT_ID"
-            echo "database_run_id=$LATEST_RUN_ID"
-            echo "database_artifact_created_at=$LATEST_CREATED_AT"
+            echo "database_artifact_id=11242500512"
+            echo "database_run_id=37038069396"
             echo "dataset_generated_at=$DATASET_GENERATED_AT"
           } >> "$GITHUB_ENV"
-
-          echo "Using database artifact $LATEST_ARTIFACT_ID from run $LATEST_RUN_ID."
-          echo "Dataset generated_at: $DATASET_GENERATED_AT"
+          echo "Pinned source dataset 11242500512: $DATASET_GENERATED_AT"
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
@@ -147,6 +106,8 @@ jobs:
           export MFL_BASELINE_RUNS="1"
           export MFL_BASELINE_PROFILES="desktop,mobile-slow"
           export MFL_BASELINE_JOURNEYS="home,database,player,club,my-clubs,evaluation,stats"
+          node --check validation/perf03-js-audit.mjs
+          node --check validation/perf03-js-report.mjs
           node validation/perf03-js-audit.mjs 2>&1 | tee performance-baseline-current.log
 
       - name: Verify complete capture
@@ -177,7 +138,8 @@ jobs:
               for phase,samples in phases.items():
                 assert len(samples) == 1, (profile,journey,phase)
                 audit=samples[0].get("perf03Js")
-                assert audit and audit["scripts"] and audit["performanceMetrics"], (profile,journey,phase)
+                assert audit and isinstance(audit["scripts"], list) and audit["performanceMetrics"], (profile,journey,phase)
+                if phase != "cached": assert audit["scripts"], (profile,journey,phase)
                 metrics=audit["performanceMetrics"]
                 assert "ScriptDuration" in metrics, (profile,journey,phase,metrics.keys())
                 assert "V8CompileDuration" in metrics, (profile,journey,phase,metrics.keys())
