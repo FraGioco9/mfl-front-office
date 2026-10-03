@@ -16,7 +16,7 @@ const child = spawn(process.execPath, ["validation/performance-baseline.mjs"], {
     MFL_BASELINE_OUTPUT: reportPath,
     MFL_BASELINE_LABEL: "PERF-06B isolated Next production/local pinned DB",
     MFL_BASELINE_SOURCE_REF: process.env.GITHUB_HEAD_REF || "isolated-perf06b",
-    MFL_BASELINE_SOURCE_COMMIT: process.env.GITHUB_SHA || "",
+    MFL_BASELINE_SOURCE_COMMIT: process.env.MFL_PERF06B_SOURCE_SHA || process.env.GITHUB_SHA || "",
     MFL_BASELINE_ACCESS_CONTEXT: "guest-only/pinned-validated-snapshot/no-live-writes",
   },
 });
