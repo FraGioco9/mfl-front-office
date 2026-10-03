@@ -42,6 +42,7 @@ const outputPath = String(process.env.MFL_BASELINE_OUTPUT || "").trim();
 const sourceCommit = String(process.env.MFL_BASELINE_SOURCE_COMMIT || "").trim();
 const sourceRef = String(process.env.MFL_BASELINE_SOURCE_REF || "").trim();
 const accessContext = String(process.env.MFL_BASELINE_ACCESS_CONTEXT || "guest/public-database").trim();
+const imageAuditEnabled = process.env.MFL_PERF06B_IMAGE_AUDIT === "1";
 
 const PROFILES = Object.freeze({
   desktop: Object.freeze({
@@ -288,6 +289,13 @@ function journeysFor({ playerId, clubId }) {
       options: Object.freeze({ clubId, view: "squad" }),
     }),
     Object.freeze({
+      id: "planner",
+      path: "/planner",
+      page: "planner",
+      options: Object.freeze({}),
+      profileOnly: true,
+    }),
+    Object.freeze({
       id: "my-clubs",
       path: "/my-clubs",
       expectedPath: "/my-clubs/opted-out",
@@ -499,7 +507,9 @@ function createNetworkCollector(cdp) {
     })();
     current.requestCount += 1;
     if (api) current.apiRequestCount += 1;
-    requests.set(requestId, { api, url, type: String(type || "") });
+    const image = imageAuditEnabled && (String(type || "") === "Image" || /\.(?:webp|png|jpe?g|gif|svg|avif)(?:\?|$)/i.test(url));
+    if (image) current.imageRequests += 1;
+    requests.set(requestId, { api, image, url, type: String(type || "") });
     pendingRequestIds.add(requestId);
     activitySequence += 1;
   });
@@ -507,6 +517,9 @@ function createNetworkCollector(cdp) {
   cdp.on("Network.responseReceived", ({ requestId, response }) => {
     if (!current) return;
     const request = requests.get(requestId);
+    if (request?.image) {
+      current.imageStatus.push({ status: Number(response?.status) || 0, mime: String(response?.mimeType || ""), fromDiskCache: Boolean(response?.fromDiskCache), fromServiceWorker: Boolean(response?.fromServiceWorker) });
+    }
     if (!request?.api) return;
     const headers = response?.headers && typeof response.headers === "object" ? response.headers : {};
     const serverTimingEntry = Object.entries(headers)
@@ -528,13 +541,22 @@ function createNetworkCollector(cdp) {
     const bytes = Math.max(0, Number(encodedDataLength) || 0);
     current.bytes += bytes;
     if (request.api) current.apiBytes += bytes;
+    if (request.image) {
+      current.imageTransferredBytes += bytes;
+      current.imagesFinished += 1;
+    }
     pendingRequestIds.delete(requestId);
     requests.delete(requestId);
     activitySequence += 1;
   });
 
+  cdp.on("Network.requestServedFromCache", ({ requestId }) => {
+    if (current && requests.get(requestId)?.image) current.imageCacheEvents += 1;
+  });
+
   cdp.on("Network.loadingFailed", ({ requestId }) => {
     if (!current || !requests.has(requestId)) return;
+    if (requests.get(requestId)?.image) current.imageFailed += 1;
     pendingRequestIds.delete(requestId);
     requests.delete(requestId);
     activitySequence += 1;
@@ -550,6 +572,12 @@ function createNetworkCollector(cdp) {
         apiRequestCount: 0,
         bytes: 0,
         apiBytes: 0,
+        imageRequests: 0,
+        imageTransferredBytes: 0,
+        imagesFinished: 0,
+        imageFailed: 0,
+        imageCacheEvents: 0,
+        imageStatus: [],
         serverTiming: {},
       };
       return current;
@@ -1019,7 +1047,21 @@ async function runMeasuredPhase(
     const browserMetrics = await collectBrowserMetrics(cdp, minimumSequence, phase);
     const elapsedSeconds = Math.round((Date.now() - phaseStartedAt) / 1000);
     console.log(`  ${label}: complete (${elapsedSeconds}s)`);
-    return { ...browserMetrics, ...networkMetrics };
+    const imageDecodeProbe = imageAuditEnabled ? await evaluate(cdp, `(async () => {
+      const images = [...document.images].filter((img) => {
+        const r = img.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight && img.complete && img.naturalWidth > 0;
+      }).slice(0, 16);
+      const started = performance.now();
+      const outcomes = await Promise.allSettled(images.map((img) => img.decode()));
+      return {
+        visibleDecodableImages: images.length,
+        explicitDecodeDurationMs: Math.round((performance.now() - started) * 100) / 100,
+        decodeRejected: outcomes.filter((result) => result.status === "rejected").length,
+        note: "Post-settlement explicit IMG.decode() probe only; Player canvas Image() outside DOM and critical-path decode excluded.",
+      };
+    })()`) : null;
+    return { ...browserMetrics, ...networkMetrics, ...(imageDecodeProbe ? { imageDecodeProbe } : {}) };
   } finally {
     clearInterval(heartbeat);
     network.stop();
@@ -1159,6 +1201,34 @@ async function runJourney(executable, profile, journey) {
       progressLabel,
     );
 
+    let imageScroll = null;
+    if (imageAuditEnabled) {
+      const scrollNetwork = network.start();
+      await evaluate(cdp, `(() => {
+        const target = document.querySelector("#plannerPage .playerTableScroller, #clubPage .playerTableScroller, #plannerPage .plannerSquadSection, .playerHero") || document.scrollingElement;
+        if (target instanceof HTMLElement) {
+          if (target.scrollHeight > target.clientHeight) target.scrollTop = target.scrollHeight;
+          else target.scrollIntoView({ block: "end" });
+        }
+        window.scrollTo({ top: Math.max(0, document.documentElement.scrollHeight - innerHeight), behavior: "instant" });
+        return true;
+      })()`);
+      const scrollStartedAt = Date.now();
+      let timedOut = false;
+      try {
+        await network.waitForIdle(10_000);
+      } catch {
+        timedOut = true;
+      }
+      imageScroll = { ...scrollNetwork, elapsedMs: Date.now() - scrollStartedAt, timedOut };
+      network.stop();
+      console.log("PERF06B_SCROLL " + JSON.stringify({
+        journey: journey.id, profile: profile.id, imageRequests: imageScroll.imageRequests,
+        imageTransferredBytes: imageScroll.imageTransferredBytes, imageFailed: imageScroll.imageFailed,
+        imageCacheEvents: imageScroll.imageCacheEvents, timedOut,
+      }));
+    }
+
     const refresh = await runMeasuredPhase(
       cdp,
       network,
@@ -1189,7 +1259,7 @@ async function runJourney(executable, profile, journey) {
       progressLabel,
     );
 
-    return { cold, refresh, cached };
+    return { cold, refresh, cached, ...(imageAuditEnabled ? { imageScroll } : {}) };
   } catch (error) {
     throw new Error(`${profile.id}/${journey.id}: ${error.message}\n${stderr.slice(-2000)}`, { cause: error });
   } finally {
