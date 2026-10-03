@@ -37,6 +37,7 @@ const validators = [
   "validate-performance-foundations.mjs",
   "validate-perf01-capture-evidence.mjs",
   "validate-perf03b-search-boundary.mjs",
+  "validate-perf05d2-name-equality.mjs",
   "validate-core-type-diagnostic-baseline.mjs",
   "validate-accessibility-navigation-lifecycle.mjs",
 ];
