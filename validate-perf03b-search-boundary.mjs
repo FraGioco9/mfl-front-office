@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
-import ts from "typescript";
+import ts from "@typescript/typescript6";
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 
 const root = fileURLToPath(new URL("./", import.meta.url));
