@@ -20,6 +20,16 @@ for (const path of staticPaths) {
   try { localBytes["/" + path] = (await stat(resolve(root, path))).size; }
   catch (error) { if (error?.code !== "ENOENT") throw error; }
 }
+const sharedEntry = coreSourceManifest.find((x) => x.domain === "shared");
+assert.ok(sharedEntry, "Shared manifest missing");
+const sharedBundleSource = await readFile(resolve(root, "modules/app-core-runtime.js"), "utf8");
+const sharedFragments = [];
+for (const name of sharedEntry.sources) {
+  const src = (await readFile(resolve(root, "modules/core-sources", name), "utf8")).replace(/\r\n?/g, "\n").replace(/\s*$/, "");
+  const start = sharedBundleSource.indexOf(src);
+  assert.ok(start >= 0, "Generated Shared runtime does not contain canonical fragment " + name);
+  sharedFragments.push({ name, start, end: start + src.length, bytes: Buffer.byteLength(src, "utf8") });
+}
 const labels = report.metadata.profiles;
 const routeRows = [];
 const loadPathsByRoute = {};
@@ -57,6 +67,18 @@ for (const profile of labels) {
     loadPathsByRoute[profile + "/" + journey] = pathSets;
   }
 }
+const sharedFragmentCoverage = sharedFragments.map(({ name, start, end, bytes }) => {
+  const routes = {};
+  for (const profile of labels) {
+    for (const [journey, phases] of Object.entries(report.raw[profile])) {
+      const functions = phases.cold[0].perf03Js.scripts.flatMap((script) =>
+        new URL(script.url).pathname === "/modules/app-core-runtime.js" ? (script.coreFunctions || []) : []);
+      const matched = functions.filter((f) => Number.isInteger(f.start) && f.start >= start && f.start < end);
+      routes[profile + "/" + journey] = { reached: matched.filter((f) => f.reached).length, declared: matched.length };
+    }
+  }
+  return { name, bytes, routes };
+});
 const pathRoutes = Object.keys(loadPathsByRoute);
 const universallyCold = Object.keys(localBytes).filter((p) => pathRoutes.every((id) => loadPathsByRoute[id].cold.includes(p)));
 const routeOwned = coreSourceManifest.filter(({ domain }) => domain !== "shared").map(({ domain, runtime }) => ({
@@ -72,7 +94,7 @@ const evidence = {
     commonRuntimeBytes: universallyCold.reduce((n, p) => n + (localBytes[p] || 0), 0),
     manifestCeilingSharedBytes: coreSourceManifest.find((x) => x.domain === "shared")?.maxUniversalBytes,
   },
-  localBytes, universallyCold, routeOwned, routeRows,
+  localBytes, universallyCold, routeOwned, routeRows, sharedFragmentCoverage,
 };
 await writeFile(output, JSON.stringify(evidence, null, 2) + "\n", "utf8");
 const kb = (value) => value == null ? "-" : (value / 1024).toFixed(1);
@@ -101,6 +123,18 @@ const lines = [
   "| Domain | JS runtime | KiB | Routes that loaded it on cold |",
   "| --- | --- | ---: | --- |",
   ...routeOwned.map((r) => "| " + r.domain + " | " + r.runtime + " | " + kb(r.declaredBytes) + " | " + r.coldRoutes.join(", ") + " |"),
+  "",
+  "### Shared-fragment function reachability (cold, Chrome precise coverage)",
+  "",
+  "Number of function spans with observed calls / declared spans in the generated Shared script. This is **not** a safe dead-code list: some functions are called only after navigation, wallet login or interaction, and inner-function overlaps may apply.",
+  "",
+  "| Shared fragment | UTF-8 KiB | Home mobile | Database mobile | Player mobile | Evaluation mobile |",
+  "| --- | ---: | ---: | ---: | ---: | ---: |",
+  ...sharedFragmentCoverage.map((f) => "| " + f.name + " | " + kb(f.bytes) + " | " +
+    ["home","database","player","evaluation"].map((j) => {
+      const count = f.routes["mobile-slow/" + j];
+      return count ? count.reached + "/" + count.declared : "-";
+    }).join(" | ") + " |"),
   "",
   "**Gate:** do not move shared code into a lazy domain without verifying lexical dependencies, first paint, back-forward, deep links and subsequent route navigation with unchanged accessible behavior.",
   "",
