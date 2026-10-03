@@ -28,6 +28,7 @@ def create_query_plan_database(path: Path, player_count: int = 6000) -> None:
                 wallet_name TEXT NOT NULL DEFAULT '',
                 name TEXT,
                 positions TEXT,
+                nationality TEXT,
                 age INTEGER,
                 retirement_years INTEGER,
                 owned_since INTEGER,
@@ -68,6 +69,7 @@ def create_query_plan_database(path: Path, player_count: int = 6000) -> None:
                     wallet_name,
                     f"Player {player_id}",
                     position,
+                    "Italy" if player_id % 4 < 2 else "France",
                     18 + (player_id % 18),
                     0 if player_id % 13 == 0 else 4,
                     1_760_000_000 + player_id,
@@ -87,6 +89,7 @@ def create_query_plan_database(path: Path, player_count: int = 6000) -> None:
                 wallet_name,
                 name,
                 positions,
+                nationality,
                 age,
                 retirement_years,
                 owned_since,
@@ -96,7 +99,7 @@ def create_query_plan_database(path: Path, player_count: int = 6000) -> None:
                 overall,
                 goalkeeping,
                 player_seasons
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             rows,
         )
