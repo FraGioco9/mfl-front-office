@@ -142,7 +142,7 @@ function projectedDatabaseColumns(scope, view, includeProgression, rules = []) {
   return availableColumns.filter((column) => selectedColumns.has(column));
 }
 
-function ruleSql(rule, parameters) {
+function ruleSql(rule, parameters, allowIndexedExactName = false) {
   const column = String(rule?.column || "");
   const operator = String(rule?.operator || "");
   const value = rule?.value;
@@ -247,7 +247,7 @@ function ruleSql(rule, parameters) {
   const normalizedValue = normalizeSearchText(value);
   parameters.push(normalizedValue);
   const nonBlank = `${quotedColumn} IS NOT NULL AND CAST(${quotedColumn} AS TEXT) <> ''`;
-  if (column === "name" && operator === "=" && canUseNormalizedPlayerNameLookup()) {
+  if (column === "name" && operator === "=" && allowIndexedExactName && canUseNormalizedPlayerNameLookup()) {
     // PERF-05D2: use the already-built indexed lookup ONLY for exact names.
     // Preserve the nonblank guard and the original bound normalization.
     // The broad LIKE/contains paths remain unchanged (measured regressions).
@@ -272,12 +272,12 @@ function normalizedEpochSeconds(quotedColumn) {
   return `(CASE WHEN CAST(${quotedColumn} AS REAL) > 100000000000 THEN CAST(${quotedColumn} AS REAL) / 1000.0 ELSE CAST(${quotedColumn} AS REAL) END)`;
 }
 
-function appendAdvancedRules(conditions, parameters, rules) {
+function appendAdvancedRules(conditions, parameters, rules, allowIndexedExactName = false) {
   if (!rules.length) return;
 
   let expression = "";
   rules.forEach((rule, index) => {
-    const current = `(${ruleSql(rule, parameters)})`;
+    const current = `(${ruleSql(rule, parameters, allowIndexedExactName)})`;
     if (index === 0) {
       expression = current;
       return;
@@ -540,7 +540,20 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression, ti
   if (String(query.newMintsOnly || "") === "1") {
     conditions.push(scope === "mfl" ? "player_seasons >= 2" : "player_seasons = 1");
   }
-  appendAdvancedRules(conditions, parameters, rules);
+  // A complete snapshot parity check costs ~0.4s/28MiB on the pinned data.
+  // Run it only for the isolated unfiltered Database exact-name case where
+  // the measured canonical COUNT+page cost exceeds this first-use overhead.
+  // Other sorts/scopes/combined rules preserve the original query.
+  const exactNameFastPath = scope === "database"
+    && sortKey === "overall"
+    && String(query.sortDirection || "desc").toLowerCase() !== "asc"
+    && !ownedProgression
+    && rules.length === 1
+    && rules[0]?.column === "name"
+    && rules[0]?.operator === "="
+    && !["hideRetired", "hideRetiring", "hideMfl", "packableOnly", "newMintsOnly"]
+      .some((key) => String(query[key] || "") === "1");
+  appendAdvancedRules(conditions, parameters, rules, exactNameFastPath);
 
   const where = conditions.length ? ` WHERE ${conditions.join(" AND ")}` : "";
   const sameResultSet = where === sourceWhere && parametersEqual(parameters, baseParameters);
