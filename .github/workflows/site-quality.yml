@@ -199,6 +199,10 @@ jobs:
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-routing-responsive-shell.mjs
 
+      - name: TEST-04B Player to Evaluation real rate readiness
+        if: steps.changes.outputs.site == 'true'
+        run: node validation/browser-evaluation-rate-route-commit.mjs
+
       - name: Planner browser regression
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-planner-regression.mjs
