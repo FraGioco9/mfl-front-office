@@ -1,0 +1,56 @@
+name: PERF-05D2 exact-name cold-guard profiling (temporary)
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/perf05d2-name-guard.yml"
+      - "scripts/performance/perf05d2-name-guard.cjs"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  cold-guard:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Retrieve existing pinned SQLite artifact (NO refresh)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 37113407333 --repo "$GITHUB_REPOSITORY" --name mfl_database --dir .
+          node <<'NODE'
+          const {DatabaseSync}=require("node:sqlite");
+          const db=new DatabaseSync("mfl_database.db",{readOnly:true});
+          const rows=db.prepare("SELECT count(*) AS n FROM players").get().n;
+          const w=db.prepare("SELECT value FROM runtime_metadata WHERE key='wallet_count'").get()?.value;
+          if(rows!==387258||Number(w)!==7866)throw Error("Unexpected snapshot");
+          db.close();
+          NODE
+      - name: One-time full parity guard + query benchmark
+        env:
+          MFL_DATABASE_PATH: mfl_database.db
+        run: |
+          set -euo pipefail
+          node --check scripts/performance/perf05d2-name-guard.cjs
+          node scripts/performance/perf05d2-name-guard.cjs > perf05d2-name-guard-report.json
+          node <<'NODE'
+          const r=require("./perf05d2-name-guard-report.json");
+          if(r.rowCount!==387258||r.observations.length!==2)throw Error("Invalid guard profile");
+          console.log(JSON.stringify({guardMs:r.guardMs,repeatMs:r.repeatGuardMs,
+            heapDeltaBytes:r.guardHeapDeltaBytes,queries:r.observations}));
+          NODE
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: perf05d2-name-guard-${{ github.run_id }}
+          path: perf05d2-name-guard-report.json
+          if-no-files-found: warn
+          retention-days: 90
