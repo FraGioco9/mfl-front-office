@@ -5,6 +5,7 @@ const {
   VALID_PLAYER_COLUMNS,
   getGeneratedAt,
   normalizeSearchText,
+  canUseNormalizedPlayerNameLookup,
   queryRows,
   queryOne,
   quoteIdentifier,
@@ -246,6 +247,12 @@ function ruleSql(rule, parameters) {
   const normalizedValue = normalizeSearchText(value);
   parameters.push(normalizedValue);
   const nonBlank = `${quotedColumn} IS NOT NULL AND CAST(${quotedColumn} AS TEXT) <> ''`;
+  if (column === "name" && operator === "=" && canUseNormalizedPlayerNameLookup()) {
+    // PERF-05D2: use the already-built indexed lookup ONLY for exact names.
+    // Preserve the nonblank guard and the original bound normalization.
+    // The broad LIKE/contains paths remain unchanged (measured regressions).
+    return `${nonBlank} AND player_id IN (SELECT player_id FROM runtime_player_search WHERE normalized_name = ?)`;
+  }
   if (operator === "contains") {
     return `${nonBlank} AND normalize_search(${quotedColumn}) LIKE '%' || ? || '%'`;
   }
