@@ -105,7 +105,9 @@ invariant(
   "Paged COUNT(*) reuse must stay dataset-aware, bounded, and owned by the canonical page-query module.",
 );
 invariant(
-  dataPage.includes('const cacheKey = pageCountCacheKey(where, parameters);')
+  dataPage.includes('const cacheKey = cacheAllowed ? pageCountCacheKey(where, parameters) : "";')
+    && dataPage.includes('if (!cacheAllowed) {')
+    && dataPage.includes('!listingFiltered,')
     && !dataPage.includes('pageCountCacheKey(where, parameters, page')
     && !dataPage.includes('pageCountCacheKey(where, parameters, sort'),
   "COUNT(*) cache identity must depend on the result-set predicate/parameters, not page or sort state.",
