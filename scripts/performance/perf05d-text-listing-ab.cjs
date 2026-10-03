@@ -94,17 +94,17 @@ function textCandidate(entry) {
   // This tests a scan of the compact pre-normalized lookup table against the
   // canonical per-row normalize_search() UDF without touching the live query.
   const operators = [
-    ["LIKE '%' || ? || '%'", "IN"],
-    ["NOT LIKE '%' || ? || '%'", "NOT IN"],
-    ["= ?", "IN"],
-    ["<> ?", "NOT IN"],
+    ["LIKE '%' || ? || '%'", "LIKE '%' || ? || '%'", "IN"],
+    ["NOT LIKE '%' || ? || '%'", "LIKE '%' || ? || '%'", "NOT IN"],
+    ["= ?", "= ?", "IN"],
+    ["<> ?", "= ?", "NOT IN"],
   ];
   let sql = entry.sql;
   let replaced = false;
-  for (const [expression, inOp] of operators) {
+  for (const [expression, matchingExpression, inOp] of operators) {
     const oldExpression = "normalize_search(\"name\") " + expression;
     const newExpression = "player_id " + inOp +
-      " (SELECT player_id FROM runtime_player_search WHERE normalized_name " + expression + ")";
+      " (SELECT player_id FROM runtime_player_search WHERE normalized_name " + matchingExpression + ")";
     if (sql.includes(oldExpression)) {
       sql = sql.replaceAll(oldExpression, newExpression);
       replaced = true;
