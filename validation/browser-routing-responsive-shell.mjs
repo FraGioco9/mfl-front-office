@@ -16,7 +16,81 @@ assert.equal(
   "Broad routing regression must consume exactly one canonical compact-shell breakpoint contract.",
 );
 
-await writeFile(temporaryPath, source, "utf8");
+// TEST-04B: the broad routing job takes ~213-219s, including ~12 Player
+// journeys at ~16.7s each. Instrument only the temporary *browser fixture*,
+// preserving the canonical suite, viewport matrix, waits and assertions.
+// Every anchor must occur exactly once: fail closed on upstream fixture drift.
+const checkpoints = [
+  [
+    "async function navigateBackToScenario(setPage, timeline) {",
+    String.raw`const __test04BTimeStart = performance.now();
+  const __test04BTimeMarks = [];
+  const __test04BMark = (label) => {
+    if (scenario === "player") __test04BTimeMarks.push({
+      phase: label,
+      elapsedMs: Math.round(performance.now() - __test04BTimeStart),
+    });
+  };
+
+  async function navigateBackToScenario(setPage, timeline) {`,
+  ],
+  [
+    "const evaluationNavigation = setPage(\"evaluation\", true, { plain: true });",
+    "__test04BMark(\"evaluation-start\");\n      const evaluationNavigation = setPage(\"evaluation\", true, { plain: true });",
+  ],
+  [
+    "      await evaluationNavigation;\n      window.__mflEnsureRouteCore = originalEnsureRouteCore;",
+    "      await evaluationNavigation;\n      __test04BMark(\"evaluation-core-ready\");\n      window.__mflEnsureRouteCore = originalEnsureRouteCore;",
+  ],
+  [
+    "      await setPage(\"evaluation\", true, { playerId: \"1\" });",
+    "      __test04BMark(\"evaluation-player-open\");\n      await setPage(\"evaluation\", true, { playerId: \"1\" });\n      __test04BMark(\"evaluation-player-ready\");",
+  ],
+  [
+    "      scrollbarSpacer.remove();\n      assertPageAccessibilityState();",
+    "      scrollbarSpacer.remove();\n      __test04BMark(\"evaluation-controls-checked\");\n      assertPageAccessibilityState();",
+  ],
+  [
+    "    await setPage(\"privacy\", true);\n    await waitFor(() => window.location.pathname === \"/privacy\", scenario + \" could not navigate to Privacy.\");",
+    "    __test04BMark(\"privacy-navigation-start\");\n    await setPage(\"privacy\", true);\n    __test04BMark(\"privacy-navigation-resolved\");\n    await waitFor(() => window.location.pathname === \"/privacy\", scenario + \" could not navigate to Privacy.\");",
+  ],
+  [
+    "      await setPage(\"player\", true, { playerId: \"1\" });",
+    "      await setPage(\"player\", true, { playerId: \"1\" });\n      __test04BMark(\"player-cached-return-resolved\");",
+  ],
+  [
+    "    await delay(100);\n    assertSpaTimingAfter(timeline, baselineSequence);",
+    "    await delay(100);\n    __test04BMark(\"spa-timing-ready\");\n    assertSpaTimingAfter(timeline, baselineSequence);",
+  ],
+  [
+    "  async function runRepresentativeRoute() {\n    const setPage = Reflect.get(window, \"setPage\");",
+    "  async function runRepresentativeRoute() {\n    __test04BMark(\"route-start\");\n    const setPage = Reflect.get(window, \"setPage\");",
+  ],
+  [
+    "    assertNav03Navigation(\"direct refresh\");",
+    "    assertNav03Navigation(\"direct refresh\");\n    __test04BMark(\"direct-refresh-ready\");",
+  ],
+  [
+    "    const directState = routeState();\n    assertRouteState(directState);",
+    "    const directState = routeState();\n    assertRouteState(directState);\n    __test04BMark(\"direct-state-asserted\");",
+  ],
+  [
+    "    if (scenario === \"database\" && innerWidth > 900) await runNav02HistoryMatrix(setPage);\n    await navigateBackToScenario(setPage, timeline);",
+    "    if (scenario === \"database\" && innerWidth > 900) await runNav02HistoryMatrix(setPage);\n    __test04BMark(\"spa-navigation-start\");\n    await navigateBackToScenario(setPage, timeline);\n    __test04BMark(\"spa-navigation-resolved\");",
+  ],
+  [
+    "    finish(\"passed\", scenario + \": direct refresh and SPA navigation converged with canonical timing and no runtime errors.\");",
+    "    __test04BMark(\"all-assertions-complete\");\n    finish(\"passed\", scenario + \": direct refresh and SPA navigation converged with canonical timing and no runtime errors.\" + (scenario === \"player\" ? \" TEST04B_PHASES=\" + JSON.stringify(__test04BTimeMarks) : \"\"));",
+  ],
+];
+let profiledSource = source;
+for (const [before, after] of checkpoints) {
+  assert.equal(profiledSource.split(before).length - 1, 1,
+    "TEST-04B phase timing hook must have one canonical anchor: " + before.slice(0, 90));
+  profiledSource = profiledSource.replace(before, after);
+}
+
+await writeFile(temporaryPath, profiledSource, "utf8");
 
 try {
   const status = await new Promise((resolveStatus, rejectStatus) => {
