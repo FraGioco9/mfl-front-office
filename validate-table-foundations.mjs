@@ -67,8 +67,8 @@ assert.ok(
 
 assert.ok(
   styles.includes("#progressionPage .playerTableScroller th.col-name {\n    z-index: 6;\n    background: var(--mfl-table-header-background);")
-    && styles.includes("background: var(--mfl-table-surface);\n    background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));")
-    && styles.includes("background: var(--mfl-table-row-hover-background);\n    background-image: linear-gradient(var(--mfl-table-row-hover-background), var(--mfl-table-row-hover-background));"),
+    && styles.includes("background: var(--mfl-table-surface);\n    background-clip: border-box;")
+    && styles.includes("#progressionPage #tableBody tr.tableRowHovered > :is(\n    td.col-name,\n    td:has(> .playerNameCell)\n  ) {\n    background: var(--mfl-table-row-hover-background);"),
   "Mobile sticky Name cells must consume the same Table-domain surface/header/row-hover language.",
 );
 
