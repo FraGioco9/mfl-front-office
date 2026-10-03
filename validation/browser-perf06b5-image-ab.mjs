@@ -77,7 +77,7 @@ const probe=[
 '        const picker=document.getElementById("plannerDepthPicker");',
 '        const scroller=picker.querySelector(".plannerDepthPickerContent");',
 '        const photos=[...picker.querySelectorAll(".plannerDepthPickerPlayer img")];',
-'        assert(!picker.hidden && scroller.scrollHeight>scroller.clientHeight+200,"Picker must actually scroll.");',
+'        assert(!picker.hidden && scroller.scrollHeight>scroller.clientHeight+200,"Picker must actually scroll: "+JSON.stringify({pickerHidden:picker.hidden,scrollHeight:scroller.scrollHeight,clientHeight:scroller.clientHeight,pickerRows:photos.length,cssMaxHeight:getComputedStyle(scroller).maxHeight,cssOverflow:getComputedStyle(scroller).overflowY}));',
 '        assert(photos.length>=40,"Expected at least 40 candidate photos: "+photos.length);',
 '        const afterPicker=window.__perf06b5Media();',
 '        scroller.scrollTop=scroller.scrollHeight;await delay(650);',
