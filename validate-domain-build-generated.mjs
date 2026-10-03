@@ -8,6 +8,7 @@ const validators = [
   "validate-shared-core-route-ownership.mjs",
   "validate-asset-cache-policy.mjs",
   "validate-perf04-cache-contract.mjs",
+  "validate-perf04b-prebuilt-model.mjs",
   "validate-production-core-sources.mjs",
   "validate-generated-core-bindings.mjs",
 ];
