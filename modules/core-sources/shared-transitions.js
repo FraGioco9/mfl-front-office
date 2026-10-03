@@ -309,6 +309,12 @@ async function runPageTransition(pageName, updateHash = true, options = {}, load
       kind: "page",
       sequence,
     };
+    // The Evaluation runtime is loaded while Player still owns the route.
+    // pushState does not fire popstate; notify the real discount-rate runtime
+    // once Evaluation has committed, preserving its authentic ready event.
+    if (transition.pageName === "evaluation") {
+      window.__mflEvaluationDiscountRateRuntime?.sync?.();
+    }
     document.documentElement.classList.add("mflInitialRouteSuperseded");
     if (!loadingToken) {
       loadingToken = loadingController?.beginRouteTransition?.(pageName, options) || "";
