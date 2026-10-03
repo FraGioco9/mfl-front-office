@@ -23,7 +23,7 @@ jobs:
           node-version: 22
       - name: Download verified pinned artifact (NO refresh)
         env:
-          GH_${{ github.token }}: TOKEN
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           gh run download 37113407333 --repo "$GITHUB_REPOSITORY" --name mfl_database --dir .
