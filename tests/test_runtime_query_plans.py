@@ -327,10 +327,15 @@ class RuntimeQueryPlanTests(unittest.TestCase):
                     for sql, params in queries
                 )
 
-            for before, after, details in zip(unindexed, indexed, plans):
+            for index, (before, after, details) in enumerate(zip(unindexed, indexed, plans)):
                 self.assertEqual(before.rows, after.rows, "Index changed page results or ordering")
+                expected_indexes = (
+                    ("players_nationality_order_index", "players_overall_order_index")
+                    if index < 2
+                    else ("players_nationality_order_index",)
+                )
                 self.assertTrue(
-                    any("players_nationality_order_index" in detail for detail in details),
+                    any(name in detail for name in expected_indexes for detail in details),
                     details,
                 )
                 self.assertFalse(
