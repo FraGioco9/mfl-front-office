@@ -19,12 +19,12 @@ function processNode(args,env={}){
 }
 const RULES=x=>JSON.stringify(x);
 async function worker(){
-  const dbApi=require("../api/_database.js");
+  const dbApi=require("./api/_database.js");
   const db=dbApi.getDatabase();
   db.exec("PRAGMA query_only=ON");
   const prices={};
   for(let n=1;n<=2600;n++)if(n%5===0)prices[String(n)]=n%101+5;
-  const state=require("../api/_marketplace-state.js");
+  const state=require("./api/_marketplace-state.js");
   state.marketplaceState=async()=>({prices,generatedAt:"2026-10-03T00:00:00.000Z",flowBlockHeight:0});
   let pageQueries=[];
   const baseQueryRows=dbApi.queryRows;
@@ -33,10 +33,10 @@ async function worker(){
       pageQueries.push({sql,params:[...params]});
     return baseQueryRows(sql,params);
   };
-  const {pagedData,orderSql}=require("../api/_data-page.js");
+  const {pagedData,orderSql}=require("./api/_data-page.js");
   const {rowsAsArrays}=dbApi;
-  const {reverseOrderSql}=require("../api/_data-page-order.js");
-  const {reversedTailQuery}=require("../scripts/performance/perf05c-tail-order.cjs");
+  const {reverseOrderSql}=require("./api/_data-page-order.js");
+  const {reversedTailQuery}=require("./scripts/performance/perf05c-tail-order.cjs");
   let cases=0,tailUses=0,forwardUses=0;
   const scenarios=[
     {name:"overall-desc",scope:"database",sortKey:"overall"},
