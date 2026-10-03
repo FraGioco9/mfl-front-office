@@ -1,0 +1,45 @@
+# PERF-04A — cache-safety audit before CSS immutability
+
+Roadmap: [issue #1034](https://github.com/FraGioco9/mfl-front-office/issues/1034), PERF-04. This PR audits *existing* cache ownership and introduces regression tests. **No production cache header or application runtime changes**, no Vercel deploy, no live database access.
+
+## Evidence from repository ownership
+
+| Resource | Current Next `headers()` rule | Release/identity risk |
+| --- | --- | --- |
+| `/`, `/index.html`, `/release.json` | `no-store, max-age=0` | First HTML and version must stay fresh. |
+| Generated `/styles-runtime.css` | `public, max-age=0, must-revalidate` | The URL is **stable**: a stylesheet may change at the next deploy while the URL stays identical. Revalidation is needed; do **not** add immutable on this URL. |
+| Non-versioned `*.js` | `no-store, max-age=0` | No stable immutable identity. |
+| JS URLs with `mfl_core` query | `public, max-age=31536000, immutable` | Caller supplies a release+build ID in canonical bootstrap/entry. **A query marker by itself is not a tamper-proof content-addressed path**. It cannot be generalized to CSS without retaining each old asset's bytes. |
+| `/_next/static/...` | Next-managed hashed filenames | Separately owned by Next; do not rewrite or override them here. |
+| API/session/SSR data, wallet/private state | Domain-specific policy | Must never inherit broad public static-asset rules. |
+
+Canonical CSS is assembled in deterministic order by `build-styles.mjs` / `style-bundle.mjs` (which also flattens nested `@import`) into `styles-runtime.css`; `build:legacy` and `prepare-next-runtime.mjs` project it into `public/` for the Next server. Both `index.html` and Next's `pages/_document.js` consume that one generated stylesheet link. The existing `validate-generated-styles.mjs` protects build parity.
+
+**Why not simply add `?mfl_style=<hash>` with `immutable`?** If the deployment replaces `/styles-runtime.css`, an old URL retained by a cached page can resolve to the new CSS bytes at the origin despite its old query. A content hash query is *not* an immutable content-addressed artifact unless the server can still serve its historical bytes. This is particularly important because the database refresh publishes the previously released Next site multiple times before the next application release: cache lifetimes must not invent an identity across these stages.
+
+The project's Vercel prebuilt deployment path is also distinct from local `next start`: `scripts/workflows/sync-vercel-security-headers.mjs` and `verify-prebuilt-security-headers.mjs` explicitly handle CSP in generated `.vercel/output/config.json`. An audit of local Next headers alone **cannot** certify the equivalent Vercel edge policy. A separate PERF-04B proof must inspect the Build Output API rules and then browser/network effects, still with no deployment until the final release.
+
+## Automated gates added in PERF-04A
+
+1. `validate-perf04-cache-contract.mjs` is called from the build/generated validation domain (via `npm run validate`). It checks deterministic generated CSS bytes and digest, stable shell CSS href, production/development header ownership, public zero-age CSS revalidation, uncached shell/release/unversioned JS, and no premature `mfl_style` immutable rule.
+2. `validation/perf04-cache-http.mjs` is run against the **already-started local production Next** smoke server on `127.0.0.1:4010` as part of Site Quality. It requires Home and release metadata to be no-store, compares actual HTTP CSS bytes with the generated on-disk CSS, validates identical CSS links on Home and a deep link, tests repeated fetch and conditional `If-None-Match` behavior (304 when supported; otherwise byte-identical 200), and compares real unversioned/version-query JS header behavior. Reports actual HTTP cache directives, byte count and ETag status in CI logs.
+3. The script refuses non-loopback hosts, so it cannot accidentally probe or mutate Vercel production. It never opens a wallet or needs tokens.
+
+### Acceptance for PERF-04B (separate PR)
+
+- Inspect an **actual prebuilt deployment artifact** (`.vercel/output/config.json`) in read-only CI: enumerate CSS, JS and HTML routing headers, account for explicit Vercel edge rules, and prove every CDN rule is correct in *both* the Next-local and prebuilt serving paths.
+- If using immutable CSS, emit a **content-addressed path**, not merely a query marker. Prove old and new CSS contents are retrievable under their respective paths across two simulated releases and that stale HTML/JS cannot combine mismatched styles. Keep previous-version assets addressable or refuse the immutable optimization.
+- Measure *two real browser loads* with a local production server and forced revalidation, including conditional-hit 304 and transferred bytes, cold/refresh/cached return and slow mobile; ensure no extra first-paint requests, same first paint and zero route regressions.
+- Preserve CSP, private/no-store responses, generated byte identity and deterministic repository projections; do not deploy Vercel until the final issue-wide release and real Safari/iPhone validation.
+- If the expected win is too small or cross-version correctness cannot be guaranteed, close the proposal explicitly **NO CHANGE** and retain current safe revalidation.
+
+**PERF-04A decision:** instrument first and retain the existing safe cache policies; PERF-04B and parent PERF-04 remain **pending** until evidence justifies a code change.
+
+## Local test commands
+
+```sh
+node validate-perf04-cache-contract.mjs
+npm run validate
+# After npm run build, start a local production Next server on 4010:
+node validation/perf04-cache-http.mjs http://127.0.0.1:4010
+```
