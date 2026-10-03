@@ -56,11 +56,45 @@ jobs:
           }
           if(r.scenarios.length < 10)process.exit(1);
           NODE
+      - name: Create isolated candidate index copy (no production writes)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp mfl_database.db perf05_candidate_nationality.db
+          node <<'NODE'
+          const { DatabaseSync } = require('node:sqlite');
+          const { performance } = require('node:perf_hooks');
+          const started = performance.now();
+          const database = new DatabaseSync('perf05_candidate_nationality.db');
+          database.exec("CREATE INDEX perf05_candidate_nationality_order ON players(nationality, (overall IS NULL), overall DESC, player_id DESC)");
+          database.exec("ANALYZE");
+          database.close();
+          console.log("PERF05_INDEX_BUILD_MS=" + (performance.now()-started).toFixed(2));
+          NODE
+          ls -lh mfl_database.db perf05_candidate_nationality.db
+      - name: Paired read-only A-B-B-A, same runner and SQL
+        shell: bash
+        env:
+          PERF05_REPETITIONS: "3"
+        run: |
+          set -euo pipefail
+          export PERF05_SOURCE_SHA="$GITHUB_SHA"
+          for pair in a1:mfl_database.db b1:perf05_candidate_nationality.db b2:perf05_candidate_nationality.db a2:mfl_database.db; do
+            IFS=: read -r label file <<< "$pair"
+            export MFL_DATABASE_PATH="$file"
+            node scripts/performance/perf05-query-profile.cjs > "perf05-profile-$label.json"
+            echo "Profiled $label on read-only $file"
+          done
+          node scripts/performance/perf05-compare-index.cjs
+
       - name: Preserve sanitized read-only query plan and timing report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: perf05-real-database-query-plans-${{ github.run_id }}
-          path: perf05-snapshot-query-profile.json
+          path: |
+            perf05-snapshot-query-profile.json
+            perf05-profile-*.json
+            perf05-paired-index-report.json
           retention-days: 90
           if-no-files-found: warn
