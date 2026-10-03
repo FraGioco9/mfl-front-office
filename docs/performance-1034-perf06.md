@@ -32,11 +32,15 @@ The five-run 2 October [PERF-01 baseline](../performance-baselines/2026-10-02-pe
 | Extra creations revisiting 16 recent portraits | 0 (expected) | 0 (expected) |
 | Revisit first evicted older portrait | 0 (expected) | 1 (expected; HTTP cache may satisfy it in a real browser) |
 
-**All rows above are initial hypotheses for the CI-controlled A/B, not validated results.** Confirm them and record exact-head run and counts before marking the gate complete. No fake heap-byte savings or invented bandwidth savings.
+**Measured results on the same CI runner (confirmed).** [Site Quality #37143064420](https://github.com/FraGioco9/mfl-front-office/actions/runs/37143064420), source SHA `330369b05b6c71137e0e79f3de5e2e3909b44ea8`, completed successfully. The test printed:
+```
+PERF06_AB_RESULT {"distinctPlayers":128,"sameRunner":true,"baselineStrongImageReferences":128,"boundedStrongImageReferences":16,"retainedReferenceReductionPercent":87.5,"coldImageCreationsBothModes":128,"last16WarmExtraRequestsBothModes":0,"oldPlayerRevisitExtraImageInstances":1,"staleLoadBlocked":true,"failedImageRetry":true}
+```
+This is **87.5% fewer retained image references in the controlled A/B**, not 87.5% less decoded browser memory. Both modes keep initial requests equivalent and the 16 most recent warm. The deliberately evicted 17th-oldest Player causes one new `Image` allocation when revisited; whether actual bytes transfer depends on the browser/CDN HTTP cache. The first full source-head CI had **9/9 workflows green**, and Site Quality's `quality` plus Windows smoke succeeded. A GitHub Actions bot subsequently regenerated `modules/app-core-player-runtime.js` and `table-width-runtime.js`; require a fresh complete exact-head CI after the report's final update.
 
 ## Remaining PERF-06 gates
 
-- [ ] Same-runner A/B source benchmark **green** with reported 128→16 references and 87.5% lower reference retention, warm recent visits unchanged, stale and error cases green.
+- [x] Same-runner A/B source benchmark **green** with reported 128→16 references and 87.5% lower reference retention, warm recent visits unchanged, stale and error cases green.
 - [ ] Full Site Quality `quality`, Windows Next smoke, Mobile 8/8 including `responsive-table-resize` + Player/Planner, Table Header and A11Y exact-head green. If CI regenerates app core assets and advances PR head, re-run CI on final new head.
 - [ ] Cold/scroll representative **real mobile** Player/Club/Planner testing deferred to the final Safari/iPhone release gate; record LCP/CLS, DPR1/2, WebP failure fallback, badges, touch, returning to an evicted Player after resize, and memory on long sessions.
 - [ ] Further image dimensions/srcset or PNG conversion only in another PR if controlled cold/scroll network/transfer/raster and error evidence justifies. Do not alter OG preview cache or share privacy without dedicated security tests.
