@@ -21,6 +21,7 @@ const injection = `    await cdp.send("Runtime.enable");
     if (value.exceptionDetails) throw new Error("PERF-02C browser exception: " + JSON.stringify(value.exceptionDetails));
     const result = value.result?.value;
     assert.ok(result && !result.error, "PERF-02C fixture: " + JSON.stringify(result));
+    console.log("PERF02C-THEME-SCROLL-SNAPSHOTS", JSON.stringify(result));
     assert.equal(result.reports?.length, 6, "Expected three scroll boundaries per light/dark theme.");
     for (const sample of result.reports) {
       const label = sample.theme + " / " + sample.position;
