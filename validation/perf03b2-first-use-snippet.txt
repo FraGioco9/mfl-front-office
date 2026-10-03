@@ -24,8 +24,16 @@ async function perf03b2SearchProbe(cdp, network, label) {
   const typed = await evaluate(cdp, '(() => ({text:document.getElementById("playerSearchInput")?.value,results:document.querySelectorAll("#playerSearchResults > .searchResult").length}))()');
   assert.equal(typed.text, "roma", "Search query changed during input.");
   await evaluate(cdp, '(() => {const x=document.getElementById("closeSearchButton");if(!x) throw new Error("No close button");x.click();return true;})()');
-  const hidden = await evaluate(cdp, 'document.getElementById("searchModal").hidden');
-  assert.equal(hidden, true, label + " close button did not hide Search.");
+  // Canonical hideModal deliberately waits 180 ms for exit animation.
+  // Do not report a valid asynchronous dismissal as a Search failure.
+  let hidden = false;
+  const closeDeadline = Date.now() + 3000;
+  while (Date.now() < closeDeadline) {
+    hidden = await evaluate(cdp, 'document.getElementById("searchModal").hidden');
+    if (hidden) break;
+    await delay(25);
+  }
+  assert.equal(hidden, true, label + " close button did not hide Search after animation.");
   const ms = Date.now() - started;
   network.stop();
   return { firstFocusMs, totalMs: ms, resultCount: typed.results,
