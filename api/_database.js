@@ -110,6 +110,7 @@ let generatedAt = "";
 let runtimeMetadata = new Map();
 let availableTables = null;
 let availablePlayerColumns = null;
+let normalizedPlayerNameLookupSafe = null;
 let marketplacePrices = Object.freeze({});
 const TABLE_COLUMNS_CACHE = new Map();
 const STATEMENT_CACHE_MAX_ENTRIES = 128;
@@ -222,6 +223,39 @@ function tableExists(tableName) {
   return availableTables.has(name);
 }
 
+// PERF-05D2: the builder's Python Unicode normalization and the runtime's
+// JavaScript Unicode normalization must agree on *every* row before we trust
+// a pre-normalized indexed name lookup. Validate once per immutable SQLite
+// snapshot/process (without copying user data into JS). Older/inconsistent
+// databases take the unchanged normalize_search(name) predicate.
+function canUseNormalizedPlayerNameLookup() {
+  getDatabase();
+  if (normalizedPlayerNameLookupSafe !== null) return normalizedPlayerNameLookupSafe;
+  if (!availableTables.has("runtime_player_search")) {
+    normalizedPlayerNameLookupSafe = false;
+    return false;
+  }
+  try {
+    const result = database.prepare(`
+      SELECT
+        (SELECT count(*) FROM players) AS players_count,
+        (SELECT count(*) FROM runtime_player_search) AS indexed_count,
+        EXISTS(
+          SELECT 1 FROM players AS p
+          LEFT JOIN runtime_player_search AS s ON s.player_id = p.player_id
+          WHERE s.player_id IS NULL
+             OR s.normalized_name <> normalize_search(p.name)
+          LIMIT 1
+        ) AS mismatches
+    `).get();
+    normalizedPlayerNameLookupSafe = Number(result.players_count) === Number(result.indexed_count)
+      && Number(result.mismatches) === 0;
+  } catch {
+    normalizedPlayerNameLookupSafe = false;
+  }
+  return normalizedPlayerNameLookupSafe;
+}
+
 function tableColumnNames(tableName) {
   const name = String(tableName || "");
   if (!/^[a-zA-Z0-9_]+$/.test(name)) return Object.freeze([]);
@@ -301,6 +335,7 @@ module.exports = {
   getRuntimeMetadata,
   normalizeSearchText,
   normalizeWalletName,
+  canUseNormalizedPlayerNameLookup,
   tableExists,
   tableColumnNames,
   quoteIdentifier,
