@@ -22,7 +22,26 @@
   const PLAYER_NOTE_MAX_LENGTH = 100;
   const PLAYER_DETAIL_REQUIRED_COLUMNS = ["height", "preferred_foot", "goalkeeping", "retirement_years"];
   const PLAYER_READY_TRANSITION = "color 180ms ease, opacity 180ms ease, background-color 180ms ease, border-color 180ms ease";
+  // Keep nearby Player heroes warm without retaining every full-resolution
+  // decoded portrait for the entire lifetime of an SPA session.
+  const PLAYER_PORTRAIT_CACHE_LIMIT = 16;
   const portraitSources = new Map();
+
+  function reusePortraitSource(playerId) {
+    const cached = portraitSources.get(playerId);
+    if (!(cached instanceof HTMLImageElement)) return null;
+    // A cache hit also refreshes recency, preserving Back/Forward Player visits.
+    portraitSources.delete(playerId);
+    portraitSources.set(playerId, cached);
+    return cached;
+  }
+
+  function rememberPortraitSource(playerId, image) {
+    portraitSources.set(playerId, image);
+    while (portraitSources.size > PLAYER_PORTRAIT_CACHE_LIMIT) {
+      portraitSources.delete(portraitSources.keys().next().value);
+    }
+  }
   let activeHeroActionMenu = null;
   let pendingDetailPlayerId = "";
   let readyDetailPlayerId = "";
@@ -660,19 +679,28 @@ function applyOverallBoxAppearance(box, overall) {
 
     applyPortraitGeometry(canvas);
     canvas.dataset.playerId = playerId;
-    const existing = portraitSources.get(playerId);
-    if (existing instanceof HTMLImageElement) {
+    const existing = reusePortraitSource(playerId);
+    if (existing) {
       if (existing.complete && existing.naturalWidth) drawPortraitCrop(canvas, existing);
-      else existing.addEventListener("load", () => drawPortraitCrop(canvas, existing), { once: true });
+      else existing.addEventListener("load", () => {
+        if (canvas.dataset.playerId === playerId) drawPortraitCrop(canvas, existing);
+      }, { once: true });
       return true;
     }
 
     const image = new Image();
     image.decoding = "async";
     image.fetchPriority = "high";
-    image.addEventListener("load", () => drawPortraitCrop(canvas, image), { once: true });
+    image.addEventListener("load", () => {
+      if (canvas.dataset.playerId === playerId) drawPortraitCrop(canvas, image);
+    }, { once: true });
+    image.addEventListener("error", () => {
+      if (portraitSources.get(playerId) === image) portraitSources.delete(playerId);
+    }, { once: true });
+    // Register before src: synchronous/mock load and error paths must see
+    // the current cache entry, while real network decode remains asynchronous.
+    rememberPortraitSource(playerId, image);
     image.src = sourceUrl;
-    portraitSources.set(playerId, image);
     return true;
   }
 
@@ -1592,6 +1620,7 @@ function stableAttributePanelHtml(row) {
       if (!(portrait instanceof HTMLCanvasElement)) return;
       const source = portraitSources.get(normalizePlayerId(portrait.dataset.playerId));
       if (source instanceof HTMLImageElement && source.complete && source.naturalWidth) drawPortraitCrop(portrait, source);
+      else if (normalizePlayerId(portrait.dataset.playerId)) loadPortraitCrop(portrait, portrait.dataset.playerId);
       else applyPortraitGeometry(portrait);
     });
     document.querySelectorAll(".playerHeroActions").forEach((actions) => {
