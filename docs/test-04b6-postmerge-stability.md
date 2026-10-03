@@ -24,11 +24,22 @@ The Site Quality workflow's browser regression has the same canonical Player sui
 
 `.github/workflows/mobile-first-paint-regression.yml` triggers on `pull_request` and `workflow_dispatch`, **not on push to main**. Re-running a historical job from #1103 after the PR branch has been deleted can fail during `actions/checkout`, without executing a browser test. This PR gives CI a valid branch that starts from the **exact post-merge main code**, without changes to application sources, and runs Mobile's dedicated `responsive-table-resize` regression.
 
-- [ ] Initial Mobile **8/8** jobs complete with success, especially `responsive-table-resize` and `responsive-shell-breakpoint`.
-- [ ] Independent repeat of `responsive-table-resize` on unchanged PR head, recording its new job ID and attempt number.
-- [ ] Confirm responsive Age/Listing icons at 1366/1367px do not regress, while acknowledging passing samples cannot prove indefinite flake elimination.
-- [ ] Confirm additional post-merge Site Quality rerun on exact main `652fe813`, with Player→Evaluation real-event and focused Planner, recording job timing and all phases.
-- [ ] Record any unexpected failure with job log and affected source SHA. Do not soften assertions or make an unsupported production change.
+- [x] Initial Mobile **8/8** job success on [run #37140770453](https://github.com/FraGioco9/mfl-front-office/actions/runs/37140770453), including `responsive-table-resize` (job [111254564812](https://github.com/FraGioco9/mfl-front-office/actions/jobs/111254564812)) and `responsive-shell-breakpoint`. All tests ran on the branch whose only diff from the merged app is this documentation file.
+- [x] Independent `responsive-table-resize` rerun on **exact unchanged head** `2ed46b5b87f783a7365e9ec8e6d4e0541aae90d5`: [Mobile run #37140770453 attempt 2](https://github.com/FraGioco9/mfl-front-office/actions/runs/37140770453/attempts/2), job [111254891290](https://github.com/FraGioco9/mfl-front-office/actions/jobs/111254891290), **success**.
+- [x] `responsive-table-resize` passed its existing Age/Listing assertions and both complete 15-viewport sequences in the first and repeat runs, including 1366/1367px, without an icon-zero failure. Passing CI samples do **not** prove that an intermittent failure can never recur.
+- [x] Independent [Site Quality main run #37140478808 attempt 2](https://github.com/FraGioco9/mfl-front-office/actions/runs/37140478808/attempts/2), job [111254351359](https://github.com/FraGioco9/mfl-front-office/actions/jobs/111254351359), success on unchanged `652fe81359290b8606ed62b73eb5f848aa35a59a`: quality **113s**, canonical browser routing **34s** with 55 pass log entries (13 Player), focused Planner **8s** (shell/squad/depth-picker/depth-ranking all passed), actual Evaluation event **175ms** with eventCount=1, rateSettled=true and the same rate source.
+- [x] First and repeated targeted post-merge CI showed **no observed regressions**. The documentation-only PR's Site Quality `quality` job is scope-filtered (~6s and skips its routing/Planner browser steps); **do not count that run as full browser quality coverage**. The two **main** runs above supply that independent full-scope coverage. No original assertions, CSS, APIs or app code were changed.
+
+### Status after independent post-merge rechecks (3 October 2026)
+
+The source `main` has stayed at `652fe81359290b8606ed62b73eb5f848aa35a59a` throughout these checks. Post-merge full-scope Site Quality completed twice on that SHA:
+
+| Source/main workflow | Attempt | Quality wall time | Browser routing | Focused Planner | Event |
+| --- | --- | ---: | ---: | ---: | --- |
+| [#37140478808](https://github.com/FraGioco9/mfl-front-office/actions/runs/37140478808) | 1 | 135s | 39s | 8s | genuine Evaluation ready: 175ms |
+| [#37140478808](https://github.com/FraGioco9/mfl-front-office/actions/runs/37140478808/attempts/2) | 2 | 113s | 34s | 8s | genuine Evaluation ready: 175ms |
+
+The independent Mobile PR workflow [#37140770453](https://github.com/FraGioco9/mfl-front-office/actions/runs/37140770453) passed **8/8** jobs, and the isolated `responsive-table-resize` job passed again on attempt 2. Only the documentation file changed relative to merged #1103, so this is post-merge **application-source** coverage, not a published Safari test. All ten manual-device checks remain **unchecked**.
 
 ## Manual Safari/iPhone validation — explicitly deferred until final release testing
 
