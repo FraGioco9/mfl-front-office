@@ -22,6 +22,30 @@ Tracking [#1034](https://github.com/FraGioco9/mfl-front-office/issues/1034), con
 
 ## Evidence and decisions
 
-Benchmark in [PR #1096](https://github.com/FraGioco9/mfl-front-office/pull/1096), workflow transient and **must be removed** before merge. Results and permanent/NO CHANGE decisions to be inserted after CI.
+Benchmark in [PR #1096](https://github.com/FraGioco9/mfl-front-office/pull/1096). Two independent pinned-snapshot captures: [#37132806259](https://github.com/FraGioco9/mfl-front-office/actions/runs/37132806259) ([artifact #11277168557](https://github.com/FraGioco9/mfl-front-office/actions/runs/37132806259/artifacts/11277168557)) and [#37132902273](https://github.com/FraGioco9/mfl-front-office/actions/runs/37132902273). **Both passed 68/68 complete response equivalence and 126/126 statement parity**; 0/387,258 normalized-name mismatches. No SQL schema/index updates or live price reads.
 
-**Status:** full-snapshot measurements pending, **no runtime changes**, no refresh, no merge, no deploy.
+### Replicated representative query medians (all milliseconds; per-run, not absolute across machines)
+
+| Case | Run #37132806259 A → B | Run #37132902273 A → B | Decision |
+| --- | --- | --- | --- |
+| Name exact COUNT | 241.988 → 0.037 | 348.827 → 0.040 | Candidate for guarded exact-match only |
+| Name exact page | 629.460 → 0.049 | 881.652 → 0.068 | Candidate for guarded exact-match only |
+| Name OR overall COUNT | 236.425 → 2.025 | 339.025 → 3.040 | Preserves OR and improves COUNT |
+| 100 listed, price ASC page | 89.000 → 0.259 | 123.526 → 0.410 | Large gain |
+| 9,000 listed, price ASC page | 87.379 → 15.665 | 136.740 → 23.834 | Gain with filtered sort |
+| 9,000 listed, overall page | 0.779 → 11.161 | 1.431 → 18.575 | **Regression: preserve original page SQL** |
+| 9,000 listed, overall≥75 COUNT | 9.003 → 10.542 | 13.670 → 16.702 | **Regression: preserve original count SQL** |
+| 150,000 listed, price ASC page | 106.514 → 86.060 | 159.636 → 139.237 | Weak savings with large overhead |
+| 150,000 listed, overall page | 0.891 → 58.100 | 0.439 → 99.811 | **Severe regression** |
+| 150,000 listed, for_sale OR not_for_sale COUNT | 90.611 → 106.823 | 146.709 → 175.512 | **Regression, skip compound logic** |
+
+Synthetic JSON price-ID payload: 2 bytes for empty, 4 bytes for 1, 671 bytes for 100, **60,549 bytes for 9,000**, and **1,009,172 bytes for 150,000**. Observed fixture heap-use delta approximately **1.84–1.88MB at 9k**, **7.0–7.2MB at 150k**. They are directional creation-time deltas, not peak concurrent Node memory. Dense lists diminish benefit, even on price sort; the general unfiltered price sort cannot use the candidate at all.
+
+### Decisions
+
+- **Accept for separate guarded implementation investigation:** indexed equality on `name =` only; preserve `contains` untouched, require whole-snapshot JS-vs-Python normalization check and fallback on drift, measure once-per-process cold-check cost.
+- **Accept for separate gated price-filter implementation investigation:** positive single `for_sale` with sort `listing_price`, sparse/moderate listings only; for-sale COUNT can be accelerated separately under bounded density. Avoid applying it to overall/age first page or high-density/mixed OR cases where measured regressions were material. Dynamic prices must remain authoritative and COUNT cache must never serve stale listing totals.
+- **Reject general predicate rewriting, indiscriminate `json_each` and fixed SQLite price indexes.** No evidence for improvement on unfiltered price sort.
+- Implement in distinct PRs with real-handler regression tests, CI, fallback and reverse-tail/page-count compatibility. No merge until requested.
+
+**Status:** benchmarks completed, no runtime modifications in this research PR. PERF-05D, PERF-05, PERF-03C, PERF-03 remain PENDING. No refresh, merge or Vercel deployment.
