@@ -29,6 +29,16 @@ const edits = [
     'cold interaction output',
   ],
   [
+    'const executable = browserExecutable();',
+    "async function perf03b2RunWithTransportRetry(executable, profile, journey) {\n  let lastError = null;\n  for (let attempt = 1; attempt <= 3; attempt++) {\n    try {\n      return await runJourney(executable, profile, journey);\n    } catch (error) {\n      lastError = error;\n      const message = String(error?.message || error);\n      // Retry *only* Chrome/CDP transport interruptions, never assertions about\n      // app behavior, request topology, keyboard/focus, or canonical routes.\n      if (!/Inspected target navigated or closed|Target closed|WebSocket.*closed|Session closed/i.test(message)\n        || attempt === 3) throw error;\n      console.warn('PERF-03B2 transient CDP transport restart ' + attempt\n        + '/2: ' + profile.id + '/' + journey.id + ': ' + message.slice(0, 160));\n    }\n  }\n  throw lastError;\n}\n\nconst executable = browserExecutable();",
+    'bounded CDP-transport-only retry owner',
+  ],
+  [
+    'const result = await runJourney(executable, profile, journey);',
+    'const result = await perf03b2RunWithTransportRetry(executable, profile, journey);',
+    'bounded CDP-transport-only retry call',
+  ],
+  [
     '      cached: { ...cached, perf03Js: { ...perf03Cached, performanceMetrics: perf03CachedTimingDelta } },',
     '      cached: { ...cached, perf03Js: { ...perf03Cached, performanceMetrics: perf03CachedTimingDelta }, perf03b2Search: perf03b2CachedSearch },',
     'cached interaction output',
