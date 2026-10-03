@@ -76,7 +76,7 @@ const cases = [
     filters: rules([{column:"listing_price",operator:"=",value:"for_sale"}]) } },
   { name: "listing_price_sort", query: { scope: "database", sortKey: "listing_price", sortDirection:"asc",
     filters: rules([{column:"listing_price",operator:"=",value:"for_sale"}]) } },
-  { name: "progression_current", query: { scope: "progression", view: "current", sortKey:"overall", includeProgression:"1" },
+  { name: "progression_current", query: { scope: "progression", view: "current", sortKey:"overall", includeProgression:"1" } },
   { name: "watchlist_sort", query: { scope: "watchlist", playerIds: watchlist.join(","), sortKey: "age", pageSize:100 } },
 ];
 if (walletAddress) {
