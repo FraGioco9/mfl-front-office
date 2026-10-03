@@ -18,16 +18,16 @@ const mobileEnd = styles.indexOf("\n}\n\n#progressionPage .playerTableScroller c
 invariant(mobileStart >= 0 && mobileEnd > mobileStart, "The canonical <=900px player-table style block is missing.");
 
 const mobileTableStyles = styles.slice(mobileStart, mobileEnd + 2);
-const stickyStart = mobileTableStyles.indexOf("#progressionPage .playerTableScroller :is(\n    th.col-name,");
+const stickyStart = mobileTableStyles.indexOf("#progressionPage .playerTableScroller :is(th.col-name, td.col-name)");
 const stickyEnd = mobileTableStyles.lastIndexOf("\n}");
 invariant(stickyStart >= 0 && stickyEnd > stickyStart, "The small-screen sticky Name subsection is missing.");
 const stickyStyles = mobileTableStyles.slice(stickyStart, stickyEnd);
 const desktopTableStyles = `${styles.slice(0, mobileStart)}${styles.slice(mobileEnd + 2)}`;
 
+invariant(!mobileTableStyles.includes("td:has(> .playerNameCell)"), "Mobile sticky Name must use semantic column classes only; avoid costly per-row relational selector matching.");
+
 for (const token of [
-  "th.col-name,",
-  "td.col-name,",
-  "td:has(> .playerNameCell)",
+  ":is(th.col-name, td.col-name)",
   "position: sticky;",
   "left: 0;",
   "padding-left: 10px;",
@@ -44,9 +44,9 @@ for (const token of [
   "pointer-events: none;",
   "#progressionPage .playerTableScroller th.col-name {\n    z-index: 6;\n    background: var(--mfl-table-header-background);",
   "z-index: 5;\n    isolation: isolate;\n    background: var(--mfl-table-surface);\n    background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));\n    background-clip: border-box;",
-  "#progressionPage #tableBody tr.tableRowHovered > :is(",
+  "#progressionPage #tableBody tr.tableRowHovered > td.col-name {",
   "background: var(--mfl-table-row-hover-background);\n    background-image: linear-gradient(var(--mfl-table-row-hover-background), var(--mfl-table-row-hover-background));",
-  "#progressionPage #tableBody > .mflTableLoadingRow > td:has(> .playerNameCell) {",
+  "#progressionPage #tableBody > .mflTableLoadingRow > td.col-name {",
   "background: var(--mfl-table-surface);\n    background-image: linear-gradient(var(--mfl-table-surface), var(--mfl-table-surface));",
 ]) {
   invariant(stickyStyles.includes(token), `Small-screen sticky Name contract is missing: ${token}`);
