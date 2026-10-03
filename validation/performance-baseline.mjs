@@ -291,6 +291,7 @@ function journeysFor({ playerId, clubId }) {
     Object.freeze({
       id: "planner",
       path: "/planner",
+      expectedPath: "/planner/opted-out",
       page: "planner",
       options: Object.freeze({}),
       profileOnly: true,
