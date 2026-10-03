@@ -74,7 +74,7 @@ for (const profile of profiles) {
         coldScriptMs: median(samples.map(x => metric(x, 'cold', 'ScriptDuration'))),
         coldCompileMs: median(samples.map(x => metric(x, 'cold', 'V8CompileDuration'))),
         coldRequests: median(samples.map(x => x.cold.requestCount)),
-        coldBytes: median(samples.map(x => x.cold.transferredBytes)),
+        coldBytes: median(samples.map(x => x.cold.bytes)),
         refreshScriptMs: median(samples.map(x => metric(x, 'refresh', 'ScriptDuration'))),
         cachedScriptMs: median(samples.map(x => metric(x, 'cached', 'ScriptDuration'))),
         firstFocusMs: median(samples.map(x => x.cold.perf03b2Search.firstFocusMs)),
