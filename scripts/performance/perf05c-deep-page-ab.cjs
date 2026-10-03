@@ -67,12 +67,21 @@ async function main(){
       q.page=Math.max(1,initial.response.totalPages+scenario.relativePage);
     }
     const {response,query}=await getCaptured(q);
-    const totalRows=response.totalRows,parameters=query.params;
+    const totalRows=response.totalRows;
     if(!totalRows)continue;
-    const reverse=reversedTailQuery(query.sql,parameters,totalRows);
-    const originalStmt=database.prepare(query.sql),reverseStmt=database.prepare(reverse.sql);
+    // pagedData may itself choose the reverse-tail plan on this branch.
+    // Recover its canonical forward SQL and page offset independently so A
+    // still measures the original query and B still measures the candidate.
+    const canonicalOrder=orderSql(String(q.scope||"database"),String(q.view||"attributes"),
+      String(q.sortKey||"overall"),String(q.sortDirection||"desc"));
+    const orderAt=query.sql.lastIndexOf(" ORDER BY ");
+    assert.ok(orderAt>0,"Expected canonical order clause");
+    const canonicalSql=query.sql.slice(0,orderAt)+" ORDER BY "+canonicalOrder+" LIMIT ? OFFSET ?";
+    const parameters=[...query.params.slice(0,-2),response.pageSize,(response.page-1)*response.pageSize];
+    const reverse=reversedTailQuery(canonicalSql,parameters,totalRows);
+    const originalStmt=database.prepare(canonicalSql),reverseStmt=database.prepare(reverse.sql);
     const sqlPlans=[
-      database.prepare("EXPLAIN QUERY PLAN "+query.sql).all(...parameters).map(x=>x.detail),
+      database.prepare("EXPLAIN QUERY PLAN "+canonicalSql).all(...parameters).map(x=>x.detail),
       database.prepare("EXPLAIN QUERY PLAN "+reverse.sql).all(...reverse.parameters).map(x=>x.detail),
     ];
     const exec={A:()=>originalStmt.all(...parameters),B:()=>reverseStmt.all(...reverse.parameters).reverse()};
