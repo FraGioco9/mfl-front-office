@@ -10,7 +10,7 @@ The previous [September layout experiment](performance-969.md#focused-cached-dat
 
 ## Measurement — existing opt-in harness, no app mutation
 
-Temporary, branch-only [PERF-02 capture workflow](../.github/workflows/perf02-one-off-capture.yml) runs on `audit-1034-perf02-mobile-layout`. It reuses the existing `validation/performance-baseline.mjs`, current validated `mfl_database` artifact, Node 22, local production Next and Chromium. Five repetitions each, **one** slow-mobile profile (390×844, CPU ×4, 150 ms network latency), fresh browser profile per repetition, cold/refresh/cached, with the same page and data across these diagnostic probes:
+The temporary, branch-only [PERF-02 capture workflow (archived at its measured commit)](https://github.com/FraGioco9/mfl-front-office/blob/57d82a4c3b7c4d547d1ddab347c913cefd1ddc9b/.github/workflows/perf02-one-off-capture.yml) ran on `audit-1034-perf02-mobile-layout` and has since been deleted from the branch. It reuses the existing `validation/performance-baseline.mjs`, current validated `mfl_database` artifact, Node 22, local production Next and Chromium. Five repetitions each, **one** slow-mobile profile (390×844, CPU ×4, 150 ms network latency), fresh browser profile per repetition, cold/refresh/cached, with the same page and data across these diagnostic probes:
 
 | Existing journey | Isolated comparison | User-visible product change? |
 | --- | --- | --- |
@@ -25,7 +25,7 @@ Expect **30 complete journey repetitions / 90 phases**. Check that the actual co
 
 ## Verified capture — 2026-10-02 (PERF-02A)
 
-The [run #37049447418](https://github.com/FraGioco9/mfl-front-office/actions/runs/37049447418) **passed**: all 30/30 journeys and 90/90 cold/refresh/cached phases were collected; 100 visible DOM rows and 1,600 cells in every condition. The full raw JSON and local Next logs are in the [run artifact #11246007937](https://github.com/FraGioco9/mfl-front-office/actions/runs/37049447418/artifacts/11246007937) (GitHub Actions retention 90 days; SHA-256 artifact archive `aefd0da42b4b8ba3b9c27cad2a72c72d1504d8fd78d28d77507258914c9b7e86`). Validated database **11242500512**, 387,258 rows and 7,866 wallets, generated **2026-10-02T17:17:23.160Z**; source commit **`57d82a4c3b7c4d547d1ddab347c913cefd1ddc9b`**, Chrome **154.0.8037.57**, Node 22.23.3, Next 16.3.6, local production server, guest.
+The [run #37049447418](https://github.com/FraGioco9/mfl-front-office/actions/runs/37049447418) **passed**: all 30/30 journeys and 90/90 cold/refresh/cached phases were collected; 100 DOM rows and 1,600 cells in every condition (the diagnostic no-layout probe intentionally hid the rendered table). The full raw JSON and local Next logs are in the [run artifact #11246007937](https://github.com/FraGioco9/mfl-front-office/actions/runs/37049447418/artifacts/11246007937) (GitHub Actions retention 90 days; SHA-256 artifact archive `aefd0da42b4b8ba3b9c27cad2a72c72d1504d8fd78d28d77507258914c9b7e86`). Validated database **11242500512**, 387,258 rows and 7,866 wallets, generated **2026-10-02T17:17:23.160Z**; source commit **`57d82a4c3b7c4d547d1ddab347c913cefd1ddc9b`**, Chrome **154.0.8037.57**, Node 22.23.3, Next 16.3.6, local production server, guest.
 
 ### Cached slow-mobile measurements
 
