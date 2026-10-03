@@ -78,18 +78,21 @@ function exercise(mode, { size = 128, immediate = true } = {}) {
   }
   const peak = harness.portraitSources.size;
   const requestsAfterCold = requests.length;
-  for (let id = size - 15; id <= size; id++) {
+  for (let id = Math.max(1, size - 15); id <= size; id++) {
     assert.equal(harness.loadPortraitCrop(canvas, String(id)), true);
   }
   const warmExtraRequests = requests.length - requestsAfterCold;
   assert.equal(warmExtraRequests, 0, "Last 16 images must be warm after traversal.");
-  assert.equal(harness.loadPortraitCrop(canvas, String(size - 16)), true);
-  const evictedVisitAdditionalRequest = requests.length - requestsAfterCold;
-  if (mode === "bounded-LRU") {
-    assert.equal(evictedVisitAdditionalRequest, 1, "Visiting a genuinely evicted image should create one new Image.");
-    assert.equal(harness.portraitSources.size, 16, "Cache must remain bounded after refill.");
-  } else {
-    assert.equal(evictedVisitAdditionalRequest, 0, "Unbounded reference control should retain the historical image.");
+  let evictedVisitAdditionalRequest = 0;
+  if (size > 16) {
+    assert.equal(harness.loadPortraitCrop(canvas, String(size - 16)), true);
+    evictedVisitAdditionalRequest = requests.length - requestsAfterCold;
+    if (mode === "bounded-LRU") {
+      assert.equal(evictedVisitAdditionalRequest, 1, "Visiting an evicted image should create one new Image.");
+      assert.equal(harness.portraitSources.size, 16, "Cache must remain bounded after refill.");
+    } else {
+      assert.equal(evictedVisitAdditionalRequest, 0, "Unbounded reference control should retain the old image.");
+    }
   }
   return { mode, peakRetainedImageReferences: peak, coldImagesCreated: requestsAfterCold,
     warmExtraRequests, evictedVisitAdditionalRequest, drawCalls, harness, instances, canvas };
