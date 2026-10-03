@@ -34,6 +34,23 @@ This means replacing arbitrary page numbers with a keyset cursor *alone* is not 
 | For-sale filter + overall · last page | 100.463 | **1.461** | Existing overall index; listing map is synthetic |
 | Agent scoped · last page | 233.445 | **55.936** | Both include temporary sort |
 
+### Same-runner replication after production-path implementation
+
+[Second completed A/B #37130626526](https://github.com/FraGioco9/mfl-front-office/actions/runs/37130626526), [raw sanitized report #11276334116](https://github.com/FraGioco9/mfl-front-office/actions/runs/37130626526/artifacts/11276334116), ran against the same pinned 387,258-player SQLite snapshot **after** the API candidate had been added. The probe independently reconstructed the *original* forward SQL from the application-generated query and `orderSql()`, so it still compared the intended A and B rather than accidentally timing B twice. All **16/16 ordered-row digests matched again**.
+
+| Scenario | Canonical A (ms) | Reverse B (ms) |
+| --- | ---: | ---: |
+| Overall DESC final | 302.471 | **0.217** |
+| Overall DESC second-final | 304.909 | **0.241** |
+| Overall DESC page 1,800 | **145.219** | 152.754 |
+| Name ASC final | 1535.108 | **46.105** |
+| Age ASC final | 450.402 | **61.628** |
+| Division final | 631.602 | **206.174** |
+| Listing price ASC final (synthetic) | 451.243 | **118.830** |
+| Agent last page | 138.348 | **32.847** |
+
+Absolute timings varied between runner runs; the direction and large effect near the end were consistent. Reverse traversal was again slower around the midpoint, further supporting the conservative tail-only gate. Unlike the separate two-row smoke fixture, this probe uses all real rows and the actual API SQL expressions and NULL/collation semantics from the pinned file. The different timing values are **not** production benchmarks or proof of first-paint changes.
+
 **Decision:** The evidence supports an *exact* reverse-tail algorithm only when the tail offset is substantially smaller than the forward offset. The selected conservative switch uses `tailOffset * 2 < offset` (approximately the last third, not pages near the midpoint), while first/middle pages, all-rows scopes, empty result sets and other contexts keep the original query path. There are **no new indexes**, migration, stored cursor, altered row count, page number or API field.
 
 ## Implementation and correctness
