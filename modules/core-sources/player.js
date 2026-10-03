@@ -697,8 +697,10 @@ function applyOverallBoxAppearance(box, overall) {
     image.addEventListener("error", () => {
       if (portraitSources.get(playerId) === image) portraitSources.delete(playerId);
     }, { once: true });
-    image.src = sourceUrl;
+    // Register before src: synchronous/mock load and error paths must see
+    // the current cache entry, while real network decode remains asynchronous.
     rememberPortraitSource(playerId, image);
+    image.src = sourceUrl;
     return true;
   }
 
