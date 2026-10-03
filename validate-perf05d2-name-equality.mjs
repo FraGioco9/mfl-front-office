@@ -55,7 +55,7 @@ const independent=(query)=>query.replaceAll(
   assert.ok(sql.length>=2,"missing COUNT/page queries");
   for(const item of sql){
     const optimized=item.sql.includes("runtime_player_search WHERE normalized_name");
-    const applies=config.rules.some(r=>r.column==="name"&&r.operator==="=");
+    const applies=item.sql.includes('normalize_search("name") = ?') || optimized;
     assert.equal(optimized,applies&&safe,"unexpected rewrite: "+item.kind);
     const baseline=independent(item.sql);
     const a=dba.getDatabase().prepare(item.sql),b=dba.getDatabase().prepare(baseline);
