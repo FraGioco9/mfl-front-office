@@ -66,7 +66,7 @@ function exercise(mode, { size = 128, immediate = true } = {}) {
     const applyPortraitGeometry = () => true;
     const drawPortraitCrop = (canvas, image) => { onDraw(canvas, image); return true; };
     ${loader}
-    return { loadPortraitCrop, portraitSources, FakeCanvas, FakeImage };
+    return { loadPortraitCrop, portraitSources };
   })()`, {
     HTMLCanvasElement: FakeCanvas, HTMLImageElement: FakeImage, Image: FakeImage,
     onDraw: (canvas, image) => { drawCalls++; canvas.drawnImage = image; },
