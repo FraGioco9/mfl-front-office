@@ -87,6 +87,31 @@ REPRESENTATIVE_TABLE_QUERY_BUDGETS = (
         required_index="players_overall_order_index",
     ),
     QueryPlanBudget(
+        name="database_nationality_overall_first_page",
+        sql=(
+            "SELECT player_id, overall FROM players "
+            "WHERE nationality = ? AND overall BETWEEN ? AND ? "
+            f"ORDER BY {DEFAULT_OVERALL_ORDER_SQL} LIMIT ? OFFSET ?"
+        ),
+        parameters=("Italy", 70, 85, 100, 0),
+        # On small synthetic fixtures, the existing overall range index can be
+        # cheaper. Both are valid; full-snapshot A/B proves the first-page gain.
+        max_full_player_scans=0,
+        max_temp_btrees=0,
+    ),
+    QueryPlanBudget(
+        name="database_position_nationality_first_page",
+        sql=(
+            "SELECT player_id, overall FROM players "
+            "WHERE nationality = ? AND "
+            "(',' || replace(coalesce(positions, ''), ' ', '') || ',') "
+            "LIKE '%,' || replace(?, ' ', '') || ',%' "
+            f"ORDER BY {DEFAULT_OVERALL_ORDER_SQL} LIMIT ? OFFSET ?"
+        ),
+        parameters=("Italy", "CM", 100, 0),
+        required_index="players_nationality_order_index",
+    ),
+    QueryPlanBudget(
         name="agent_attributes",
         sql=(
             "SELECT player_id, overall FROM players WHERE wallet_address = ? "

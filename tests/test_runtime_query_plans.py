@@ -28,6 +28,7 @@ def create_query_plan_database(path: Path, player_count: int = 6000) -> None:
                 wallet_name TEXT NOT NULL DEFAULT '',
                 name TEXT,
                 positions TEXT,
+                nationality TEXT,
                 age INTEGER,
                 retirement_years INTEGER,
                 owned_since INTEGER,
@@ -68,6 +69,7 @@ def create_query_plan_database(path: Path, player_count: int = 6000) -> None:
                     wallet_name,
                     f"Player {player_id}",
                     position,
+                    "Italy" if player_id % 4 < 2 else "France",
                     18 + (player_id % 18),
                     0 if player_id % 13 == 0 else 4,
                     1_760_000_000 + player_id,
@@ -87,6 +89,7 @@ def create_query_plan_database(path: Path, player_count: int = 6000) -> None:
                 wallet_name,
                 name,
                 positions,
+                nationality,
                 age,
                 retirement_years,
                 owned_since,
@@ -96,7 +99,7 @@ def create_query_plan_database(path: Path, player_count: int = 6000) -> None:
                 overall,
                 goalkeeping,
                 player_seasons
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             rows,
         )
@@ -278,6 +281,68 @@ class RuntimeQueryPlanTests(unittest.TestCase):
                 any("USE TEMP B-TREE" in detail for detail in precomputed_plan),
                 precomputed_plan,
             )
+
+    def test_nationality_order_index_preserves_filters_and_page_boundaries(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = self.prepare_database(directory)
+            nationality_sql = (
+                "SELECT player_id, overall FROM players "
+                "WHERE nationality = ? "
+                "AND overall BETWEEN ? AND ? "
+                f"ORDER BY {runtime_query_plans.DEFAULT_OVERALL_ORDER_SQL} LIMIT ? OFFSET ?"
+            )
+            position_sql = (
+                "SELECT player_id, overall FROM players "
+                "WHERE nationality = ? "
+                "AND (',' || replace(coalesce(positions, ''), ' ', '') || ',') "
+                "LIKE '%,' || replace(?, ' ', '') || ',%' "
+                f"ORDER BY {runtime_query_plans.DEFAULT_OVERALL_ORDER_SQL} LIMIT ? OFFSET ?"
+            )
+            queries = (
+                (nationality_sql, ("Italy", 70, 85, 100, 0)),
+                (nationality_sql, ("France", 70, 85, 100, 300)),
+                (position_sql, ("Italy", "CM", 100, 0)),
+                (position_sql, ("France", "ST", 100, 100)),
+            )
+
+            with sqlite3.connect(database_path) as connection:
+                connection.execute("DROP INDEX players_nationality_order_index")
+                connection.execute("ANALYZE")
+                unindexed = tuple(
+                    runtime_query_plans.measure_query_work(connection, sql, params)
+                    for sql, params in queries
+                )
+
+                connection.execute(
+                    "CREATE INDEX players_nationality_order_index "
+                    "ON players(nationality, (overall IS NULL), overall DESC, player_id DESC)"
+                )
+                connection.execute("ANALYZE")
+                indexed = tuple(
+                    runtime_query_plans.measure_query_work(connection, sql, params)
+                    for sql, params in queries
+                )
+                plans = tuple(
+                    runtime_query_plans.explain_query_plan(connection, sql, params)
+                    for sql, params in queries
+                )
+
+            for index, (before, after, details) in enumerate(zip(unindexed, indexed, plans)):
+                self.assertEqual(before.rows, after.rows, "Index changed page results or ordering")
+                expected_indexes = (
+                    ("players_nationality_order_index", "players_overall_order_index")
+                    if index < 2
+                    else ("players_nationality_order_index",)
+                )
+                self.assertTrue(
+                    any(name in detail for name in expected_indexes for detail in details),
+                    details,
+                )
+                self.assertFalse(
+                    any("USE TEMP B-TREE" in detail for detail in details),
+                    details,
+                )
+            self.assertGreater(len(unindexed[0].rows), 0)
 
     def test_budget_detects_loss_of_production_overall_order_index(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

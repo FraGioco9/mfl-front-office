@@ -37,6 +37,7 @@ def create_source_database(path: Path) -> None:
                 wallet_name TEXT NOT NULL DEFAULT '',
                 name TEXT,
                 positions TEXT,
+                nationality TEXT,
                 age INTEGER,
                 retirement_years INTEGER,
                 owned_since INTEGER,
