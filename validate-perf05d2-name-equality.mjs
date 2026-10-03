@@ -39,6 +39,8 @@ const cases=[
   {rules:[{column:"name",operator:"=",value:"Nicolò Barella"},{column:"overall",operator:">=",value:90,connector:"or"}]},
   {rules:[{column:"name",operator:"=",value:"Nicolò Barella"},{column:"name",operator:"contains",value:"nico"}]},
   {rules:[{column:"name",operator:"contains",value:"nicolò"}]},
+  {rules:[{column:"name",operator:"=",value:"Nicolò Barella"}],sortKey:"age"},
+  {rules:[{column:"name",operator:"=",value:"Nicolò Barella"}],hideRetired:"1"},
 ];
 const independent=(query)=>query.replaceAll(
   "player_id IN (SELECT player_id FROM runtime_player_search WHERE normalized_name = ?)",
@@ -48,7 +50,7 @@ const independent=(query)=>query.replaceAll(
  for(const config of cases){
   captured=[];
   const query={scope:"database",view:"attributes",pageSize:25,
-    sortKey:"age",sortDirection:"asc",page:1,filters:JSON.stringify(config.rules)};
+    sortKey:config.sortKey||"overall",sortDirection:"desc",hideRetired:config.hideRetired||"",page:1,filters:JSON.stringify(config.rules)};
   const response=await pagedData({query},"",true,false);
   assert.ok(response&&Array.isArray(response.rows));
   const sql=captured.filter(c=>/^SELECT\s/i.test(c.sql));
@@ -56,7 +58,9 @@ const independent=(query)=>query.replaceAll(
   for(const item of sql){
     const optimized=item.sql.includes("runtime_player_search WHERE normalized_name");
     const applies=item.sql.includes('normalize_search("name") = ?') || optimized;
-    assert.equal(optimized,applies&&safe,"unexpected rewrite: "+item.kind);
+    const isolated=config.rules.length===1 && config.rules[0].column==="name"
+      && config.rules[0].operator==="=" && !config.sortKey && !config.hideRetired;
+    assert.equal(optimized,applies&&safe&&isolated,"unexpected rewrite: "+item.kind);
     const baseline=independent(item.sql);
     const a=dba.getDatabase().prepare(item.sql),b=dba.getDatabase().prepare(baseline);
     const run=(stmt)=>item.kind==="count"?stmt.get(...item.args):stmt.all(...item.args);
