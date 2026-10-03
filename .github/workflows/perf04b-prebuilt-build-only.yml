@@ -63,12 +63,15 @@ jobs:
           test -s .vercel/output/config.json
           node scripts/workflows/verify-prebuilt-security-headers.mjs
           node scripts/workflows/inspect-prebuilt-cache.mjs .vercel/output/config.json > perf04b-prebuilt-report.json
+          node validation/perf04b-prebuilt-asset-inventory.mjs .vercel/output > perf04b-prebuilt-assets.json
           node -e 'const r=require("./perf04b-prebuilt-report.json"); console.log("Vercel Build Output API v"+r.schemaVersion+" route count="+r.routeCount); for(const p of r.inspections)console.log(p.label+": "+p.matchedHeaderRules.map(x=>x.cacheControl||"(no explicit cache control)").join(" | "));'
       - name: Preserve header-only report, not functions or secrets
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: perf04b-prebuilt-header-audit-${{ github.run_id }}
-          path: perf04b-prebuilt-report.json
+          path: |
+            perf04b-prebuilt-report.json
+            perf04b-prebuilt-assets.json
           if-no-files-found: warn
           retention-days: 90
