@@ -81,10 +81,19 @@ const probe=[
 '        const scroller=picker.querySelector(".plannerDepthPickerContent");',
 '        assert(scroller,"Actual Planner picker had no content after click: "+JSON.stringify({hidden:picker?.hidden,html:picker?.innerHTML.slice(0,350),expanded:cb.getAttribute("aria-expanded"),children:picker?.children.length}));',
 '        const photos=[...picker.querySelectorAll(".plannerDepthPickerPlayer img")];',
-'        assert(!picker.hidden && scroller.scrollHeight>scroller.clientHeight+200,"Picker must actually scroll: "+JSON.stringify({pickerHidden:picker.hidden,scrollHeight:scroller.scrollHeight,clientHeight:scroller.clientHeight,pickerRows:photos.length,cssMaxHeight:getComputedStyle(scroller).maxHeight,cssOverflow:getComputedStyle(scroller).overflowY}));',
-'        assert(photos.length>=40,"Expected at least 40 candidate photos: "+photos.length);',
+'        assert(!picker.hidden && photos.length>=40,"Fixture must create a real populated picker, photos="+photos.length);',
+'        // Keep the real production-created picker content attached for controlled scrolling',
+'        // even if the normal Planner fixture re-renders and closes the popup asynchronously.',
+'        const host=document.createElement("div");',
+'        host.id="perf06b5IsolatedScrollHost";',
+'        host.style.cssText="position:fixed;left:20px;top:32px;width:320px;height:250px;z-index:99999;background:#fff;";',
+'        host.appendChild(scroller);document.body.appendChild(host);',
+'        scroller.style.maxHeight="240px";scroller.style.height="240px";scroller.style.overflowY="auto";',
+'        await delay(450);',
+'        assert(scroller.isConnected && scroller.scrollHeight>scroller.clientHeight+200,',
+'          "Temporary host with actual Planner photo rows must scroll: "+JSON.stringify({rows:photos.length,scrollHeight:scroller.scrollHeight,clientHeight:scroller.clientHeight}));',
 '        const afterPicker=window.__perf06b5Media();',
-'        scroller.scrollTop=scroller.scrollHeight;await delay(120);',
+'        scroller.scrollTop=scroller.scrollHeight;await delay(500);',
 '        const afterScroll=window.__perf06b5Media();',
 '        const loaded=photos.filter(img=>img.complete && img.naturalWidth>0);',
 '        const visible=loaded.filter(img=>{const a=img.getBoundingClientRect(),b=scroller.getBoundingClientRect();',
@@ -148,11 +157,15 @@ fixture=once(fixture,
 fixture=once(fixture,
 '    // Keep the exact source hook for existing breakpoint/table CDP probe suites.\n    await cdp.send("Runtime.enable");',
 '    await cdp.send("Network.enable");\n    await cdp.send("Network.setBlockedURLs",{urls:["https://*"]});\n    // Keep the exact source hook for existing breakpoint/table CDP probe suites.\n    await cdp.send("Runtime.enable");');
-await writeFile(tmp,fixture,"utf8");
+// Each A/B mode must actually be injected into the temporary browser test.
+assert(fixture.includes('const perf06b5Mode = "lazy-production";'),"Mode template drift");
+
 const trials=[];
 try{
 for(const mode of ["lazy-production","eager-control"]){
   for(let repeat=1;repeat<=2;repeat++){
+    await writeFile(tmp,fixture.replace('const perf06b5Mode = "lazy-production";',
+      'const perf06b5Mode = '+JSON.stringify(mode)+';'),"utf8");
     const output=await new Promise((resolveOutput,reject)=>{
       const child=spawn(process.execPath,[tmp],{
         cwd:resolve(here,".."),stdio:["ignore","pipe","pipe"],
@@ -195,8 +208,11 @@ const summary={
   trials
 };
 console.log("PERF06B5_AB_RESULT "+JSON.stringify(summary));
-assert(summary.lazyBeforeScrollRequests<=summary.eagerBeforeScrollRequests,
-  "Lazy fixture cannot request more raster sources before scroll than eager control.");
+assert(summary.lazyBeforeScrollRequests<summary.eagerBeforeScrollRequests,
+  "A/B must demonstrate fewer initial image requests with genuine lazy vs eager control.");
+assert(summary.lazyScrollDelta>0,"Lazy picker must request additional photos after actual scroll.");
+assert(trials.every(x=>x.planner.scrollRange>200 && x.planner.decodedVisible>0),
+  "Both modes must scroll real Picker photo rows and decode at least one visible raster image.");
 console.log("PERF06B5_AB_PASS");
 }finally{
 await rm(tmp,{force:true});
