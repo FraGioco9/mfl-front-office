@@ -18,7 +18,7 @@ function insertOnce(before, after, label) {
   instrumented = instrumented.replace(before, after);
 }
 
-const auditHelper = String.raw([
+const auditHelper = [
   "async function perf03ReadJsAudit(cdp) {",
   "  const [coverage, timing] = await Promise.all([",
   "    cdp.send('Profiler.takePreciseCoverage'),",
@@ -38,7 +38,7 @@ const auditHelper = String.raw([
   "  return { performanceMetrics, scripts };",
   "}",
   "",
-].join("\n"));
+].join("\n");
 insertOnce("async function runJourney(executable, profile, journey) {", auditHelper + "async function runJourney(executable, profile, journey) {", "audit helper");
 insertOnce(
   '    await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: observerBootstrap });',
