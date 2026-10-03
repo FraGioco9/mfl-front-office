@@ -38,6 +38,23 @@ A **temporary** PR-only GitHub Actions workflow downloads the existing successfu
 
 **Conclusion from first run:** Reject any broad substitution of text predicates with `runtime_player_search`: many inexpensive indexed first-page queries become dramatically slower and composite filters can regress. SQL-only testing justifies researching **selective** equality and for-sale strategies with full response, combined filter, cache and Unicode validation. The general listing-price sort still has no measured safe replacement. Do not ship from this experiment alone; **replication triggered on the same PR head** and any resulting runtime change must be separately gated. No schema/index/app runtime changed.
 
+## Independent repetition — 03 October 2026
+
+[Second full-snapshot workflow #37132043333](https://github.com/FraGioco9/mfl-front-office/actions/runs/37132043333), [sanitized artifact #11277341819](https://github.com/FraGioco9/mfl-front-office/actions/runs/37132043333/artifacts/11277341819): **PASS**, again 0/387,258 normalization mismatches and **24/24 digest-equivalent paired statements**. Absolute times differ substantially between GitHub-hosted runner captures, so use *within-run paired differences*, never pooled absolute latency values.
+
+| Query | Repeat A (ms) | Repeat B (ms) | Repeated conclusion |
+| --- | ---: | ---: | --- |
+| Name contains `a` COUNT | 231.985 | 229.951 | first-run benefit did not reproduce convincingly |
+| Name contains `a` first page | 0.314 | 244.254 | **severe regression confirmed** |
+| Name contains `mar` COUNT | 233.162 | 35.310 | COUNT better but first page 2.488→36.020 ms slower |
+| Name exact `=` COUNT | 215.168 | 0.006 | dramatic gain confirmed, first page 473.343→0.037 ms |
+| Name + overall COUNT | 57.052 | 227.394 | **regression confirmed** |
+| `for_sale` COUNT | 81.621 | 7.419 | gain confirmed; first page 1.218→8.248 ms worse |
+| Price ASC for_sale page | 84.731 | 10.368 | improvement confirmed for *synthetic selective listings* |
+| Price DESC for_sale page | 85.874 | 10.221 | improvement confirmed for *synthetic selective listings* |
+
+**Gate outcome:** 15-case diagnostic experiment is complete with twice-matched data. The existing broad name-contains query must remain unchanged. Selective exact-name and filtered-listing optimizations have encouraging evidence but require their **own** implementation/contract PR with harder combinations, real API response parity, future-schema normalization guarantees, concurrency/memory and adverse-dataset benchmarks. Full `listing_price` sort without a for-sale filter is still unresolved. PERF-05D and parent PERF-05 remain open; no user-facing performance claim, SQLite index or runtime modification has been made.
+
 ## Decision criteria
 
 Implement production changes only in a **subsequent dedicated change** if A/B results on the pinned snapshot agree with exact digest equivalence *and* meaningfully improve measured latency without unacceptable build/storage/memory cost. Replicate promising findings in another same-runner run, assess index/db size and text drift, run full CI and retain safe fallback for older snapshots. If not demonstrated, close PERF-05D as **NO CHANGE** with evidence.
