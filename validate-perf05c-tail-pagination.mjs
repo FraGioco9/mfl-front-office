@@ -5,7 +5,7 @@ import {spawnSync} from "node:child_process";
 import {createRequire} from "node:module";
 import {mkdtemp,rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
-import {join,resolve} from "node:path";
+import {join} from "node:path";
 const require=createRequire(import.meta.url);
 const isWorker=process.argv.includes("--worker");
 function processNode(args,env={}){
@@ -19,7 +19,6 @@ function processNode(args,env={}){
 }
 const RULES=x=>JSON.stringify(x);
 async function worker(){
-  const {DatabaseSync}=require("node:sqlite");
   const dbApi=require("../api/_database.js");
   const db=dbApi.getDatabase();
   db.exec("PRAGMA query_only=ON");
