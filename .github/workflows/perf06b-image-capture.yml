@@ -1,0 +1,87 @@
+name: PERF-06B image cold and scroll diagnostics
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/perf06b-image-capture.yml"
+      - "validation/perf06b-image-runner.mjs"
+      - "validation/performance-baseline.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  isolated-image-capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Download pinned existing validated DB (read-only artifact)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # This downloads existing artifact 11242500512 from PERF-01 baseline;
+          # it does not rebuild, refresh, migrate, or write any shared database.
+          gh run download 37038069396 --repo "$GITHUB_REPOSITORY" --name mfl_database --dir .
+          python -m scripts.database.prepare_runtime_database mfl_database.db --validate-only
+          mkdir -p api/data-files
+          mv mfl_database.db api/data-files/mfl_database.db
+          python -m scripts.database.prepare_runtime_database api/data-files/mfl_database.db --validate-only
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build isolated local Next production
+        run: |
+          npm run build:legacy
+          npm run build:public
+          npx next build --webpack
+      - name: Start local production Next
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx next start -p 4000 > /tmp/perf06b-next.log 2>&1 &
+          echo "PERF06B_PID=$!" >> "$GITHUB_ENV"
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent --show-error http://127.0.0.1:4000/api/data?mode=bootstrap >/tmp/perf06b-bootstrap.json; then
+              exit 0
+            fi
+            if ! kill -0 "$!" >/dev/null 2>&1; then
+              cat /tmp/perf06b-next.log >&2
+              exit 1
+            fi
+            sleep 1
+          done
+          tail -100 /tmp/perf06b-next.log
+          exit 1
+      - name: PERF-06B isolated cold scroll image audit
+        env:
+          MFL_BASE_URL: http://127.0.0.1:4000
+          MFL_PERF06B_OUTPUT: perf06b-images-current.json
+        run: node validation/perf06b-image-runner.mjs
+      - name: Upload run evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf06b-images-${{ github.run_id }}
+          path: |
+            perf06b-images-current.json
+            /tmp/perf06b-next.log
+          if-no-files-found: warn
+          retention-days: 45
+      - name: Stop local Next
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${PERF06B_PID:-}" ]; then
+            kill "$PERF06B_PID" >/dev/null 2>&1 || true
+            wait "$PERF06B_PID" >/dev/null 2>&1 || true
+          fi
