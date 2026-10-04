@@ -7387,6 +7387,20 @@ function incrementalRequestDetails(route, page = 1) {
   };
 }
 
+// Marketplace changes independently of the bundled SQLite generatedAt. Server-side
+// listing-price sort/filter is authoritative, so a completed page must not
+// survive a second visit under only the SQLite/wallet cache namespace.
+function incrementalQueryEmbedsMarketplace(query) {
+  if (String(query.get("sortKey") || "").toLowerCase() === "listing_price") return true;
+  try {
+    const filters = JSON.parse(query.get("filters") || "[]");
+    return Array.isArray(filters)
+      && filters.some((rule) => String(rule?.column || "").toLowerCase() === "listing_price");
+  } catch {
+    return false;
+  }
+}
+
 const INCREMENTAL_PAYLOAD_CACHE_MAX_ENTRIES = 64;
 
 function readIncrementalPayloadCache(cacheKey) {
@@ -7416,7 +7430,8 @@ function cachedIncrementalPayload(route, page = 1) {
   if (!route || route.scope === "empty") {
     return null;
   }
-  return readIncrementalPayloadCache(incrementalRequestDetails(route, page).cacheKey);
+  const { query, cacheKey } = incrementalRequestDetails(route, page);
+  return incrementalQueryEmbedsMarketplace(query) ? null : readIncrementalPayloadCache(cacheKey);
 }
 
 function incrementalRouteIsCached(route, page = 1) {
@@ -7556,11 +7571,12 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
     return payload;
   }
 
-  const { requestKey, cacheKey } = incrementalRequestDetails(route, page);
+  const { query, requestKey, cacheKey } = incrementalRequestDetails(route, page);
+  const cacheable = !incrementalQueryEmbedsMarketplace(query);
   const generation = beginIncrementalRouteRequest(cacheKey, force);
   if (force) state.incrementalPayloadCache.delete(cacheKey);
 
-  const cachedPayload = !force ? readIncrementalPayloadCache(cacheKey) : null;
+  const cachedPayload = !force && cacheable ? readIncrementalPayloadCache(cacheKey) : null;
   const inheritedTableLoadingRequestToken = Number(options.tableLoadingRequestToken || 0);
   const cachedPayloadSupersedesActiveRequest = Boolean(cachedPayload && window.__mflTableLoadingRuntime?.requestActive?.());
   const tableLoadingRequestToken = inheritedTableLoadingRequestToken
@@ -7608,7 +7624,7 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
         if (controller.signal.aborted) return null;
         adoptIncrementalPayloadDataset(payload);
         const responseCacheKey = incrementalRequestDetails(route, page).cacheKey;
-        rememberIncrementalPayload(responseCacheKey, payload);
+        if (cacheable) rememberIncrementalPayload(responseCacheKey, payload);
         return payload;
       } catch (error) {
         if (error?.name === "AbortError" && !timedOut) return null;

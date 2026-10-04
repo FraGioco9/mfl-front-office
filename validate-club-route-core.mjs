@@ -104,7 +104,7 @@ includes(sharedCore, "const setIncrementalView = async function setIncrementalVi
 excludes(sharedCore, "const clubViewPayloadCache = new Map();", "Club views must not retain a competing completed-result cache.");
 excludes(sharedCore, "function rememberClubViewPayload(route, payload) {", "Club views must not retain a route-specific cache writer.");
 excludes(sharedCore, "function cachedClubViewPayload(route) {", "Club views must not retain a route-specific cache reader.");
-includes(sharedCore, "return readIncrementalPayloadCache(incrementalRequestDetails(route, page).cacheKey);", "Club views must reuse the canonical incremental payload cache reader.");
+includes(sharedCore, "return incrementalQueryEmbedsMarketplace(query) ? null : readIncrementalPayloadCache(cacheKey);", "Club views must reuse the canonical incremental payload cache reader.");
 includes(tableCore, 'else if (pageName !== "club") {', "Table rendering must preserve the Club title during view changes.");
 includes(tableCore, 'window.mflOpenClubPage(clubLink.dataset.clubId || "", "attributes");', "Table Club links must open the canonical Squad/Attributes view directly.");
 excludes(tableCore, 'window.mflOpenClubPage(clubLink.dataset.clubId || "", "info");', "Table Club links must not retain retired Info navigation.");
