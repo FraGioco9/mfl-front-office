@@ -34,6 +34,10 @@ The exact production Player search and input owner are extracted into `validatio
 
 These are **isolated, source-execution synthetic checks**, not a real wallet, Safari/iPhone test, real network timings or a field measurement of server query load. The fixture does not prove all server Unicode matching, backend 429 handling, every pagination edge case or real touch-keyboard composition. Do not infer a performance improvement from the measured abort counts alone.
 
+## CI-generated source projection head
+
+The first complete CI on `bf293003a05909bd4a11ecf35405b2c06135ca8e` passed **10/10 workflows, 18/18 jobs**, including the Player/Planner browser regressions. After completing, Site Quality's source-owned generation synchronization automatically created commit `46b5e9fc0e6304363a0ba6e17de8ab01028e7ad8`, changing only two lines in derived `table-width-runtime.js`. That generated commit has no directly successful full-suite status on its exact SHA. This documentation update intentionally retriggers the full suite on a fresh human-authored head containing the finalized projection. **Do not claim final exact-head pass until all jobs on the resulting commit succeed and the PR head remains unchanged.**
+
 ## Decision
 
 Only the reproduced **Planner Player search** race warrants an application PR. Global Search, Planner Club search and Evaluation remain **NO CHANGE**. Do not merge either PR, refresh a live/shared database or deploy Vercel. Real Safari/iPhone and wallet remain at the final issue gate (TEST-04B6.6, PERF-06.5, LOAD-01D). Exact-head CI success must be recorded separately when the last PR commit is verified.
