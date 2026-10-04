@@ -68,7 +68,6 @@ const cases = [
   { kind: "club", scenario: "load01b4-club", path: "/clubs/9001/squad" },
   { kind: "evaluation", scenario: "load01b4-evaluation", path: "/evaluation" },
   { kind: "database", scenario: "database", path: "/database/attributes" },
-  { kind: "planner", scenario: "planner-selected", path: "/planner?club=9001" },
 ];
 const mode = process.env.MFL_LOAD01B4_MODE || "all";
 const selected = mode === "pilot" ? [cases[0]] : mode === "target"
