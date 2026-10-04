@@ -7749,6 +7749,152 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
 
   return withInteractionBusy(loadAndRender, options.loadingReason);
 }
+
+
+
+// DATA-01C3: event-scoped SQLite identity revalidation. This intentionally
+// does not poll, touch Planner drafts/localStorage, or treat the separately
+// generated Marketplace overlay as part of the SQLite identity.
+const RESUME_IDENTITY_MIN_INTERVAL_MS = 30_000;
+const RESUME_IDENTITY_RETRY_MS = 5_000;
+const RESUME_IDENTITY_TIMEOUT_MS = 7_000;
+let resumeIdentityLastCheckAt = 0;
+let resumeIdentityLastFailed = false;
+let resumeIdentityEtag = "";
+let resumeIdentityWasHidden = Boolean(document.hidden);
+let resumeIdentitySequence = 0;
+let resumeIdentityActive = null;
+
+function stopResumeIdentityCheck() {
+  resumeIdentitySequence += 1;
+  const active = resumeIdentityActive;
+  resumeIdentityActive = null;
+  if (active) {
+    resumeIdentityLastFailed = true;
+    resumeIdentityLastCheckAt = 0;
+    active.abort();
+  }
+}
+
+function watchlistResumeSnapshot() {
+  if (state.currentPage !== "watchlist" || state.incrementalRoute?.scope !== "watchlist"
+    || !state.incrementalMode) return null;
+  return {
+    route: window.location.pathname + window.location.search,
+    wallet: String(state.linkedWalletAddress || ""),
+    watchlist: String(state.currentWatchlistId || ""),
+    view: String(state.view || ""),
+    page: state.page,
+  };
+}
+
+function watchlistResumeSnapshotMatches(snapshot) {
+  return Boolean(snapshot
+    && document.visibilityState === "visible"
+    && state.currentPage === "watchlist"
+    && state.incrementalRoute?.scope === "watchlist"
+    && state.incrementalMode
+    && window.location.pathname + window.location.search === snapshot.route
+    && String(state.linkedWalletAddress || "") === snapshot.wallet
+    && String(state.currentWatchlistId || "") === snapshot.watchlist
+    && String(state.view || "") === snapshot.view
+    && state.page === snapshot.page
+    && state.incrementalRequestPromises.size === 0
+    && typeof window.mflReloadIncrementalPage === "function");
+}
+
+async function revalidateSQLiteIdentityOnResume() {
+  if (document.visibilityState !== "visible" || !state.manifest?.generated_at) return false;
+  if (resumeIdentityActive) return resumeIdentityActive.promise;
+
+  const now = Date.now();
+  const minInterval = resumeIdentityLastFailed
+    ? RESUME_IDENTITY_RETRY_MS
+    : RESUME_IDENTITY_MIN_INTERVAL_MS;
+  if (resumeIdentityLastCheckAt && now - resumeIdentityLastCheckAt < minInterval) return false;
+  resumeIdentityLastCheckAt = now;
+  const controller = new AbortController();
+  const sequence = ++resumeIdentitySequence;
+  const watchlistSnapshot = watchlistResumeSnapshot();
+  let timeout = 0;
+  const request = (async () => {
+    try {
+      timeout = window.setTimeout(() => controller.abort(), RESUME_IDENTITY_TIMEOUT_MS);
+      const headers = new Headers({ Accept: "application/json" });
+      if (resumeIdentityEtag) headers.set("If-None-Match", resumeIdentityEtag);
+      const response = await window.__mflDataClient.fetch("/api/identity", {
+        cache: "no-store",
+        headers,
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted || sequence !== resumeIdentitySequence
+        || document.visibilityState !== "visible") return false;
+      if (response.status === 304) {
+        resumeIdentityLastFailed = false;
+        return false;
+      }
+      if (!response.ok) throw new Error("SQLite identity unavailable.");
+      const identity = await response.json();
+      if (controller.signal.aborted || sequence !== resumeIdentitySequence
+        || document.visibilityState !== "visible") return false;
+      const incoming = String(identity?.database?.generatedAt || "").trim();
+      const observed = String(state.manifest?.generated_at || "").trim();
+      const incomingTime = Date.parse(incoming);
+      const observedTime = Date.parse(observed);
+      if (!Number.isFinite(incomingTime) || !Number.isFinite(observedTime)) {
+        throw new Error("SQLite identity malformed.");
+      }
+      resumeIdentityLastFailed = false;
+      // A late/old deployment response must not replace the newer generation
+      // already observed by a concurrent route or Home bootstrap request.
+      if (incomingTime < observedTime) return false;
+      resumeIdentityEtag = response.headers?.get?.("ETag") || "";
+      if (incomingTime === observedTime) return false;
+      adoptIncrementalPayloadDataset({ generatedAt: incoming });
+      // Refresh only an unchanged, idle Watchlist route. Planner and its
+      // unsaved formations never receive automatic page/roster mutations.
+      if (watchlistResumeSnapshotMatches(watchlistSnapshot)) {
+        void window.mflReloadIncrementalPage(watchlistSnapshot.page, {
+          save: false, loadingMode: "preserve",
+        });
+      }
+      return true;
+    } catch {
+      if (sequence === resumeIdentitySequence) resumeIdentityLastFailed = true;
+      return false;
+    } finally {
+      if (timeout) window.clearTimeout(timeout);
+    }
+  })();
+  const record = {
+    abort: () => controller.abort(),
+    promise: request.finally(() => {
+      if (resumeIdentityActive === record) resumeIdentityActive = null;
+    }),
+  };
+  resumeIdentityActive = record;
+  return record.promise;
+}
+
+function installSQLiteIdentityResumeListener() {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") {
+      resumeIdentityWasHidden = true;
+      stopResumeIdentityCheck();
+      return;
+    }
+    if (!resumeIdentityWasHidden) return;
+    resumeIdentityWasHidden = false;
+    void revalidateSQLiteIdentityOnResume();
+  });
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted && document.visibilityState === "visible") {
+      resumeIdentityWasHidden = false;
+      void revalidateSQLiteIdentityOnResume();
+    }
+  });
+}
+installSQLiteIdentityResumeListener();
 window.mflReloadIncrementalPage = reloadIncrementalPage;
 
 let pendingViewButtonPointer = null;
