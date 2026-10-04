@@ -24,3 +24,5 @@ jobs:
         run: |
           node --check validation/load02-error-retry-isolation.mjs
           node validation/load02-error-retry-isolation.mjs
+          node --check validation/load02-incremental-network-fixture.mjs
+          node validation/load02-incremental-network-fixture.mjs
