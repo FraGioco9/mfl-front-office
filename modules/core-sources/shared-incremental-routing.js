@@ -131,6 +131,12 @@ function syncIncrementalCacheNamespace() {
   return { datasetKey, walletKey, namespace };
 }
 
+function incrementalPayloadGenerationIsOlder(payload) {
+  const incoming = Date.parse(String(payload?.generatedAt || ""));
+  const current = Date.parse(String(state.manifest?.generated_at || ""));
+  return Number.isFinite(incoming) && Number.isFinite(current) && incoming < current;
+}
+
 function adoptIncrementalPayloadDataset(payload) {
   const generatedAt = String(payload?.generatedAt || "").trim();
   if (generatedAt && String(state.manifest?.generated_at || "").trim() !== generatedAt) {
@@ -138,6 +144,7 @@ function adoptIncrementalPayloadDataset(payload) {
       ...(state.manifest || {}),
       generated_at: generatedAt,
     };
+    window.__mflHomeSummaryCache?.invalidate?.();
   }
   return syncIncrementalCacheNamespace();
 }
@@ -387,7 +394,7 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
         if (!response.ok) {
           throw new Error(payload.error || "Could not load this page.");
         }
-        if (controller.signal.aborted) return null;
+        if (controller.signal.aborted || incrementalPayloadGenerationIsOlder(payload)) return null;
         adoptIncrementalPayloadDataset(payload);
         const responseCacheKey = incrementalRequestDetails(route, page).cacheKey;
         if (cacheable) rememberIncrementalPayload(responseCacheKey, payload);
