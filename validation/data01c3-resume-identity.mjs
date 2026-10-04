@@ -8,7 +8,8 @@ const source = readFileSync(new URL("../modules/core-sources/shared-incremental-
 const cacheStart = source.indexOf("function syncIncrementalCacheNamespace() {");
 const cacheEnd = source.indexOf("function incrementalRequestDetails(", cacheStart);
 const resumeStart = source.indexOf("// DATA-01C3: event-scoped SQLite identity revalidation.");
-assert.ok(cacheStart >= 0 && cacheEnd > cacheStart && resumeStart > cacheEnd,
+const resumeEnd = source.lastIndexOf("window.mflReloadIncrementalPage = reloadIncrementalPage;");
+assert.ok(cacheStart >= 0 && cacheEnd > cacheStart && resumeStart > cacheEnd && resumeEnd > resumeStart,
   "Fixture must execute real cache adopter and event-based revalidator, not test copies.");
 const A = "2026-10-04T10:00:00.000Z";
 const B = "2026-10-04T11:00:00.000Z";
@@ -57,7 +58,7 @@ const window = {
 const env = { state, document, window, Date: ClockDate, Headers, AbortController,
   normalizeWalletAddress: (v) => String(v || "").trim() };
 runInNewContext(source.slice(cacheStart, cacheEnd) + "\n"
-  + source.slice(resumeStart) + "\n"
+  + source.slice(resumeStart, resumeEnd) + "\n"
   + "globalThis.__test={syncIncrementalCacheNamespace,revalidateSQLiteIdentityOnResume,stopResumeIdentityCheck};", env);
 const owner = env.__test;
 const sleepMicro = async () => { for (let i=0;i<4;i++) await new Promise(resolve=>setImmediate(resolve)); };
