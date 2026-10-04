@@ -57,11 +57,16 @@ script = swapOnce(script,
     await cdp.send("Network.setBlockedURLs", { urls: ["https://*"] });
     return await (await import("./browser-load01b4-cdp.mjs")).runLoad01b4(cdp, { url, width, height });`);
 
+// Register only these three source routes inside the temporary canonical fixture.
+script = swapOnce(script,
+  "const regressionScenarios = Object.freeze([",
+  'const regressionScenarios = Object.freeze([\\n  ["load01b4-home", "/"],\\n  ["load01b4-club", "/clubs/9001/squad"],\\n  ["load01b4-evaluation", "/evaluation"],');
+
 const cases = [
   { kind: "myclubs", scenario: "myclubs-in", path: "/my-clubs#opted-in" },
-  { kind: "home", scenario: "stale", path: "/" },
-  { kind: "club", scenario: "stale", path: "/clubs/9001/squad" },
-  { kind: "evaluation", scenario: "stale", path: "/evaluation" },
+  { kind: "home", scenario: "load01b4-home", path: "/" },
+  { kind: "club", scenario: "load01b4-club", path: "/clubs/9001/squad" },
+  { kind: "evaluation", scenario: "load01b4-evaluation", path: "/evaluation" },
   { kind: "database", scenario: "database", path: "/database/attributes" },
   { kind: "planner", scenario: "planner-selected", path: "/planner?club=9001" },
 ];
