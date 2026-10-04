@@ -21,6 +21,7 @@ const validators = [
   "validate-marketplace-overlay.mjs",
   "validation/data01-listing-cache-freshness.mjs",
   "validation/data01c-generation-regression.mjs",
+  "validation/data01c3-resume-identity.mjs",
   "validate-table-payload-projection.mjs",
   "validate-contract-clauses.mjs",
   "validate-data-client-runtime-ownership.mjs",
