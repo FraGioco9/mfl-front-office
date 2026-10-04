@@ -60,7 +60,7 @@ script = swapOnce(script,
 // Register only these three source routes inside the temporary canonical fixture.
 script = swapOnce(script,
   "const regressionScenarios = Object.freeze([",
-  'const regressionScenarios = Object.freeze([\\n  ["load01b4-home", "/"],\\n  ["load01b4-club", "/clubs/9001/squad"],\\n  ["load01b4-evaluation", "/evaluation"],');
+  'const regressionScenarios = Object.freeze([\n  ["load01b4-home", "/"],\n  ["load01b4-club", "/clubs/9001/squad"],\n  ["load01b4-evaluation", "/evaluation"],');
 
 const cases = [
   { kind: "myclubs", scenario: "myclubs-in", path: "/my-clubs#opted-in" },
