@@ -1,0 +1,49 @@
+name: LOAD-01C same-runner equivalent-payload skeleton A/B
+
+on:
+  pull_request:
+    paths:
+      - "validation/browser-load01c-*"
+      - ".github/workflows/load01c-skeleton-ab.yml"
+      - "docs/load01c-no-change-decision.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  equal-payload-ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install existing dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Validate isolated test files and pilot A/B
+        env:
+          MFL_LOAD01C_MODE: pilot
+          MFL_LOAD01C_OUT: ${{ runner.temp }}/load01c-pilot
+        run: |
+          node --check validation/browser-load01c-cdp.mjs
+          node --check validation/browser-load01c-geometry-ab.mjs
+          node validation/browser-load01c-geometry-ab.mjs
+      - name: Repeat equal-payload A/B by cardinality, viewport and theme
+        env:
+          MFL_LOAD01C_MODE: all
+          MFL_LOAD01C_OUT: ${{ runner.temp }}/load01c-all
+        run: node validation/browser-load01c-geometry-ab.mjs
+      - name: Upload synthetic A/B evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load01c-row-matched-ab-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/load01c-pilot/
+            ${{ runner.temp }}/load01c-all/
+          retention-days: 14
+          if-no-files-found: warn
