@@ -37,7 +37,7 @@ const [
 
 const sitePackage = JSON.parse(sitePackageSource);
 
-const cacheReadIndex = incrementalRouting.indexOf("const cachedPayload = !force ? readIncrementalPayloadCache(cacheKey) : null;");
+const cacheReadIndex = incrementalRouting.indexOf("const cachedPayload = !force && cacheable ? readIncrementalPayloadCache(cacheKey) : null;");
 const cacheReturnIndex = incrementalRouting.indexOf("return cachedPayload;", cacheReadIndex);
 const networkFetchIndex = incrementalRouting.indexOf('window.__mflDataClient.fetch("/api/data?" + requestKey', cacheReadIndex);
 invariant(
