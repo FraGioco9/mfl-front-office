@@ -497,7 +497,7 @@ async function reloadIncrementalPage(page = state.page, options = {}) {
 
   return withInteractionBusy(loadAndRender, options.loadingReason);
 }
-window.mflReloadIncrementalPage = reloadIncrementalPage;
+
 
 
 // DATA-01C3: event-scoped SQLite identity revalidation. This intentionally
@@ -643,3 +643,4 @@ function installSQLiteIdentityResumeListener() {
   });
 }
 installSQLiteIdentityResumeListener();
+window.mflReloadIncrementalPage = reloadIncrementalPage;
