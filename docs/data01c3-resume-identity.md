@@ -24,3 +24,7 @@ Run via `node validation/data01c3-resume-identity.mjs` and `node validate-all.mj
 ## Explicit limits
 
 A tab that never gets hidden, never receives a persisted BFCache return, and never performs a fresh route request will not detect a remote SQLite swap; changing that would require periodic polling and is out of scope. Rapid hide/show cycles intentionally throttle probes. While offline, existing cached data remains visible and the next qualifying return retries. Automatic visible refresh is scoped to an unchanged Watchlist to avoid clobbering editable forms (Planner/evaluation/settings). Other active pages are invalidated for their next data-driven read/navigation, rather than force-rendered during typing.
+
+## Generated artifacts and exact-head CI gate
+
+Source CI on `4fd8dc66a477cacf5ee135d754e2136550c3c0e3` passed all Site Quality jobs. Its canonical generated-assets writer updated **only** `modules/app-core-runtime.js` and `table-width-runtime.js` into `a4df97bdf284e6e600bc993a0c5a920e78e19afd`. The generated commit's first set of workflow records was `action_required`, not a verified test pass. This docs-only trigger requests all required workflows on the post-generated head. Do not mark DATA-01C3 complete until those runs and mergeability are confirmed against the final exact head. No deployment, DB refresh or merge.
