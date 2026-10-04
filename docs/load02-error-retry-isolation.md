@@ -25,6 +25,10 @@ Two source-execution fixtures are run via `.github/workflows/load02-failure-isol
 - Background force-cache replacement and arbitrary dataset-version swaps are not changed by this PR; they require separate evidence, particularly since stale cache reuse across generations must never cross identity boundaries.
 - Real Safari/iPhone and authenticated browser sessions remain reserved for the final release gate: **LOAD-01D, PERF-06.5, TEST-04B6.6** all remain pending.
 
+## Generated-artifact head validation
+
+The Site Quality workflow validates and may auto-commit derived assets to the open PR branch. The initial comprehensive exact-head run on `3cb37b69064988774ff5f852399a060fe973e61b` succeeded (18/18 jobs), then its generated-output synchronization created descendant commit `8f8a2632f395133f8c0de2e9631870a0c8bf9ef9` modifying only the checked-in `table-width-runtime.js` projection. The automatically authored SHA does not itself inherit the preceding run's status checks. A user-authored documentation commit will retrigger the **entire CI suite on its new exact head**, and its status must be verified before marking issue #1034's LOAD-02D complete.
+
 ## Decision
 
 **Small, evidence-backed change** only: obsolete toasts must be suppressed, while all current-route feedback and committed rows are preserved. Do not globally retry HTTP errors, invent recovery UI for unrelated routes, alter data persistence, or change retry policy without additional isolated proof. The diagnostic fixture PR and product fix PR remain **open and unmerged**.
