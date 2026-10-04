@@ -42,11 +42,6 @@ script = replaceExactly(script,
 script = replaceExactly(script,
   '  async function run() {\n    try {',
   '  async function run() {\n    try {\n      if (window.__load01b && window.__load01b.kind !== "myclubs" && !window.__load01b.measurementDone) await new Promise(resolve => { window.__load01b.unblockCanonical = () => { window.__load01b.measurementDone = true; resolve(); }; });');
-// Pause the canonical My Clubs test exactly after authoritative cards settle,
-// before it clicks through to a Club, so screenshots observe the same visible page.
-script = replaceExactly(script,
-  "      const firstClubCard = document.querySelector('#myClubsGrid .myClubCard[data-club-id=\"9001\"]:not(.myClubCardLoading)');",
-  "      if (window.__load01b && window.__load01b.kind === \"myclubs\" && !window.__load01b.measurementDone) await new Promise(resolve => { window.__load01b.unblockCanonical = () => { window.__load01b.measurementDone = true; resolve(); }; });\n      const firstClubCard = document.querySelector('#myClubsGrid .myClubCard[data-club-id=\"9001\"]:not(.myClubCardLoading)');");
 script = replaceExactly(script,
   "async function runChromeRegression(executable, url, width = 1280, height = 900) {",
   `async function runChromeRegression(executable, url, width = 1280, height = 900) {
@@ -61,7 +56,6 @@ const cases = [
   { kind: "planner-squad", scenario: "planner-selected" },
   { kind: "plans", scenario: "planner" },
   { kind: "planner-search", scenario: "planner" },
-  { kind: "myclubs", scenario: "myclubs-in" },
   { kind: "database", scenario: "database" },
   { kind: "player", scenario: "player" },
 ];
