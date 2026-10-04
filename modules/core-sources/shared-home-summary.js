@@ -40,8 +40,15 @@ function homeSummaryCacheReady() {
   return summaryLoaded && Boolean(summarySnapshot);
 }
 
+function invalidateHomeSummarySnapshot() {
+  summaryLoaded = false;
+  summarySnapshot = null;
+  if (state.currentPage === "home") updateSummaryCounts(null, null);
+}
+
 Reflect.set(globalThis, "__mflHomeSummaryCache", Object.freeze({
   isReady: homeSummaryCacheReady,
+  invalidate: invalidateHomeSummarySnapshot,
 }));
 
 async function loadSummary() {
@@ -57,7 +64,18 @@ async function loadSummary() {
       const response = await window.__mflDataClient.fetch("/api/data?mode=bootstrap", { cache: "no-store", headers: { Accept: "application/json" } });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Could not load the database summary.");
-      state.manifest = data.manifest || null;
+      const incomingGeneration = String(data.manifest?.generated_at || "").trim();
+      const observedGeneration = String(state.manifest?.generated_at || "").trim();
+      // A concurrent route may have already observed a newer immutable SQLite
+      // generation while this Home bootstrap request was still pending.
+      if (incomingGeneration && observedGeneration
+        && Number.isFinite(Date.parse(incomingGeneration))
+        && Number.isFinite(Date.parse(observedGeneration))
+        && Date.parse(incomingGeneration) < Date.parse(observedGeneration)) {
+        throw new Error("Database summary changed while loading. Retry.");
+      }
+      state.manifest = data.manifest || state.manifest || null;
+      if (typeof syncIncrementalCacheNamespace === "function") syncIncrementalCacheNamespace();
       const summary = data.summary || {};
       if (![summary.playerCount, summary.walletCount].every(
         value => value !== null && value !== undefined

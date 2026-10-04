@@ -388,4 +388,4 @@ window.__mflUniformWidth = Object.freeze({
   source: "styles.css",
   unit: "%",
 });
-window.__mflCoreBuildId = "aae94cbb0bc95f5c";
+window.__mflCoreBuildId = "695268e1694bea30";
