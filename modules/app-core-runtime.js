@@ -8672,9 +8672,12 @@ const setIncrementalView = async function setIncrementalView(viewName) {
         }
         return result;
       } catch (error) {
-        if (route.scope === "player" && pageNavigationIsCurrent(navigationOptions)) {
+        // Navigation supersession may happen while a rejected request is settling.
+        // Never report a failed destination after its owning transition was replaced.
+        if (!pageNavigationIsCurrent(navigationOptions)) return;
+        if (route.scope === "player") {
           window.__mflStaticUiRuntime?.showLoadError?.("Player");
-        } else if (route.scope !== "player") {
+        } else {
           showToast(error?.message || "Could not load this page.");
         }
         return;
