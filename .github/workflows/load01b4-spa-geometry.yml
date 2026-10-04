@@ -33,6 +33,12 @@ jobs:
           node --check validation/browser-load01b4-cdp.mjs
           node --check validation/browser-load01b4-geometry.mjs
           node validation/browser-load01b4-geometry.mjs
+      - name: Home SPA return targeted diagnostic
+        env:
+          MFL_LOAD01B4_MODE: target
+          MFL_LOAD01B4_TARGET: home
+          MFL_LOAD01B4_OUT: ${{ runner.temp }}/load01b4-home
+        run: node validation/browser-load01b4-geometry.mjs
       - name: Full 6-route 3-viewport light/dark and SPA-return matrix
         env:
           MFL_LOAD01B4_MODE: all
@@ -45,6 +51,7 @@ jobs:
           name: load01b4-synthetic-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/load01b4-pilot/
+            ${{ runner.temp }}/load01b4-home/
             ${{ runner.temp }}/load01b4-full/
           retention-days: 14
           if-no-files-found: warn
