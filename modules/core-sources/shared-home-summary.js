@@ -75,7 +75,7 @@ async function loadSummary() {
         throw new Error("Database summary changed while loading. Retry.");
       }
       state.manifest = data.manifest || state.manifest || null;
-      syncIncrementalCacheNamespace();
+      if (typeof syncIncrementalCacheNamespace === "function") syncIncrementalCacheNamespace();
       const summary = data.summary || {};
       if (![summary.playerCount, summary.walletCount].every(
         value => value !== null && value !== undefined
