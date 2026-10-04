@@ -1,0 +1,26 @@
+name: LOAD-02 isolated retry and stale-error diagnostics
+
+on:
+  pull_request:
+    paths:
+      - "validation/load02-*"
+      - ".github/workflows/load02-failure-isolation.yml"
+      - "docs/load02-error-retry-audit.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-failures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Run standalone deterministic fail/retry fixtures
+        run: |
+          node --check validation/load02-error-retry-isolation.mjs
+          node validation/load02-error-retry-isolation.mjs
