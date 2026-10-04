@@ -26,6 +26,8 @@ jobs:
         with:
           node-version: 22
       - name: Execute real toast/Planner/Settings owner in fake DOM and network
+        env:
+          LOAD04_EXPECT_STICKY: "1"
         run: |
           node --check validation/load04-feedback-context-isolation.mjs
           node validation/load04-feedback-context-isolation.mjs
