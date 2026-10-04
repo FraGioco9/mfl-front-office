@@ -13,7 +13,7 @@ async function evaluate(cdp, expression) {
   return out.result?.value;
 }
 
-async function until(cdp, expression, label, timeout = 18000) {
+async function until(cdp, expression, label, timeout = 9500) {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
     if (await evaluate(cdp, expression)) return;
