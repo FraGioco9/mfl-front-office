@@ -2799,8 +2799,15 @@ function homeSummaryCacheReady() {
   return summaryLoaded && Boolean(summarySnapshot);
 }
 
+function invalidateHomeSummarySnapshot() {
+  summaryLoaded = false;
+  summarySnapshot = null;
+  if (state.currentPage === "home") updateSummaryCounts(null, null);
+}
+
 Reflect.set(globalThis, "__mflHomeSummaryCache", Object.freeze({
   isReady: homeSummaryCacheReady,
+  invalidate: invalidateHomeSummarySnapshot,
 }));
 
 async function loadSummary() {
@@ -2816,7 +2823,18 @@ async function loadSummary() {
       const response = await window.__mflDataClient.fetch("/api/data?mode=bootstrap", { cache: "no-store", headers: { Accept: "application/json" } });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Could not load the database summary.");
-      state.manifest = data.manifest || null;
+      const incomingGeneration = String(data.manifest?.generated_at || "").trim();
+      const observedGeneration = String(state.manifest?.generated_at || "").trim();
+      // A concurrent route may have already observed a newer immutable SQLite
+      // generation while this Home bootstrap request was still pending.
+      if (incomingGeneration && observedGeneration
+        && Number.isFinite(Date.parse(incomingGeneration))
+        && Number.isFinite(Date.parse(observedGeneration))
+        && Date.parse(incomingGeneration) < Date.parse(observedGeneration)) {
+        throw new Error("Database summary changed while loading. Retry.");
+      }
+      state.manifest = data.manifest || state.manifest || null;
+      if (typeof syncIncrementalCacheNamespace === "function") syncIncrementalCacheNamespace();
       const summary = data.summary || {};
       if (![summary.playerCount, summary.walletCount].every(
         value => value !== null && value !== undefined
@@ -7365,6 +7383,12 @@ function syncIncrementalCacheNamespace() {
   return { datasetKey, walletKey, namespace };
 }
 
+function incrementalPayloadGenerationIsOlder(payload) {
+  const incoming = Date.parse(String(payload?.generatedAt || ""));
+  const current = Date.parse(String(state.manifest?.generated_at || ""));
+  return Number.isFinite(incoming) && Number.isFinite(current) && incoming < current;
+}
+
 function adoptIncrementalPayloadDataset(payload) {
   const generatedAt = String(payload?.generatedAt || "").trim();
   if (generatedAt && String(state.manifest?.generated_at || "").trim() !== generatedAt) {
@@ -7372,6 +7396,7 @@ function adoptIncrementalPayloadDataset(payload) {
       ...(state.manifest || {}),
       generated_at: generatedAt,
     };
+    Reflect.get(window, "__mflHomeSummaryCache")?.invalidate?.();
   }
   return syncIncrementalCacheNamespace();
 }
@@ -7621,7 +7646,7 @@ async function requestIncrementalRoute(route, page = 1, options = {}) {
         if (!response.ok) {
           throw new Error(payload.error || "Could not load this page.");
         }
-        if (controller.signal.aborted) return null;
+        if (controller.signal.aborted || incrementalPayloadGenerationIsOlder(payload)) return null;
         adoptIncrementalPayloadDataset(payload);
         const responseCacheKey = incrementalRequestDetails(route, page).cacheKey;
         if (cacheable) rememberIncrementalPayload(responseCacheKey, payload);
