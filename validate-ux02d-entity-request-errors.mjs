@@ -14,7 +14,7 @@ const routing = read("modules/core-sources/shared-incremental-routing.js");
 assert.match(player, /if \(!row\) \{\s*playerDetailRenderReuse\.invalidate\(\);\s*window\.__mflStaticUiRuntime\?\.showNotFound\?\.\("Player"\)/);
 assert.match(player, /if \(!matchingRow && payload\.rows\.length === 0 && Number\(payload\.totalRows\) === 0\)/);
 assert.match(player, /readyDetailPlayerId = routePlayerId;\s*return true;\s*}\s*if \(!matchingRow/);
-assert.match(navigation, /route\.scope === "player" && pageNavigationIsCurrent\(navigationOptions\)/);
+assert.match(navigation, /if \(!pageNavigationIsCurrent\(navigationOptions\)\) return;\s*if \(route\.scope === "player"\)/, "Obsolete navigation errors must be discarded before Player or non-Player feedback.");
 assert.match(navigation, /window\.__mflStaticUiRuntime\?\.showLoadError\?\.\("Player"\)/);
 assert.match(routing, /if \(!response\.ok\) \{\s*throw new Error\(payload\.error/);
 
