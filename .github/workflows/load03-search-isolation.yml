@@ -1,0 +1,33 @@
+name: LOAD-03 isolated search concurrency
+
+on:
+  pull_request:
+    paths:
+      - "validation/load03-*"
+      - ".github/workflows/load03-search-isolation.yml"
+      - "modules/core-sources/planner.js"
+      - "modules/app-core-planner-runtime.js"
+      - "global-search-runtime.js"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  search-races:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Isolated Planner search timing and cancelled requests
+        run: |
+          node --check validation/load03-search-race-isolation.mjs
+          node validation/load03-search-race-isolation.mjs
+      - name: Canonical Global Search debounce/empty/error contracts
+        run: |
+          node validate-global-search-results.mjs
+          node validate-ux02f-home-search-recovery.mjs
+          node validate-ux02-empty-states.mjs
