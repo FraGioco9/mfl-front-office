@@ -1,0 +1,14 @@
+# DATA-01C — synthetic SQLite deployment/identity-swap audit
+
+This is **test-only evidence** stacked on the unmerged DATA-01B PR #1120 (head `db8986df`), with no wallet, production database, Supabase connection, Vercel deploy or mutation.
+
+The fixture `validation/data01c-generation-race-baseline.mjs` executes canonical shared incremental-cache functions, the actual Home `loadSummary()` function and the actual Planner `cachedPlannerClub()` function using deferred HTTP and in-memory storage.
+
+## Distinct observations
+
+1. **Already-open Watchlist, Player and table:** completed payloads are scoped by observed SQLite generation and linked wallet. When the deployed server switches from synthetic A to B, the SPA's old generation remains until any fresh response provides `generatedAt=B`. Re-entry into a fully cached Watchlist can continue displaying a removed/updated player. Once `adoptIncrementalPayloadDataset({generatedAt:B})` executes, the shared cache invalidates as intended. The baseline does *not* imply a runtime mechanism to detect remote swaps exists.
+2. **Late Home bootstrap overwrites a newer generation:** `startApp()` initiates bootstrap concurrently with route loading. A newer route can adopt B while the earlier bootstrap A remains pending; when it resolves, `loadSummary()` unconditionally installs manifest A, counts A, and marks summary loaded. Subsequent Home visits reuse counts A without checking the server. The fixture executes this exact response order and proves B→A regression.
+3. **Planner separates concerns:** `cachedPlannerClub()` reads unversioned `mfl-club-display-data-v1` localStorage; it is public display metadata, not persisted user plan data or private wallet state. A remote transfer/rename does not automatically invalidate this display cache, but forcibly clearing the key could break Planner's fast first paint; do **not** clear saved plans, formation, modified contracts, wallet data or Planner drafts as part of a general DB cache fix.
+4. **Scope and exclusions:** no fresh-update poll is present in the app; propose only an explicit, bounded visibility/re-entry identity check after measuring and handling offline/abort and active user edits. Do not silently mutate Planner draft/saved plans or silently replace Watchlist in-flight user changes. Browser Safari/iPhone and real Dapper/production swap remain FINAL gate.
+
+**Next:** if separate product fixes are justified, protect bootstrap against older generation replacing newer and add a small, event-scoped session identity check without tight polling. Preserve 64-entry LRU, Marketplace independent generations, request ownership and wallet namespace. Verify exact-head full Site Quality, Mobile, A11Y, Windows, Table Header, and source-execution races. Do not merge either #1120 or this diagnostic PR, refresh DB or deploy.
