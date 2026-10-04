@@ -15,3 +15,7 @@ Validation `validation/data01-listing-cache-freshness.mjs` executes the real can
 - Test in CI using `node validation/data01-listing-cache-freshness.mjs` and `npm run validate`, plus full Site Quality, Windows, Mobile, A11Y and Table Header on the **exact head**.
 - Live simultaneous wallet/Watchlist/Planner flows, production swap, Safari/iPhone and Dapper remain the **single final release gate**.
 - No DB refresh, live Supabase operation, merge or Vercel deployment.
+
+## Generated artifact sync / final exact-head gate
+
+Site Quality on source head `92bc5c6d1ca3f6af1fec997ccf69739807078418` ran build, lint, typecheck, Node cache-freshness fixture and repository checks; the CI-owned writer then synced `modules/app-core-runtime.js` and `table-width-runtime.js` as `2ae67235aa8d61052c6bc66f9b720219875843de` (only two generated files, one commit ahead and no behind). That generated-only head returned GitHub Actions `action_required` rather than executing tests. This documentation-only commit intentionally triggers a **full CI on the new exact head** without changing runtime/fixture behavior. Do not interpret `action_required` as green, and do not merge or deploy until every required job has passed on the latest head.
