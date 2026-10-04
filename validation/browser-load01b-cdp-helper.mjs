@@ -92,6 +92,7 @@ export async function runLoad01b(cdp, { url, width, height }) {
   await sleep(90);
   const before = await evaluate(cdp, "window.__load01b.snapshot()");
   assert(before.requestsHeld >= required, "Pending snapshot was not network-gated");
+  assert.equal(before.themeActual, theme, "LOAD01B first-paint light/dark theme was not active during pending screenshot");
   const screenshotBefore = await screenshot(cdp, out, label + "-pending");
   await evaluate(cdp, "window.__load01b.startMeasurement(); window.__load01b.release()");
   const settledSelectors = {
@@ -105,6 +106,7 @@ export async function runLoad01b(cdp, { url, width, height }) {
   await waitFor(cdp, settledSelectors[kind], "settled " + kind, 16000);
   await sleep(150);
   const after = await evaluate(cdp, "window.__load01b.snapshot()");
+  assert.equal(after.themeActual, theme, "LOAD01B theme changed unexpectedly during data settlement");
   const screenshotAfter = await screenshot(cdp, out, label + "-loaded");
   await evaluate(cdp, "window.__load01b.unblockCanonical(); true");
   // This temporary fixture is diagnostic-only: its canonical navigation callback was deliberately
