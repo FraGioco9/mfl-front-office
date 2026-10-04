@@ -1,0 +1,50 @@
+name: LOAD-01B4 Chromium SPA and skeleton geometry
+
+on:
+  pull_request:
+    paths:
+      - "validation/browser-load01b4-*"
+      - ".github/workflows/load01b4-spa-geometry.yml"
+      - "docs/load01b4-geometry-results.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-spa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Syntax checks and My Clubs pilot
+        env:
+          MFL_LOAD01B4_MODE: pilot
+          MFL_LOAD01B4_OUT: ${{ runner.temp }}/load01b4-pilot
+        run: |
+          node --check validation/browser-load01b4-probe.js
+          node --check validation/browser-load01b4-cdp.mjs
+          node --check validation/browser-load01b4-geometry.mjs
+          node validation/browser-load01b4-geometry.mjs
+      - name: Full 6-route 3-viewport light/dark and SPA-return matrix
+        env:
+          MFL_LOAD01B4_MODE: all
+          MFL_LOAD01B4_OUT: ${{ runner.temp }}/load01b4-full
+        run: node validation/browser-load01b4-geometry.mjs
+      - name: Upload paired screenshots and JSON measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load01b4-synthetic-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/load01b4-pilot/
+            ${{ runner.temp }}/load01b4-full/
+          retention-days: 14
+          if-no-files-found: warn
