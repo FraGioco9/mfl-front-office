@@ -10,6 +10,7 @@ const settingsSource = await readFile("modules/core-sources/settings.js", "utf8"
 const evaluationSource = await readFile("modules/core-sources/evaluation.js", "utf8");
 const searchSource = await readFile("global-search-runtime.js", "utf8");
 const fixed = process.env.LOAD04_EXPECT_FIXED === "1";
+const stickyFixed = fixed || process.env.LOAD04_EXPECT_STICKY === "1";
 
 const sections = (source, a, b) => {
   const start = source.indexOf(a), end = source.indexOf(b, start);
@@ -50,7 +51,7 @@ assert(toast && toast.textContent === "Opting in...");
 assert.equal(callbacks.size, 0, "Sticky toast must not schedule a hide on show");
 toast.listeners.mouseleave();
 const stickyLeaveHides = callbacks.size;
-if (fixed) assert.equal(stickyLeaveHides, 0, "Sticky toast must stay visible after mouseleave");
+if (stickyFixed) assert.equal(stickyLeaveHides, 0, "Sticky toast must stay visible after mouseleave");
 else assert.equal(stickyLeaveHides, 1, "Baseline stale mouseleave unexpectedly hides sticky opt-in");
 vm.runInContext('showToast("Saved.")', tc);
 assert.equal(callbacks.size, 1, "Normal success toast should auto-dismiss");
@@ -119,7 +120,7 @@ const settingsFailure = settingsSource.includes('showToast("Settings could not b
   || settingsSource.includes('showToast("Settings could not be saved. Your changes are kept; select Save to retry.", { urgent: true })');
 if (fixed) assert(settingsFailure, "Settings offline Save should be urgent and indicate draft/retry");
 else assert.equal(settingsFailure, false, "Baseline Settings offline Save is announced as success/polite");
-console.log("LOAD04_FEEDBACK_" + (fixed ? "FIXED" : "BASELINE") + " " + JSON.stringify({
+console.log("LOAD04_FEEDBACK_" + (fixed ? "FIXED" : stickyFixed ? "STICKY_FIXED" : "BASELINE") + " " + JSON.stringify({
   stickyMouseleaveScheduledHide: stickyLeaveHides,
   opaquePlanner409: displayed[0], opaquePlanner429: displayed[1], offlinePlanner: displayed[2],
   settingsOfflineUrgent: settingsFailure, checkedStatuses: 7,
