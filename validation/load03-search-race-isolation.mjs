@@ -158,8 +158,53 @@ if (corrected) {
     "Baseline expected old request failure to show premature empty/error during debounce");
   assert(reusedAccentResult, "Baseline expected prior accent-equivalent payload to render prematurely");
 }
+// Canonical Planner club search: synchronous input/sequence supersession and
+// raw-query guard must prevent previous success/error from taking over.
+// This is a test of the existing owner, not a change to club search behavior.
+const teamSource = extract(planner,
+  '  async function requestTeams(query){',
+  '  async function restoreSelectedTeam(clubId){');
+const teamInput = { value: "" };
+const teamCalls = [], teamRenders = [], teamAnnouncements = [], teamMessages = [];
+const teamContext = vm.createContext({
+  input: teamInput, URLSearchParams,
+  window: { __mflDataClient: { fetch: (url) => {
+    let resolve, reject;
+    const promise = new Promise((ok, no) => { resolve = ok; reject = no; });
+    teamCalls.push({ url: String(url), resolve, reject });
+    return promise;
+  } } },
+  renderResults: (teams, query, options = {}) => teamRenders.push({ teams, query, error: options.error || "" }),
+  clearResults: () => {},
+  announceActionStatus: message => teamAnnouncements.push(message),
+  setStatus: message => teamMessages.push(message),
+});
+vm.runInContext('let searchSequence=0;\n' + teamSource + '\nthis.searchTeams = requestTeams;', teamContext);
+teamInput.value = "Molé";
+const obsoleteClub = teamContext.searchTeams("Molé");
+teamInput.value = "Mole";
+vm.runInContext("searchSequence+=1;", teamContext); // real input listener invalidates eagerly
+teamCalls.at(-1).reject(new Error("obsolete club search error"));
+await obsoleteClub;
+assert.equal(teamRenders.length, 0, "Old Planner club error must not render after edit");
+const currentClub = teamContext.searchTeams("Mole");
+const beforeTeamResolve = teamRenders.length;
+assert.equal(teamRenders.length, beforeTeamResolve, "Club no-results must wait for HTTP resolution");
+teamCalls.at(-1).resolve({ ok: true, json: async () => ({ results: [] }) });
+await currentClub;
+assert.equal(teamRenders.length, beforeTeamResolve + 1, "Current authoritative empty club result must settle");
+assert.equal(teamRenders.at(-1).teams.length, 0);
+assert.equal(teamRenders.at(-1).error, "");
+const lateSuccess = teamContext.searchTeams("Mole");
+teamInput.value = "Mole plus";
+vm.runInContext("searchSequence+=1;", teamContext);
+teamCalls.at(-1).resolve({ ok: true, json: async () => ({ results: [{ clubId: "1", name: "Old club" }] }) });
+await lateSuccess;
+assert.equal(teamRenders.length, beforeTeamResolve + 1, "Old Planner club success must not render after edit");
+
 console.log("LOAD03_LOCAL_SEARCH_" + (corrected ? "FIXED" : "BASELINE") + " " + JSON.stringify({
   networkRequests: network.length, oldErrorMessages: obsoleteFeedback.length,
   oldErrorEmptyRenders: obsoleteRenders.length, staleAccentPayloadRendered: reusedAccentResult,
-  abortedRequests: aborts, finalSettledEmpty: true, noLiveNetwork: true,
+  abortedRequests: aborts, clubStaleErrorsSuppressed: true, clubStaleResultsSuppressed: true,
+  clubAuthoritativeEmptyOnly: true, finalSettledEmpty: true, noLiveNetwork: true,
 }));
