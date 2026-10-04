@@ -63,9 +63,10 @@ const cases = [
 const mode = process.env.MFL_LOAD01B_MODE || "all";
 const selected = mode === "pilot"
   ? [cases[0]]
-  : cases;
-const viewports = mode === "pilot" ? [[1280, 900]] : [[1280, 900], [390, 844], [768, 1024]];
-const themes = mode === "pilot" ? ["light"] : ["light", "dark"];
+  : mode === "target" ? cases.filter(item => item.kind === process.env.MFL_LOAD01B_TARGET_KIND) : cases;
+assert(selected.length > 0, "LOAD01B must have a matching target case");
+const viewports = mode === "pilot" || mode === "target" ? [[1280, 900]] : [[1280, 900], [390, 844], [768, 1024]];
+const themes = mode === "pilot" || mode === "target" ? ["light"] : ["light", "dark"];
 const failures = [];
 let attempted = 0;
 try {
