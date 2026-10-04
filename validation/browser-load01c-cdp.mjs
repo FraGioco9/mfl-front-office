@@ -44,7 +44,12 @@ export async function runLoad01c(cdp, { url, width, height }) {
   assert([1, expectedSkeletonCount].includes(placeholders), "Unexpected candidate placeholder row count");
   await runJS(cdp, `(() => {
     const body = document.querySelector(${JSON.stringify(bodySelector)});
-    while (body.querySelectorAll("tr").length > ${placeholders}) body.lastElementChild.remove();
+    const trim = () => {
+      while (body.querySelectorAll("tr").length > ${placeholders}) body.lastElementChild.remove();
+    };
+    trim();
+    window.__load01cSkeletonObserver = new MutationObserver(trim);
+    window.__load01cSkeletonObserver.observe(body, { childList: true });
   })()`);
   await delay(70);
   const sample = `(() => {
@@ -67,7 +72,7 @@ export async function runLoad01c(cdp, { url, width, height }) {
   assert.equal(pending.theme, theme, "First paint used wrong theme");
   assert.equal(pending.rowCount, placeholders, "Failed to apply what-if pending row count");
   const screenshots = [await capture(cdp, folder, label + "-pending.png")];
-  await runJS(cdp, "window.__load01b.startMeasurement(); window.__load01b.release()");
+  await runJS(cdp, "window.__load01cSkeletonObserver?.disconnect(); window.__load01b.startMeasurement(); window.__load01b.release()");
   await waitFor(cdp,
     'window.__load01b.requestsReleased >= 1 && document.querySelectorAll(' +
       JSON.stringify(bodySelector + " tr") + ').length === ' + rows
