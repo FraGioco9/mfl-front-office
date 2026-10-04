@@ -97,7 +97,7 @@ const settingContext=vm.createContext({
   saveWalletPreferencesNow:()=>{writeCount++;return new Promise((res,rej)=>{resolveWrite=res;rejectWrite=rej;});},
   updateSettingsEmailDraftActions:()=>{transitions.push(state.settingsSaveInFlight);},
   currentSettingsPayload:()=>({emailAddress:"valid@example.org"}),
-  renderSettingsPage:()=>{},showToast:message=>notifications.push(message),
+  renderSettingsPage:()=>{},showToast:(message,options={})=>notifications.push({message,urgent:options.urgent===true}),
   renderSettingsEmailControls:()=>{},
 });
 vm.runInContext(section(settingsSource,"async function saveSettingsDraft() {","function ensureSettingsPageStructure()"),settingContext);
@@ -109,7 +109,8 @@ assert.equal(writeCount,1,"Double-click Save cannot enqueue a second request");
 rejectWrite(new Error("network offline"));
 await saving;
 assert.equal(state.settingsSaveInFlight,false,"Error must unlock Settings Save and Discard");
-assert.deepEqual(notifications,["Settings could not be saved."]);
+assert.deepEqual(notifications,[{message:"Settings could not be saved. Your changes are kept; select Save to retry.",urgent:true}],
+  "Offline Save must announce urgently, explain retained draft and provide manual retry direction");
 assert.ok(pending,"Pending local draft must survive offline failure");
 const retry=settingContext.saveSettingsDraft();
 assert.equal(writeCount,2);
@@ -117,7 +118,8 @@ pending=null;
 resolveWrite();
 await retry;
 assert.equal(state.settingsSaveInFlight,false);
-assert.equal(notifications.at(-1),"Settings saved.");
+assert.deepEqual(notifications.at(-1),{message:"Settings saved.",urgent:false},
+  "Success stays a polite status, unlike offline failure");
 assert.equal(state.settingsDraftDirty,false);
 
 // Watchlist confirmation is synchronous/local-first; ignore rapid repeated

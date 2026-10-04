@@ -204,7 +204,7 @@ async function saveSettingsDraft() {
   if (failed || pending) {
     state.settingsDraftDirty = true;
     updateSettingsEmailDraftActions();
-    showToast("Settings could not be saved.");
+    showToast("Settings could not be saved. Your changes are kept; select Save to retry.", { urgent: true });
     return;
   }
 

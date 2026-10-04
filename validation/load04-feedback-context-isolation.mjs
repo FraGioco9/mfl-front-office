@@ -71,7 +71,8 @@ assert(stableStatus, "Keep existing polite success region");
 assert.equal(elements.get("toastMessage"), toast, "Do not duplicate toast nodes");
 
 const saveSlice = sections(plannerSource,
-  "  async function runPlannerToolbarAction(", "  async function plannerPrivateRequest(");
+  fixed ? "  function plannerActionErrorMessage(" : "  async function runPlannerToolbarAction(",
+  "  async function plannerPrivateRequest(");
 const messages = [], lockStates = [];
 const pc = vm.createContext({
   activePlanId: "plan-A", plannerConflictPlanId: "",
