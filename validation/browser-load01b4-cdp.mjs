@@ -58,7 +58,6 @@ const readiness = {
   club: 'document.getElementById("clubIdentityName")?.textContent?.trim() === "Browser Club" && document.getElementById("clubIdentityOwnerName")?.textContent?.includes("Browser Owner")',
   evaluation: 'document.getElementById("evaluationPage")?.hidden === false && document.documentElement.dataset.mflRouteReady === "true"',
   database: 'document.getElementById("tableBody")?.textContent?.includes("Browser Player")',
-  planner: 'document.querySelector("#plannerRosterBody tr[data-player-id]") !== null',
 };
 
 const returnActions = {
@@ -67,7 +66,6 @@ const returnActions = {
   club: '(history.back(), Promise.resolve())',
   evaluation: 'window.setPage("evaluation", true, { plain: true })',
   database: 'window.setPage("database", true, { view: "attributes" })',
-  planner: 'window.setPage("planner", true, { clubId: "9001" })',
 };
 
 export async function runLoad01b4(cdp, { url, width, height }) {
