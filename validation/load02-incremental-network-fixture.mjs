@@ -29,7 +29,7 @@ const window = {
   __mflDataClient: { fetch: async () => { throw new Error("Fixture not configured"); } },
 };
 const context = {
-  state, window,
+  state, window, AbortController,
   activeIncrementalNetworkRequest: null,
   ROUTE_REQUEST_TIMEOUT_MS: 60_000,
   walletProofHeaders: () => ({ Accept: "application/json" }),
