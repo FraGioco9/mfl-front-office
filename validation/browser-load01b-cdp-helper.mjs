@@ -106,7 +106,8 @@ export async function runLoad01b(cdp, { url, width, height, waitForBaseline }) {
   await sleep(150);
   const after = await evaluate(cdp, "window.__load01b.snapshot()");
   const screenshotAfter = await screenshot(cdp, out, label + "-loaded");
-  await evaluate(cdp, "window.__load01b.unblockCanonical(); true");\n  const baseline = await waitForBaseline();
+  await evaluate(cdp, "window.__load01b.unblockCanonical(); true");
+  const baseline = await waitForBaseline();
   assert.equal(baseline.status, "passed", "Canonical source fixture should still pass");
   const cached = await evaluate(cdp, "window.__load01b.snapshot()");
   const report = {
