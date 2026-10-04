@@ -235,9 +235,9 @@ invariant(
   "Club views must not maintain a competing completed-result cache beside the canonical incremental cache.",
 );
 invariant(
-  appCoreSource.includes("return readIncrementalPayloadCache(incrementalRequestDetails(route, page).cacheKey);")
-    && appCoreSource.includes("const cachedPayload = !force ? readIncrementalPayloadCache(cacheKey) : null;")
-    && appCoreSource.includes("rememberIncrementalPayload(cacheKey, payload);"),
+  appCoreSource.includes("return incrementalQueryEmbedsMarketplace(query) ? null : readIncrementalPayloadCache(cacheKey);")
+    && appCoreSource.includes("const cachedPayload = !force && cacheable ? readIncrementalPayloadCache(cacheKey) : null;")
+    && appCoreSource.includes("if (cacheable) rememberIncrementalPayload(responseCacheKey, payload);"),
   "Canonical incremental-route reads and writes must flow through the shared cache owner.",
 );
 invariant(
