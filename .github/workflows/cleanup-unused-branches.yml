@@ -12,6 +12,11 @@ on:
       - .github/workflows/cleanup-unused-branches.yml
   workflow_dispatch:
 
+# Two cleanup triggers must never delete remote refs concurrently.
+concurrency:
+  group: cleanup-unused-branches-${{ github.repository }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pull-requests: read
@@ -22,65 +27,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          # pull_request_target is safe here because cleanup always checks out trusted main,
-          # never code from the closed pull request.
+          # pull_request_target only executes trusted main; never PR code.
           ref: main
           fetch-depth: 0
 
-      - name: Delete unused remote branches
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Verify cleanup protections with isolated GitHub/git fixtures
+        run: node --test tests/test_cleanup_unused_branches.mjs
+
+      - name: Delete only unreferenced remote branches
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          mapfile -t open_heads < <(
-            gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" --jq '.[].head.ref'
-          )
-          mapfile -t remote_branches < <(
-            git ls-remote --heads origin | awk '{sub("refs/heads/", "", $2); print $2}'
-          )
-
-          deleted=()
-          kept=()
-          already_gone=()
-
-          for branch in "${remote_branches[@]}"; do
-            if [[ "$branch" == "main" ]]; then
-              kept+=("$branch")
-              continue
-            fi
-
-            if ((${#open_heads[@]} > 0)) && printf '%s\n' "${open_heads[@]}" | grep -Fxq -- "$branch"; then
-              kept+=("$branch")
-              continue
-            fi
-
-            if git push origin --delete "$branch"; then
-              deleted+=("$branch")
-              continue
-            fi
-
-            # Another merge/cleanup may delete a branch after our initial snapshot.
-            # Treat that race as success, but fail if the branch still exists.
-            if git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
-              echo "Failed to delete existing branch: $branch" >&2
-              exit 1
-            fi
-            already_gone+=("$branch")
-          done
-
-          {
-            echo "## Unused branch cleanup"
-            echo
-            echo "Deleted ${#deleted[@]} branch(es)."
-            for branch in "${deleted[@]}"; do
-              echo "- deleted: \`$branch\`"
-            done
-            for branch in "${already_gone[@]}"; do
-              echo "- already gone: \`$branch\`"
-            done
-            for branch in "${kept[@]}"; do
-              echo "- kept: \`$branch\`"
-            done
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: node scripts/workflows/cleanup-unused-branches.mjs
