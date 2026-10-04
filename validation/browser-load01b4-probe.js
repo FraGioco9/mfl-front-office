@@ -15,7 +15,7 @@
     const scope = url.searchParams.get("scope");
     if (kind === "myclubs") return mode === "my-clubs-competitions";
     if (kind === "home" || kind === "evaluation") return mode === "bootstrap";
-    if (kind === "club" || kind === "planner") return mode === "page" && scope === "club";
+    if (kind === "club") return mode === "page" && scope === "club";
     if (kind === "database") return mode === "page";
     return false;
   };
@@ -55,7 +55,6 @@
     evaluation: ["#evaluationPage", "#evaluationSearchInput", "#evaluationPanel",
       "#evaluationSummaryBody", "#evaluationTableBody"],
     database: ["#progressionPage", "#tableHead", "#tableBody", "#tableBody tr", ".playerTableScroller"],
-    planner: ["#plannerPage", "#plannerWorkspace", ".plannerRosterTable", "#plannerRosterBody tr"],
   };
   const rect = node => {
     const r = node.getBoundingClientRect();
