@@ -8,6 +8,7 @@ const validators = [
   "validate-domain-build-generated.mjs",
   "validate-domain-route-features.mjs",
   "validate-domain-release-deployment.mjs",
+  "tests/test_cleanup_unused_branches.mjs",
   "validate-domain-api-persistence.mjs",
   "validate-domain-shared-ui.mjs",
   "validate-domain-responsive-ui.mjs",
