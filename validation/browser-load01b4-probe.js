@@ -80,6 +80,9 @@
       scrollWidth: document.documentElement.scrollWidth,
       heldCount: state.heldCount, releasedCount: state.releasedCount,
       apiRequests: state.apiRequests.slice(),
+      texts: Object.fromEntries(["homePlayers", "homeWallets", "totalPlayers", "totalWallets",
+        "clubIdentityName", "clubIdentityOwnerName"].map(id =>
+          [id, document.getElementById(id)?.textContent?.trim()?.slice(0, 140) || ""])),
       cls: +state.cls.toFixed(7), shifts: state.shifts.slice(),
       regions, synthetic: true,
     };
