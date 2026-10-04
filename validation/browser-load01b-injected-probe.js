@@ -7,6 +7,8 @@
   const state = {
     kind, targetTheme, requestsHeld: 0, requestsReleased: 0, waiting: [],
     observe: false, cls: 0, shifts: [], observed: 0,
+    measurementDone: false,
+    unblockCanonical() { this.measurementDone = true; },
   };
   const observer = new PerformanceObserver(list => {
     for (const entry of list.getEntries()) {
