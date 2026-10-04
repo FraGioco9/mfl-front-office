@@ -120,7 +120,7 @@ async function runReload(errorMessage) {
   assert.equal(await reload(1, {}), false, "Failed refresh should report false");
   assert.equal(state.rows, preserved, "Failed refresh discarded previously loaded rows");
   assert.equal(state.dataLoaded, true, "Failed refresh hid the committed dataset");
-  assert.deepEqual(seen.finished, [41, 41], "Loading tokens must be released by owner and request");
+  assert.deepEqual(seen.finished, [41], "Failed refresh must release the owned loading token");
   assert.deepEqual(seen.toasts, [errorMessage]);
   assert.equal(seen.headerRebuilt, 0);
   assert.equal(seen.filtersReapplied, 0);
