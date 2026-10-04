@@ -144,7 +144,7 @@ function adoptIncrementalPayloadDataset(payload) {
       ...(state.manifest || {}),
       generated_at: generatedAt,
     };
-    window.__mflHomeSummaryCache?.invalidate?.();
+    Reflect.get(window, "__mflHomeSummaryCache")?.invalidate?.();
   }
   return syncIncrementalCacheNamespace();
 }
