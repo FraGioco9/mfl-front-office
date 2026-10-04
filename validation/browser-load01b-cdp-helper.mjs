@@ -114,12 +114,12 @@ export async function runLoad01b(cdp, { url, width, height }) {
     status: "passed",
     detail: "LOAD-01B screenshot/geometry capture complete; canonical regression runs separately",
   };
-  const cached = await evaluate(cdp, "window.__load01b.snapshot()");
+  const postCapture = await evaluate(cdp, "window.__load01b.snapshot()");
   const report = {
     kind, theme, width, height, url, status: "passed",
     scope: "synthetic Chromium with held real fixture fetch; no wallet or live provider",
     diagnosticValidation: validation.detail,
-    pending: before, loaded: after, cachedReturn: cached,
+    pending: before, loaded: after, postCaptureSnapshot: postCapture,
     delta: deltas(before, after),
     captures: [screenshotBefore, screenshotAfter],
     limitations: [
