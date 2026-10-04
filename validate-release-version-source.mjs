@@ -10,7 +10,7 @@ import { readValidationText } from "./validation-text.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
 
-const [releaseSource, buildSource, projectionSource, preBootstrapSource, bootstrap, bootstrapCore, indexHtml, firstPaintSource, tableWidthRuntime, siteQualityWorkflow, cleanupWorkflow, releaseProjectionWorkflowExists] = await Promise.all([
+const [releaseSource, buildSource, projectionSource, preBootstrapSource, bootstrap, bootstrapCore, indexHtml, firstPaintSource, tableWidthRuntime, siteQualityWorkflow, cleanupWorkflow, cleanupSource, releaseProjectionWorkflowExists] = await Promise.all([
   read("./release.json"),
   read("./build-app-core.mjs"),
   read("./sync-release-projections.mjs"),
@@ -22,6 +22,7 @@ const [releaseSource, buildSource, projectionSource, preBootstrapSource, bootstr
   read("./table-width-runtime.js"),
   read("./.github/workflows/site-quality.yml"),
   read("./.github/workflows/cleanup-unused-branches.yml"),
+  read("./scripts/workflows/cleanup-unused-branches.mjs"),
   access(new URL("./.github/workflows/release-projection-sync.yml", import.meta.url)).then(() => true, () => false),
 ]);
 
@@ -82,8 +83,18 @@ invariant(
 invariant(
   cleanupWorkflow.includes("- release.json")
     && cleanupWorkflow.includes("branches:\n      - main")
-    && cleanupWorkflow.includes('gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100"'),
-  "Release metadata changes on main must automatically trigger open-PR-safe unused-branch cleanup.",
+    && cleanupWorkflow.includes("pull_request_target:")
+    && cleanupWorkflow.includes("cancel-in-progress: false")
+    && cleanupWorkflow.includes("ref: main")
+    && cleanupWorkflow.includes("node --test tests/test_cleanup_unused_branches.mjs")
+    && cleanupWorkflow.includes("node scripts/workflows/cleanup-unused-branches.mjs")
+    && cleanupSource.includes('"--paginate", "--slurp"')
+    && cleanupSource.includes('"/pulls?state=open&per_page=100"')
+    && cleanupSource.includes("pr.base.ref")
+    && cleanupSource.includes("pr.head.ref")
+    && cleanupSource.includes("REMOTE_SHA_CHANGED")
+    && cleanupSource.includes("--force-with-lease=refs/heads/"),
+  "Release metadata changes on main must trigger serialized, fail-closed cleanup protecting open-PR heads and bases.",
 );
 invariant(
   preBootstrapSource.includes("window.__mflRelease = data.release;")
