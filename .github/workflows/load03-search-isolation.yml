@@ -23,6 +23,8 @@ jobs:
         with:
           node-version: 22
       - name: Isolated Planner search timing and cancelled requests
+        env:
+          LOAD03_EXPECT_FIXED: "1"
         run: |
           node --check validation/load03-search-race-isolation.mjs
           node validation/load03-search-race-isolation.mjs
