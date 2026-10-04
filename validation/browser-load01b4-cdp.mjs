@@ -22,7 +22,7 @@ async function until(cdp, expression, label, timeout = 9500) {
   const probe = await evaluate(cdp, "window.__load01b4?.snapshot()");
   throw new Error("LOAD01B4 timeout " + label + ": " + JSON.stringify({
     held: probe?.heldCount, released: probe?.releasedCount, path: probe?.path,
-    requests: probe?.apiRequests?.slice(-9), regions: probe?.regions,
+    requests: probe?.apiRequests?.slice(-9), texts: probe?.texts, regions: probe?.regions,
   }).slice(0, 2400));
 }
 
