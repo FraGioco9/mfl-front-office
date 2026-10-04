@@ -29,6 +29,7 @@ assert.match(planner, /if\(seq!==searchSequence\|\|input\?\.value\.trim\(\)!==q\
 class FakeElement {
   constructor() { this.hidden = true; this.textContent = ""; this.children = []; this.listeners = {}; this.disabled = false; }
   replaceChildren(...children) { this.children = children; }
+  querySelectorAll() { return []; }
   addEventListener(event, handler) { this.listeners[event] = handler; }
 }
 class FakeInput extends FakeElement {
