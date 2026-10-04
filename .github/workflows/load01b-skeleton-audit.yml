@@ -37,13 +37,6 @@ jobs:
           node --check validation/browser-load01b-injected-probe.js
           node validation/browser-load01b-skeleton-geometry.mjs
 
-      - name: Targeted My Clubs synthetic gate
-        env:
-          MFL_LOAD01B_MODE: target
-          MFL_LOAD01B_TARGET_KIND: myclubs
-          MFL_LOAD01B_OUTPUT: ${{ runner.temp }}/mfl-load01b-target
-        run: node validation/browser-load01b-skeleton-geometry.mjs
-
       - name: Compare all route, width and theme phases
         env:
           MFL_LOAD01B_MODE: all
@@ -57,7 +50,6 @@ jobs:
           name: load01b-chromium-synthetic-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/mfl-load01b-pilot/
-            ${{ runner.temp }}/mfl-load01b-target/
             ${{ runner.temp }}/mfl-load01b-full/
           retention-days: 14
           if-no-files-found: warn
