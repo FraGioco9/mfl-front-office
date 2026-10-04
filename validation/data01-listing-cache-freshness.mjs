@@ -23,6 +23,8 @@ const state = {
 };
 const ctx = {
   state,
+  // The real core runs in Window; keep that owner present in the isolated VM.
+  window: {},
   URLSearchParams,
   normalizeWalletAddress: (value) => String(value || "").trim(),
   hideRetiredInput: { checked: false },
