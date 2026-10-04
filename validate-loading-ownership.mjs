@@ -225,7 +225,7 @@ invariant(
 invariant(
   appCoreSource.includes("function adoptIncrementalPayloadDataset(payload) {")
     && appCoreSource.includes('const generatedAt = String(payload?.generatedAt || "").trim();')
-    && appCoreSource.includes("adoptIncrementalPayloadDataset(payload);\n        const responseCacheKey = incrementalRequestDetails(route, page).cacheKey;\n        rememberIncrementalPayload(responseCacheKey, payload);"),
+    && appCoreSource.includes("adoptIncrementalPayloadDataset(payload);\n        const responseCacheKey = incrementalRequestDetails(route, page).cacheKey;\n        if (cacheable) rememberIncrementalPayload(responseCacheKey, payload);"),
   "Fresh route payloads must adopt a newly published dataset identity before entering the completed-result cache.",
 );
 invariant(
