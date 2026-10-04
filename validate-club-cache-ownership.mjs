@@ -43,7 +43,7 @@ includes(sharedCore, "const INCREMENTAL_PAYLOAD_CACHE_MAX_ENTRIES = 64;", "Share
 includes(sharedCore, "function readIncrementalPayloadCache(cacheKey) {", "Shared incremental core must own canonical cache reads.");
 includes(sharedCore, "function rememberIncrementalPayload(cacheKey, payload) {", "Shared incremental core must own canonical cache writes.");
 includes(sharedCore, "while (state.incrementalPayloadCache.size > INCREMENTAL_PAYLOAD_CACHE_MAX_ENTRIES) {", "Canonical cache writes must enforce the bounded-entry policy.");
-includes(sharedCore, "return readIncrementalPayloadCache(incrementalRequestDetails(route, page).cacheKey);", "Cached Club re-entry must consult the canonical incremental cache.");
+includes(sharedCore, "return incrementalQueryEmbedsMarketplace(query) ? null : readIncrementalPayloadCache(cacheKey);", "Cached Club re-entry must consult the canonical incremental cache.");
 includes(sharedCore, 'pageName === "club" && state.clubProfile && ["attributes", "contracts"].includes(nextView)', "Squad and Contracts must reuse the already-loaded Club profile/base roster instead of issuing redundant view requests.");
 
 const previousRouteSpecificRowClonePasses = 1;
