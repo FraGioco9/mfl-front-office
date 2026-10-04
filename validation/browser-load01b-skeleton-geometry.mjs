@@ -24,7 +24,7 @@ script = replaceExactly(script,
   const injectedIndexHtml = indexHtml.replace(`);
 script = replaceExactly(script,
   '  const server = createServer(async (request, response) => {',
-  `  const probedIndexHtml = injectedIndexHtml.replace("</head>", '<script src="/__load01b-probe.js"></script></head>');
+  `  const probedIndexHtml = injectedIndexHtml.replace('<script src="/__browser-routing-test.js"></script>', '<script src="/__browser-routing-test.js"></script><script src="/__load01b-probe.js"></script>');
   assert.notEqual(probedIndexHtml, injectedIndexHtml, "LOAD01B probe must be parser-loaded");
   const server = createServer(async (request, response) => {`);
 script = replaceExactly(script,
