@@ -78,9 +78,8 @@ for (const [label, text] of messages) {
   stale.reject(new Error(text));
   await obsolete;
   assert.deepEqual(stale.seen.finished, [17], "Stale " + label + " loading token leaked");
-  // Diagnostic baseline captures the existing bug; product fix PR must invert this assertion.
-  assert.equal(stale.seen.toasts.length, 1,
-    "Expected one observed stale error toast in baseline " + label + " fixture");
+  assert.equal(stale.seen.toasts.length, 0,
+    "Obsolete request must never display a toast after newer navigation: " + label);
   staleErrors++;
 }
 const retry = makeRouteBoundary();
@@ -133,8 +132,8 @@ for (const [, message] of messages) {
 }
 console.log("LOAD02_DIAGNOSTIC " + JSON.stringify({
   currentErrorFeedback: currentErrors,
-  obsoleteErrorToastsObserved: staleErrors,
-  obsoleteToastBugReproduced: staleErrors === messages.length,
+  obsoleteErrorsSuppressed: staleErrors,
+  obsoleteToastRegressionPrevented: staleErrors === messages.length,
   manualRetrySuccess: true,
   failedRefreshPreservesCommittedRows: preserved,
   synthetic: true,
