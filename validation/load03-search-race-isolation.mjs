@@ -202,9 +202,62 @@ teamCalls.at(-1).resolve({ ok: true, json: async () => ({ results: [{ clubId: "1
 await lateSuccess;
 assert.equal(teamRenders.length, beforeTeamResolve + 1, "Old Planner club success must not render after edit");
 
+// Evaluation search intentionally dispatches immediately rather than adding
+// another arbitrary latency: prove abort/sequence and Unicode editing with the
+// real Global Search Evaluation transport owner in the isolated VM.
+const evaluationSource = extract(globals,
+  "  async function searchEvaluationDatabase(rawQuery) {",
+  "  function clearGlobalRequest() {");
+const evalInput = { value: "" };
+const evalRequests = [], evalApplied = [], evalMessages = [], evalPending = [];
+const evalContext = vm.createContext({
+  AbortController, URLSearchParams, VERSION: "fixture",
+  installCoreSearchMatching: () => true,
+  evaluationInput: () => evalInput,
+  normalize: normalize,
+  markEvaluationSearching: q => evalPending.push(q),
+  finishEvaluationSearching: () => {},
+  renderEvaluationMessage: message => evalMessages.push(message),
+  invalidateLegacyEvaluationSearch: () => {},
+  dataClientFetch: (url, opts) => {
+    let resolve, reject;
+    const promise = new Promise((ok, no) => { resolve = ok; reject = no; });
+    const request = { url: String(url), opts, resolve, reject };
+    evalRequests.push(request);
+    opts.signal.addEventListener("abort", () => {
+      const error = new Error("Superseded Evaluation GET");
+      error.name = "AbortError";
+      reject(error);
+    }, { once: true });
+    return promise;
+  },
+  applyEvaluationPayload: (payload, query) => { evalApplied.push({ payload, query }); return true; },
+  console: { error: message => evalMessages.push(message) },
+});
+vm.runInContext('let evaluationController=null,evaluationSequence=0,destroyed=false;\n'
+  + evaluationSource + '\nthis.runEvalSearch=searchEvaluationDatabase;', evalContext);
+evalInput.value = "Zoë";
+const staleEval = evalContext.runEvalSearch("Zoë");
+evalInput.value = "Zoe";
+const currentEval = evalContext.runEvalSearch("Zoe");
+assert.equal(evalRequests.length, 2, "Evaluation immediately dispatches distinct edits");
+assert.equal(evalRequests[0].opts.signal.aborted, true, "Evaluation aborts previous request");
+evalRequests[1].resolve({ ok: true, json: async () => ({ rows: [] }) });
+await Promise.all([staleEval, currentEval]);
+assert.equal(evalApplied.length, 1, "Only latest accent-equivalent Evaluation response can apply");
+assert.equal(evalApplied[0].query, "zoe");
+assert.equal(evalMessages.length, 0, "An obsolete aborted Evaluation query must not display an error");
+evalInput.value = "X";
+const pendingEval = evalContext.runEvalSearch("X");
+evalInput.value = "";
+vm.runInContext("evaluationSequence+=1; evaluationController?.abort();", evalContext);
+await pendingEval;
+assert.equal(evalApplied.length, 1, "Clearing Evaluation query supersedes pending response");
+
 console.log("LOAD03_LOCAL_SEARCH_" + (corrected ? "FIXED" : "BASELINE") + " " + JSON.stringify({
   networkRequests: network.length, oldErrorMessages: obsoleteFeedback.length,
   oldErrorEmptyRenders: obsoleteRenders.length, staleAccentPayloadRendered: reusedAccentResult,
   abortedRequests: aborts, clubStaleErrorsSuppressed: true, clubStaleResultsSuppressed: true,
-  clubAuthoritativeEmptyOnly: true, finalSettledEmpty: true, noLiveNetwork: true,
+  clubAuthoritativeEmptyOnly: true, evaluationAccentLatestOnly: true,
+  evaluationAbortsAndClear: true, finalSettledEmpty: true, noLiveNetwork: true,
 }));
