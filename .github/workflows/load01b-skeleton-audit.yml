@@ -1,0 +1,55 @@
+name: LOAD-01B isolated Chromium geometry
+
+on:
+  pull_request:
+    paths:
+      - "validation/browser-load01b-*"
+      - ".github/workflows/load01b-skeleton-audit.yml"
+      - "docs/load-01b-skeleton-measurements.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-geometry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install existing site dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Check injection syntax and run isolated pilot
+        env:
+          MFL_LOAD01B_MODE: pilot
+          MFL_LOAD01B_OUTPUT: ${{ runner.temp }}/mfl-load01b-pilot
+        run: |
+          node --check validation/browser-load01b-skeleton-geometry.mjs
+          node --check validation/browser-load01b-cdp-helper.mjs
+          node --check validation/browser-load01b-injected-probe.js
+          node validation/browser-load01b-skeleton-geometry.mjs
+
+      - name: Compare all route, width and theme phases
+        env:
+          MFL_LOAD01B_MODE: all
+          MFL_LOAD01B_OUTPUT: ${{ runner.temp }}/mfl-load01b-full
+        run: node validation/browser-load01b-skeleton-geometry.mjs
+
+      - name: Publish synthetic reports and phase screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load01b-chromium-synthetic-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/mfl-load01b-pilot/
+            ${{ runner.temp }}/mfl-load01b-full/
+          retention-days: 14
+          if-no-files-found: warn
