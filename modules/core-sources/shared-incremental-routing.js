@@ -517,7 +517,11 @@ function stopResumeIdentityCheck() {
   resumeIdentitySequence += 1;
   const active = resumeIdentityActive;
   resumeIdentityActive = null;
-  active?.abort();
+  if (active) {
+    resumeIdentityLastFailed = true;
+    resumeIdentityLastCheckAt = 0;
+    active.abort();
+  }
 }
 
 function watchlistResumeSnapshot() {
@@ -564,8 +568,8 @@ async function revalidateSQLiteIdentityOnResume() {
   const request = (async () => {
     try {
       timeout = window.setTimeout(() => controller.abort(), RESUME_IDENTITY_TIMEOUT_MS);
-      const headers = { Accept: "application/json" };
-      if (resumeIdentityEtag) headers["If-None-Match"] = resumeIdentityEtag;
+      const headers = new Headers({ Accept: "application/json" });
+      if (resumeIdentityEtag) headers.set("If-None-Match", resumeIdentityEtag);
       const response = await window.__mflDataClient.fetch("/api/identity", {
         cache: "no-store",
         headers,
@@ -604,11 +608,7 @@ async function revalidateSQLiteIdentityOnResume() {
       }
       return true;
     } catch {
-      if (sequence === resumeIdentitySequence && !controller.signal.aborted) {
-        resumeIdentityLastFailed = true;
-      } else if (sequence === resumeIdentitySequence) {
-        resumeIdentityLastFailed = true;
-      }
+      if (sequence === resumeIdentitySequence) resumeIdentityLastFailed = true;
       return false;
     } finally {
       if (timeout) window.clearTimeout(timeout);
