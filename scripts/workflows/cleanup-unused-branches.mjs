@@ -5,7 +5,6 @@ import { appendFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const MAX_PAGE_SIZE = 100;
-const SHA_PATTERN = /^[0-9a-f]{40}$/i;
 
 function repositoryName(value) {
   if (typeof value !== "string" || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value)) {
