@@ -50,7 +50,7 @@ script = replaceExactly(script,
 script = replaceExactly(script,
   '    return await waitForBrowserRegression(cdp);',
   `    return await (await import("./browser-load01b-cdp-helper.mjs")).runLoad01b(cdp, {
-      url, width, height, waitForBaseline: () => waitForBrowserRegression(cdp),
+      url, width, height,
     });`);
 const cases = [
   { kind: "planner-squad", scenario: "planner-selected" },
