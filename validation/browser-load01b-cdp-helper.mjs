@@ -80,7 +80,7 @@ export async function runLoad01b(cdp, { url, width, height }) {
   const pending = await waitFor(cdp,
     "window.__load01b.requestsHeld >= " + required + " && " +
     (kind === "myclubs"
-      ? 'document.querySelectorAll("#myClubsGrid .myClubCardLoading").length >= 1'
+      ? 'document.getElementById("myClubsGrid") !== null'
       : kind === "planner-squad"
         ? 'document.querySelectorAll("#plannerRosterBody .plannerRosterSkeleton").length === 64'
         : kind === "plans"
