@@ -75,7 +75,7 @@ let attempted = 0;
 const failures = [];
 try {
   await writeFile(tmp, script, "utf8");
-  for (const item of selected) {
+  attempts: for (const item of selected) {
     for (const [width, height] of viewports) {
       for (const theme of themes) {
         const label = [item.kind, width, theme].join("-");
@@ -100,6 +100,7 @@ try {
         if (exitCode !== 0) {
           failures.push(label);
           console.error("LOAD01B4_FAIL " + label + ": " + exitCode);
+          break attempts;
         }
       }
     }
