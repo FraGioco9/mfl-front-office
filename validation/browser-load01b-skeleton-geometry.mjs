@@ -38,6 +38,10 @@ script = replaceExactly(script,
 script = replaceExactly(script,
   "      response.end(injectedIndexHtml);",
   "      response.end(probedIndexHtml);");
+// Prevent the canonical fixture's own SPA navigation and modal teardown from racing screenshots.
+script = replaceExactly(script,
+  '  async function run() {\\n    try {',
+  '  async function run() {\\n    try {\\n      if (window.__load01b) await new Promise(resolve => { window.__load01b.unblockCanonical = resolve; });');
 script = replaceExactly(script,
   "async function runChromeRegression(executable, url, width = 1280, height = 900) {",
   `async function runChromeRegression(executable, url, width = 1280, height = 900) {
