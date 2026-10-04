@@ -46,7 +46,7 @@
       headers.set("x-browser-ux03-actions", "1");
     }
     const gated = requestKind(url, method);
-    if (!gated) return originalFetch(input, { ...init, headers });
+    // Gate only the first measured request wave: canonical SPA/cached returns must never be held.\n    if (!gated || state.requestsReleased > 0) return originalFetch(input, { ...init, headers });
     state.requestsHeld++;
     return new Promise((resolve, reject) => {
       state.waiting.push({ gated, url: url.pathname + url.search, release: () => {
