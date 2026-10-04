@@ -1,0 +1,16 @@
+# DATA-01A — Runtime data generation and Marketplace cache baseline
+
+Scope: **read-only, synthetic, no live database, wallet, browser, or deploy**. Source-execution fixture `validation/data01-generation-cache-baseline.mjs` runs the actual canonical `incrementalDataQuery`, `syncIncrementalCacheNamespace`, `adoptIncrementalPayloadDataset` and completed-payload cache owners in a Node VM. This is a test-only PR; it intentionally does **not** fix an observed exposure.
+
+## Findings / reproducible hypotheses
+
+1. **SQLite generation boundary appears correct on a fresh response:** when `generatedAt` changes from generation A to B, the canonical completed-route cache clears. The linked-wallet change also clears it. This confirms the targeted in-memory namespace contract, not an end-to-end deployment-swap or in-flight concurrency guarantee.
+2. **Marketplace generation is independent.** The marketplace overlay has a 5-second TTL; marketplace events run separately from database refresh. The server's `publicPageSnapshotEligible` correctly disallows database-only cache revalidation for price-sorted and price-filtered pages. The browser's completed `incrementalPayloadCache` is only namespaced by SQLite `manifest.generated_at` and linked wallet, with no TTL or marketplace revision on those page payloads.
+3. **Concrete stale-reuse path:** for an unchanged SQLite generation, visit a table sorted by `listing_price` (Marketplace A), navigate away, let Marketplace B arrive with a different price, then revisit the same table with identical query. `cachedIncrementalPayload` returns the old completed page and `requestIncrementalRoute` takes the cache-hit path, skipping its fresh API request. A `listing_price` filter follows the same path. The overlay deliberately skips patching those authoritative Marketplace queries. The fixture logs `DATA01_BASELINE_MARKETPLACE_STALE listing-sort=1 listing-filter=1` to mark **a demonstrated risk, not a passing correctness guarantee**.
+4. **Follow-up boundaries:** a fresh un-cached request can adopt the SQLite generation supplied by its API response, but an entirely cached route cannot discover a remote SQLite swap by itself. The Home summary also retains its successful in-memory snapshot until a reload. Evaluate whether explicit revalidation on session resume / release transition is necessary, without polling on every route or misrepresenting immutable released SQLite snapshots.
+
+## Next step (DATA-01B; separate product PR only with proof)
+
+Fix only stale Marketplace-sensitive completed-route reuse, retaining SQLite-only LRU (64 entries), request deduplication and abort ownership, session-wallet namespace, `force` behavior, and public/private cache headers. A minimal option is to bypass the completed payload cache specifically for listing-sorted or listing-filtered requests while retaining same-request in-flight deduplication. Test rapid reentry, changed sale price, removed listing, empty results, filtered counts/pagination, A→B→A generation/wallet switching, and independent SQLite changes. Follow up on SQLite deployment-swap revalidation with a separate scoped design if justified. All tests use synthetic data; production wallet and Safari/iPhone remain final release gates.
+
+No merges, database refresh, live Supabase migration, or Vercel deploy.
