@@ -70,13 +70,32 @@ async function main() {
   let baseSha = eventName === "pull_request" ? process.env.PR_BASE_SHA || "" : process.env.BEFORE_SHA || "";
   const headSha = eventName === "pull_request" ? process.env.PR_HEAD_SHA || currentSha : currentSha;
 
-  if (!commitExists(baseSha)) {
+  // A manual run has no PR base or push "before" SHA. Comparing only HEAD^
+  // misses application changes whenever a documentation-only commit is last.
+  // Compare the full branch delta to the default branch's merge base instead.
+  // checkout@v7 fetch-depth: 0 provides origin/main for workflow_dispatch.
+  let fullManualSiteRun = false;
+  if (eventName === "workflow_dispatch") {
+    const mainSha = git(["rev-parse", "--verify", "refs/remotes/origin/main^{commit}"], { allowFailure: true }).trim();
+    const mergeBase = commitExists(mainSha)
+      ? git(["merge-base", headSha, mainSha], { allowFailure: true }).trim()
+      : "";
+    if (commitExists(mergeBase) && mergeBase !== headSha) {
+      baseSha = mergeBase;
+    } else {
+      // Manual run on main (or missing/incomplete refs): never report
+      // a green quality job while silently skipping all site validation.
+      fullManualSiteRun = true;
+    }
+  } else if (!commitExists(baseSha)) {
     baseSha = git(["rev-parse", `${headSha}^`], { allowFailure: true }).trim();
   }
 
   let scope;
   let changedFiles = [];
-  if (!commitExists(baseSha)) {
+  if (fullManualSiteRun) {
+    scope = Object.freeze({ site: true, builder: false, workflow: false, quality: true });
+  } else if (!commitExists(baseSha)) {
     scope = Object.freeze({ site: true, builder: true, workflow: true, quality: true });
   } else {
     changedFiles = git(["diff", "--name-only", baseSha, headSha]).split("\n").filter(Boolean);
