@@ -128,6 +128,21 @@ answer(latest, []);
 await flush();
 assert.equal(rendered.length, preSettled + 1, "Current successful empty search must settle");
 assert.equal(rendered.at(-1).rows.length, 0, "Settled empty payload should render no players");
+if (process.env.LOAD03_EXPECT_FIXED === "1") {
+  inputValue("unavailable");
+  assert.equal(empty.textContent, "Searching players…",
+    "Pending search must display Searching rather than No players found");
+  assert.equal(empty.hidden, false);
+  advance(140);
+  const failed = network.at(-1);
+  const priorRendered = rendered.length;
+  failed.reject(new Error("Synthetic 503"));
+  await flush();
+  assert.equal(rendered.length, priorRendered,
+    "Failed request is not a successful empty result");
+  assert.equal(messages.at(-1), "Synthetic 503", "Current search error stays actionable");
+  assert.equal(empty.hidden, true, "Failed current query must not show No players found");
+}
 inputValue("");
 assert.equal(results.hidden, true, "Clear input must hide results");
 assert.equal(tasks.size, 0, "Clear input must cancel debounce timer");
