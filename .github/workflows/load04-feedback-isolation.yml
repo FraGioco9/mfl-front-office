@@ -1,0 +1,37 @@
+name: LOAD-04 isolated feedback contexts
+
+on:
+  pull_request:
+    paths:
+      - "validation/load04-*"
+      - ".github/workflows/load04-feedback-isolation.yml"
+      - "modules/core-sources/shared-toast-core.js"
+      - "modules/core-sources/planner.js"
+      - "modules/core-sources/settings.js"
+      - "modules/app-core-runtime.js"
+      - "modules/app-core-planner-runtime.js"
+      - "modules/app-core-settings-runtime.js"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  load04-feedback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Execute real toast/Planner/Settings owner in fake DOM and network
+        run: |
+          node --check validation/load04-feedback-context-isolation.mjs
+          node validation/load04-feedback-context-isolation.mjs
+      - name: Existing accessibility, mutation, retry and focus ownership
+        run: |
+          node validation/a11y04-live-announcements.mjs
+          node validate-ux03-planner-toolbar-actions.mjs
+          node validate-ux03d-cross-domain-actions.mjs
+          node validate-ux02f-home-search-recovery.mjs
