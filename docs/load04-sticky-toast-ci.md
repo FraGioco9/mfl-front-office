@@ -1,0 +1,5 @@
+# LOAD-04B — Sticky toast source/CI decision
+
+Date: 2026-10-04. Diagnostic baseline #1116 successfully reproduced that `mouseleave` schedules a new 2200ms hide timer for a `showToast("Opting in...",{sticky:true})` message (despite its initial timer being disabled). The isolated source-execution test in #1117 asserts that mouseleave leaves **zero** pending timers while the opt-in remains active and that a subsequent ordinary toast resets the sticky state and retains existing 2200ms auto-hide plus pause-on-hover and resume-on-leave.
+
+Only `modules/core-sources/shared-toast-core.js` and its generated `modules/app-core-runtime.js` owner change. No new timeout durations, extra CSS, new announcement regions, wallet authentication changes or focus moves. The program's own Site Quality workflow may synchronize `table-width-runtime.js` on the open PR branch; the resulting automatically authored commit does not inherit exact-head CI checks from its parent. The documentation commit here explicitly reruns the complete suite on the current checked-in generated artifact. Review the latest branch head SHA and every workflow/check before marking final.
