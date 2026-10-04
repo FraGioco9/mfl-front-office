@@ -25,7 +25,7 @@ async function capture(cdp, folder, filename) {
   return { name: filename, bytes: buffer.length, sha256: createHash("sha256").update(buffer).digest("hex") };
 }
 
-export async function runLoad01c(cdp, { url, width, height }) {
+export async function runLoad01c(cdp, { width, height }) {
   const surface = process.env.MFL_LOAD01C_SURFACE;
   const rows = Number(process.env.MFL_LOAD01C_ROWS);
   const placeholders = Number(process.env.MFL_LOAD01C_PLACEHOLDERS);
