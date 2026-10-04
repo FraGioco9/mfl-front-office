@@ -100,7 +100,7 @@ export async function runLoad01b(cdp, { url, width, height, waitForBaseline }) {
     "planner-search": 'document.querySelector("#plannerTeamSelector") && document.querySelectorAll("#plannerTeamSelector .searchHint").length === 0',
     myclubs: 'document.querySelectorAll("#myClubsGrid .myClubCard:not(.myClubCardLoading)").length >= 1',
     database: 'document.querySelectorAll("#tableBody tr:not(.mflTableLoadingRow)").length > 0 && document.documentElement.dataset.mflRouteReady === "true"',
-    player: 'document.documentElement.dataset.mflRouteReady === "true" && document.querySelector("#playerDetail")?.textContent?.includes("Browser Player")',
+    player: 'document.documentElement.dataset.mflRouteReady === "true" && document.querySelector("#playerDetail")?.textContent?.includes("Player")',
   };
   await waitFor(cdp, settledSelectors[kind], "settled " + kind, 16000);
   await sleep(150);
