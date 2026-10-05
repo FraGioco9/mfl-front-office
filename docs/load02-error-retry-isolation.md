@@ -22,3 +22,6 @@ These are deterministic synthetic source-execution fixtures, not Safari/iPhone f
 ## Decision
 
 Keep only the stale-error ownership guard. Do not import PR #1112 history, do not change persistence or retry policy, and do not touch unrelated generated artifacts.
+## Generated artifact synchronization
+
+Site Quality on user head `7d2e4552e2fbe263971ea291daa50c07b60ed603` passed all runtime/browser/Planner checks and then produced CI-owned commit `6ebcae9074e9b57c737ee0b9dc5a9b4b4cd2dd05`, changing only the derived `table-width-runtime.js` core build ID. This documentation commit intentionally retriggers the complete exact-head workflow set on the synchronized generated state; no application behavior is changed here.
