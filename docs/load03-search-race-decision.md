@@ -26,3 +26,6 @@ These are deterministic synthetic checks, not real Safari/iPhone, wallet, produc
 ## Decision
 
 Integrate only the Planner Player race fix after exact-head CI. Do not import #1114 history or unrelated generated artifacts; no merge without explicit maintainer approval.
+## Generated artifact synchronization
+
+Site Quality on user head `f19cef6529115d74d93a864d1ee09773a09e6e5b` passed the application/browser gates and produced CI-owned commit `a36c75f85c5555192cb6a510662b01c7a04518eb`, changing only the derived `table-width-runtime.js` core build ID. This documentation commit retriggers the full exact-head workflow set on the synchronized generated state; it changes no application behavior.
