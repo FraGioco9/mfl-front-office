@@ -28,7 +28,7 @@ assert.match(routeLoader, /catch \(error\)/);
 
 const reloadSource = sliceExactly(incremental,
   "async function reloadIncrementalPage(page = state.page, options = {}) {",
-  "window.mflReloadIncrementalPage = reloadIncrementalPage;");
+  "// DATA-01C3: event-scoped SQLite identity revalidation.");
 
 function makeRouteBoundary() {
   const seen = { toasts: [], finished: [], resetScroll: 0, current: true, outcome: null };
