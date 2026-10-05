@@ -52,6 +52,11 @@ jobs:
             summary="- Overall: `unknown`\n- Health endpoint HTTP status: ${http_code:-network-error}"
           fi
 
+          case "$status" in
+            healthy|warning|degraded|unknown) ;;
+            *) status="unknown" ;;
+          esac
+
           open_issue="$(
             gh api "repos/$GITHUB_REPOSITORY/issues?state=open&per_page=100"               | jq -r --arg title "$ALERT_TITLE" '
                   .[]
@@ -61,8 +66,21 @@ jobs:
                 '               | head -n 1
           )"
 
-          if [[ "$status" != "unknown" && "$status" != "degraded" ]]; then
+          if [[ "$status" == "healthy" ]]; then
             if [[ -n "$open_issue" ]]; then
+              gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$open_issue/comments" -f body="Operational health recovered to **healthy** at $(date -u +'%Y-%m-%dT%H:%M:%SZ'). The monitor is closing this incident automatically."
+              gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/$open_issue" -f state=closed -f state_reason=completed >/dev/null
+            fi
+            echo "Operational health is healthy; no alert required."
+            exit 0
+          fi
+
+          if [[ "$status" == "warning" ]]; then
+            echo "Operational health is warning; recovery is expected, so no new alert is opened and any existing incident stays open."
+            exit 0
+          fi
+
+          if [[ -n "$open_issue" ]]; then
               gh api                 --method POST                 "repos/$GITHUB_REPOSITORY/issues/$open_issue/comments"                 -f body="Operational health recovered to **$status** at $(date -u +'%Y-%m-%dT%H:%M:%SZ'). The monitor is closing this incident automatically."
               gh api                 --method PATCH                 "repos/$GITHUB_REPOSITORY/issues/$open_issue"                 -f state=closed                 -f state_reason=completed                 >/dev/null
             fi
