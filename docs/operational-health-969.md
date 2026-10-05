@@ -55,3 +55,25 @@ The marker writer runs with `always()` after the normal production work and is `
 - `unknown`: a required monitoring signal is unavailable.
 
 This is visibility only. Existing Supabase Cron primary/recovery scheduling, checkpoint/resume publication, Marketplace fail-closed semantics and deployment identity remain the canonical behavior owners.
+
+
+## Incident alerting
+
+Issue #1034 OPS-02 adds a repository-side monitor in
+`.github/workflows/operational-health-monitor.yml`. It checks the public read-only
+health endpoint every 30 minutes and can also be run manually.
+
+The monitor deliberately alerts only for `unknown` or `degraded` overall status.
+A single `warning` remains visible through the endpoint but does not open an incident,
+because the scheduler recovery path is expected to handle one failed occurrence.
+
+Alerting is deduplicated by a fixed repository issue title. While an incident is open,
+subsequent unhealthy checks do not create or comment repeatedly. A later non-degraded,
+non-unknown check posts one recovery comment and closes the incident automatically.
+The issue body includes only normalized status, failure counts and attempt timestamps
+already exposed by `GET /api/operational-health`; raw Storage objects, wallet data,
+URLs containing credentials and secrets are never copied into the alert.
+
+This monitor is independent from the database and Marketplace refresh workflows, so a
+missing scheduler dispatch can still be detected. It does not change refresh cadence,
+health thresholds, product fail-closed behavior, Supabase data or Vercel deployment.
