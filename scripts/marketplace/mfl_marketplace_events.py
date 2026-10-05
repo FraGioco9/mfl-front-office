@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import time
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -108,10 +109,24 @@ def decode_event_payload(encoded: object) -> dict[str, object]:
 def fetch_events_for_type(event_type: str, start_height: int, end_height: int) -> list[OrderedFlowEvent]:
     if start_height <= 0 or end_height < start_height:
         return []
+    event_label = next(
+        (name for name, configured_type in EVENT_TYPES.items() if configured_type == event_type),
+        event_type.rsplit(".", 1)[-1],
+    )
+    chunk_total = ((end_height - start_height) // EVENT_HEIGHT_RANGE) + 1
+    type_started = time.monotonic()
+    print(
+        f"Flow marketplace events: {event_label} blocks {start_height}-{end_height}; "
+        f"{chunk_total} chunk(s)."
+    )
     results: list[OrderedFlowEvent] = []
     current = start_height
+    chunk_index = 0
     while current <= end_height:
+        chunk_index += 1
         chunk_end = min(end_height, current + EVENT_HEIGHT_RANGE - 1)
+        chunk_started = time.monotonic()
+        before_count = len(results)
         query = urlencode(
             {
                 "type": event_type,
@@ -121,7 +136,7 @@ def fetch_events_for_type(event_type: str, start_height: int, end_height: int) -
         )
         payload = request_json(
             f"{FLOW_EVENTS_URL}?{query}",
-            f"Flow events {event_type} {current}-{chunk_end}",
+            f"Flow events {event_label} {current}-{chunk_end}",
         )
         if not isinstance(payload, list):
             raise RuntimeError("Flow events endpoint returned an invalid response")
@@ -152,7 +167,17 @@ def fetch_events_for_type(event_type: str, start_height: int, end_height: int) -
                         payload=decode_event_payload(event.get("payload")),
                     )
                 )
+        chunk_elapsed = time.monotonic() - chunk_started
+        print(
+            f"Flow marketplace events: {event_label} chunk {chunk_index}/{chunk_total} "
+            f"blocks {current}-{chunk_end}: {len(results) - before_count} event(s) "
+            f"in {chunk_elapsed:.1f}s; {len(results)} total."
+        )
         current = chunk_end + 1
+    print(
+        f"Flow marketplace events: {event_label} complete with {len(results)} event(s) "
+        f"in {time.monotonic() - type_started:.1f}s."
+    )
     return results
 
 
@@ -323,6 +348,7 @@ def write_state(state: dict[str, object], output: Path) -> None:
 
 
 def incremental(previous_state_path: Path, output: Path) -> dict[str, object]:
+    refresh_started = time.monotonic()
     previous = load_state(previous_state_path)
     try:
         previous_height = int(previous["flow_block_height"])
@@ -343,12 +369,14 @@ def incremental(previous_state_path: Path, output: Path) -> dict[str, object]:
     write_state(state, output)
     print(
         f"Advanced marketplace state {previous_height}->{end_height}: "
-        f"processed {applied} MFL listing events; {len(active)} listings active."
+        f"processed {applied} MFL listing events; {len(active)} listings active "
+        f"in {time.monotonic() - refresh_started:.1f}s."
     )
     return state
 
 
 def bootstrap(database_path: Path, output: Path, *, workers: int, page_size: int, mode: str) -> dict[str, object]:
+    refresh_started = time.monotonic()
     wallets = load_owner_wallets(database_path)
     start_height = fetch_sealed_block_height()
     print(
@@ -359,7 +387,12 @@ def bootstrap(database_path: Path, output: Path, *, workers: int, page_size: int
     def fetcher(wallet: str) -> list[Listing]:
         return fetch_wallet_listings(wallet, block_height="sealed", page_size=page_size)
 
+    scan_started = time.monotonic()
     scan = build_snapshot(wallets, fetcher, block_height=start_height, workers=workers)
+    print(
+        f"Flow marketplace storefront scan complete: {len(wallets)} wallet(s) "
+        f"in {time.monotonic() - scan_started:.1f}s."
+    )
     active: dict[str, Listing] = {}
     raw_players = scan.get("players")
     if not isinstance(raw_players, dict):
@@ -393,7 +426,8 @@ def bootstrap(database_path: Path, output: Path, *, workers: int, page_size: int
     write_state(state, output)
     print(
         f"{mode.title()} complete at Flow block {end_height}: "
-        f"{len(active)} active listings after replaying {applied} MFL listing events."
+        f"{len(active)} active listings after replaying {applied} MFL listing events "
+        f"in {time.monotonic() - refresh_started:.1f}s."
     )
     return state
 
