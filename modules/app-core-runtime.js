@@ -3211,7 +3211,9 @@ function showToast(message, options = {}) {
     toast.setAttribute("aria-live", "off");
     toast.setAttribute("aria-hidden", "true");
     toast.addEventListener("mouseenter", () => window.clearTimeout(state.toastTimer));
-    toast.addEventListener("mouseleave", () => scheduleToastHide(toast));
+    toast.addEventListener("mouseleave", () => {
+      if (toast.getAttribute("data-sticky") !== "true") scheduleToastHide(toast);
+    });
     document.body.appendChild(toast);
   }
 
@@ -3221,6 +3223,7 @@ function showToast(message, options = {}) {
   } else {
     toast.textContent = message;
   }
+  toast.setAttribute("data-sticky", options.sticky === true ? "true" : "false");
   toast.classList.add("visible");
   announceActionStatus(toast.textContent, { urgent: options.urgent === true });
   if (options.sticky) {
