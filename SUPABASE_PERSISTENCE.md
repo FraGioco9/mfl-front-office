@@ -58,7 +58,7 @@ Stored values:
 - `opted_in_at`: first persisted opt-in timestamp.
 - `last_seen_at`: most recent authenticated visit/activity timestamp.
 
-`agent_name` and `last_seen_at` are refreshed when the signed wallet opts in and whenever the authenticated wallet-preferences GET succeeds far enough to run its parallel presence touch. Agent names are refreshed only when the current runtime database contains a non-empty name for that wallet, so a temporary lookup miss does not erase a previously known name. Application startup already requests wallet preferences for a restored valid wallet proof, so an opted-in user's return to the site refreshes this presence data without a separate browser persistence path. A failed presence touch is non-blocking and does not prevent required preferences from loading.
+`agent_name` and `last_seen_at` are refreshed when the signed wallet opts in and whenever the authenticated wallet-preferences GET succeeds far enough to run its parallel presence touch. Agent names are refreshed only when the current runtime database contains a non-empty name for that wallet, so a temporary lookup miss does not erase a previously known name. Application startup already requests wallet preferences for a restored valid session marker; the server still requires the HttpOnly session cookie before treating the request as authenticated. An opted-in user's return to the site therefore refreshes presence data without restoring or replaying Flow proof material. A failed presence touch is non-blocking and does not prevent required preferences from loading.
 
 This table is retained as the explicit opt-in/audit and last-seen record. It is not duplicated into `wallet_preferences`.
 
@@ -126,9 +126,12 @@ Owner: `api/_wallet-session.js`. Schema/transaction owner:
 `supabase/migrations/20260914150000_wallet_auth_sessions.sql`, mirrored in
 `supabase-schema.sql`.
 
-These tables are the durable server-side foundation for challenge replay protection and expiring
-wallet sessions. They are not active browser persistence yet; the current login flow still uses the
-legacy proof headers until the challenge/session endpoints are integrated.
+These tables are the active durable server-side foundation for challenge replay protection and expiring
+wallet sessions. The migration phase is complete: `api/wallet-session.js` issues and exchanges the
+server challenge, creates the first-party HttpOnly session cookie, and revokes that session on logout;
+`api/_wallet-auth.js` resolves the cookie for private wallet-owned API access. Legacy proof headers are
+not an authorization fallback. The browser may retain only a non-authorizing local session marker for UI
+restoration; possession of that marker alone cannot authenticate an API request.
 
 `wallet_auth_consumed_challenges` stores only the challenge nonce, verified wallet, challenge expiry
 and consumption timestamp. The nonce is unique, so the service-role-only
@@ -231,7 +234,7 @@ Stored values:
 - `evidence`: optional links, console messages, or additional context.
 - `app_version`: current MFL Front Office release when the form is submitted.
 - `user_agent`: server-observed browser user-agent metadata.
-- `wallet_address`: optional verified wallet identity when the reporter already has a valid Dapper wallet proof; bug reporting itself does not require opt-in.
+- `wallet_address`: optional verified wallet identity when the reporter already has a valid server wallet session; bug reporting itself does not require opt-in.
 - `reporter_hash`: HMAC-SHA256 of the request address using a server-only key, used only for abuse throttling. The raw IP address is never persisted.
 - `status`: internal triage lifecycle (`new`, `triaged`, `planned`, `resolved`, or `dismissed`).
 - `created_at`: submission timestamp.

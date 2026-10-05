@@ -211,8 +211,8 @@ includes(
 );
 includes(
   documentation,
-  "Application startup already requests wallet preferences for a restored valid wallet proof",
-  "Supabase documentation must explain how returning opted-in visits refresh wallet presence data.",
+  "Application startup already requests wallet preferences for a restored valid session marker",
+  "Supabase documentation must explain how returning opted-in visits refresh wallet presence data without replaying wallet proofs.",
 );
 includes(
   documentation,
@@ -223,6 +223,42 @@ includes(
   documentation,
   "service-role-only",
   "Supabase documentation must record the RPC execution boundary.",
+);
+
+includes(
+  documentation,
+  "The migration phase is complete",
+  "Supabase documentation must describe wallet-session migration as completed.",
+);
+includes(
+  documentation,
+  "`api/wallet-session.js` issues and exchanges the",
+  "Supabase documentation must reference the active challenge/session endpoint.",
+);
+includes(
+  documentation,
+  "`api/_wallet-auth.js` resolves the cookie",
+  "Supabase documentation must reference the canonical cookie authentication owner.",
+);
+includes(
+  documentation,
+  "Legacy proof headers are\nnot an authorization fallback.",
+  "Supabase documentation must state that legacy proof headers are not an authorization fallback.",
+);
+includes(
+  documentation,
+  "non-authorizing local session marker",
+  "Supabase documentation must distinguish the browser UI marker from server authentication.",
+);
+excludes(
+  documentation,
+  "They are not active browser persistence yet",
+  "Supabase documentation must not describe the active wallet session tables as future-only.",
+);
+excludes(
+  documentation,
+  "current login flow still uses the\nlegacy proof headers",
+  "Supabase documentation must not claim that current login uses legacy proof headers.",
 );
 
 const apiFiles = await fs.readdir(apiRoot);
