@@ -563,7 +563,11 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression, ti
   // Dynamic marketplace prices are not part of the immutable SQLite database.
   // Never cache a price-sensitive COUNT across changes to the listing snapshot.
   const listingFiltered = rules.some((r) => String(r?.column || "") === LISTING_COLUMN);
-  const simpleForSale = rules.length === 1
+  const simpleForSale = scope === "database"
+    && !ownedProgression
+    && !["hideRetired", "hideRetiring", "hideMfl", "packableOnly", "newMintsOnly"]
+      .some((key) => String(query[key] || "") === "1")
+    && rules.length === 1
     && String(rules[0]?.column || "") === LISTING_COLUMN
     && String(rules[0]?.value || "") === "for_sale";
   let saleWhere = where, saleParameters = parameters, saleIdsCount = -1;
