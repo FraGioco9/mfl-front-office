@@ -28,9 +28,7 @@ jobs:
           set -euo pipefail
 
           response_file="$(mktemp)"
-          http_code="$(
-            curl               --silent               --show-error               --location               --max-time 20               --output "$response_file"               --write-out "%{http_code}"               "$HEALTH_URL"               || true
-          )"
+          http_code="$(curl --silent --show-error --location --max-time 20 --output "$response_file" --write-out "%{http_code}" "$HEALTH_URL" || true)"
 
           if [[ "$http_code" == "200" ]] && jq -e '.status | type == "string"' "$response_file" >/dev/null 2>&1; then
             status="$(jq -r '.status' "$response_file")"
@@ -49,7 +47,8 @@ jobs:
             )"
           else
             status="unknown"
-            summary="- Overall: `unknown`\n- Health endpoint HTTP status: ${http_code:-network-error}"
+            summary="- Overall: `unknown`
+          - Health endpoint HTTP status: ${http_code:-network-error}"
           fi
 
           case "$status" in
@@ -58,12 +57,14 @@ jobs:
           esac
 
           open_issue="$(
-            gh api "repos/$GITHUB_REPOSITORY/issues?state=open&per_page=100"               | jq -r --arg title "$ALERT_TITLE" '
-                  .[]
-                  | select(has("pull_request") | not)
-                  | select(.title == $title)
-                  | .number
-                '               | head -n 1
+            gh api "repos/$GITHUB_REPOSITORY/issues?state=open&per_page=100" |
+              jq -r --arg title "$ALERT_TITLE" '
+                .[]
+                | select(has("pull_request") | not)
+                | select(.title == $title)
+                | .number
+              ' |
+              head -n 1
           )"
 
           if [[ "$status" == "healthy" ]]; then
@@ -81,14 +82,6 @@ jobs:
           fi
 
           if [[ -n "$open_issue" ]]; then
-              gh api                 --method POST                 "repos/$GITHUB_REPOSITORY/issues/$open_issue/comments"                 -f body="Operational health recovered to **$status** at $(date -u +'%Y-%m-%dT%H:%M:%SZ'). The monitor is closing this incident automatically."
-              gh api                 --method PATCH                 "repos/$GITHUB_REPOSITORY/issues/$open_issue"                 -f state=closed                 -f state_reason=completed                 >/dev/null
-            fi
-            echo "Operational health is $status; no alert required."
-            exit 0
-          fi
-
-          if [[ -n "$open_issue" ]]; then
             echo "Operational health is $status and incident #$open_issue is already open; suppressing duplicate alert."
             exit 0
           fi
@@ -102,10 +95,9 @@ jobs:
 
           Source: `GET /api/operational-health`.
 
-          This issue is intentionally deduplicated: the monitor will not create another incident while this one remains open, and will close it automatically after recovery. It does not expose raw runtime objects, wallet data or credentials.
+          This issue is intentionally deduplicated: the monitor will not create another incident while this one remains open, and will close it automatically after a healthy recovery. It does not expose raw runtime objects, wallet data or credentials.
           EOF
           )"
 
-          gh api             --method POST             "repos/$GITHUB_REPOSITORY/issues"             -f title="$ALERT_TITLE"             -f body="$body"             >/dev/null
-
+          gh api --method POST "repos/$GITHUB_REPOSITORY/issues" -f title="$ALERT_TITLE" -f body="$body" >/dev/null
           echo "Opened one deduplicated operational-health incident for status $status."
