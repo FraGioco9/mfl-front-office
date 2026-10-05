@@ -7,7 +7,16 @@ on:
       - ".github/workflows/load04-feedback-isolation.yml"
       - "docs/load04-sticky-toast-ci.md"
       - "modules/core-sources/shared-toast-core.js"
+      - "modules/core-sources/planner.js"
+      - "modules/core-sources/settings.js"
       - "modules/app-core-runtime.js"
+      - "modules/app-core-planner-runtime.js"
+      - "modules/app-core-settings-runtime.js"
+      - "validate-ux03-planner-toolbar-actions.mjs"
+      - "validate-ux03c-planner-saved-plans-actions.mjs"
+      - "validate-ux03d-cross-domain-actions.mjs"
+      - "validate-ux05-planner-plan-state.mjs"
+      - "validation/a11y04-live-announcements.mjs"
   workflow_dispatch:
 
 permissions:
@@ -24,7 +33,7 @@ jobs:
           node-version: 22
       - name: Execute real toast owner in fake DOM and network context
         env:
-          LOAD04_EXPECT_STICKY: "1"
+          LOAD04_EXPECT_FIXED: "1"
         run: |
           node --check validation/load04-feedback-context-isolation.mjs
           node validation/load04-feedback-context-isolation.mjs
