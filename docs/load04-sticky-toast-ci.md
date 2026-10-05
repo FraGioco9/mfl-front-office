@@ -24,3 +24,6 @@ These are deterministic synthetic checks, not Safari/iPhone or live wallet/netwo
 ## Decision
 
 Integrate only the sticky lifecycle correction after exact-head CI. Do not import #1116 history, do not modify #1117/#1118, and do not merge without explicit maintainer approval.
+## Generated artifact synchronization
+
+Site Quality on user head `e120c00b952d92019ed06995309df3031be602c9` passed the application/browser gates and produced CI-owned commit `25ded4e0208ca49fa1eef774d632507ec2715aba`, changing only the derived `table-width-runtime.js` core build ID. The automatic pull-request events on that bot-authored head are `action_required`, so this documentation-only commit intentionally retriggers the complete exact-head workflow set on the synchronized generated state. No application behavior changes here.
