@@ -42,8 +42,13 @@ This scheduler reuses the secure credentials already installed for the Full data
 
 - Edge Function secret `GITHUB_ACTIONS_DISPATCH_TOKEN`
 - Edge Function secret `SCHEDULER_SHARED_SECRET`
+- optional temporary Edge Function secret `SCHEDULER_SHARED_SECRET_NEXT` during rotation
 - Vault secret `mfl_scheduler_project_url`
 - Vault secret `mfl_scheduler_shared_secret`
+
+Both scheduler dispatch functions accept the primary and temporary shared secret during
+a controlled rollover. The temporary value is for overlap only and must be removed after
+Vault and the primary Edge Function secret are confirmed on the new value.
 
 No secret values belong in Git.
 
