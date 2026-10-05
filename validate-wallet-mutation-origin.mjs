@@ -67,6 +67,11 @@ try {
         if (dep === "./_request-origin") return { requireSameOriginMutation };
         if (dep === "./_wallet-auth") return { signedWalletFromRequest() { authenticated += 1; return "0x1111111111111111"; } };
         if (dep === "./_supabase") return { supabaseConfig() { databaseAccess += 1; return true; }, supabaseRequest() { databaseAccess += 1; return []; } };
+        if (dep === "./_request-log") return {
+          createRequestLog() {
+            return { info() {}, warn() {}, error() {} };
+          },
+        };
         return {};
       },
     }, { filename: `api/${name}.js` });

@@ -7,6 +7,7 @@ const {
   sendNotModified,
 } = require("./_data-auth");
 const { getGeneratedAt } = require("./_database");
+const { createRequestLog } = require("./_request-log");
 const { publicPageSnapshotEligible } = require("./_data-cache-policy");
 const { snapshotEtag, requestMatchesEtag } = require("./_http-cache");
 const { pagedData } = require("./_data-page");
@@ -48,6 +49,7 @@ function requiresSignedWallet(mode, scope, accessMode, publicEntityProgression, 
 module.exports = async function handler(request, response) {
   const startedAt = performance.now();
   const timings = {};
+  const trace = createRequestLog(response, { category: "data" });
   if (request.method && request.method !== "GET") {
     response.setHeader("Allow", "GET");
     sendJson(response, 405, { error: "Method not allowed." }, startedAt, timings);
@@ -93,6 +95,7 @@ module.exports = async function handler(request, response) {
       signedWallet = await signedWalletFromRequest(request);
       timings.auth = performance.now() - authStartedAt;
       if (!signedWallet) {
+        trace.info("authentication_required", { status: 401 });
         sendJson(response, 401, { error: "Invalid wallet proof." }, startedAt, timings);
         return;
       }
@@ -139,7 +142,9 @@ module.exports = async function handler(request, response) {
 
     sendJson(response, 200, data, startedAt, timings, publicCacheOptions);
   } catch (error) {
-    console.error("Could not query MFL database.", error);
+    let generation = "";
+    try { generation = getGeneratedAt(); } catch {}
+    trace.error("query_failed", { status: 500, generation, error });
     sendJson(
       response,
       500,
