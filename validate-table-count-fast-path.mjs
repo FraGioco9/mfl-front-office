@@ -4,12 +4,15 @@ import { readValidationText } from "./validation-text.mjs";
 const dataPage = await readValidationText("./api/_data-page.js", import.meta.url);
 
 for (const token of [
-  "function countRows(where, parameters) {",
+  "function countRows(where, parameters, cacheAllowed = true) {",
   "function parametersEqual(left, right) {",
   "const sameResultSet = where === sourceWhere && parametersEqual(parameters, baseParameters);",
   "const totalRows = sameResultSet && precomputedSourceRows !== null",
-  ': measureSync(timings, "sqlite", () => countRows(where, parameters));',
+  'saleIdsCount >= 0 ? saleWhere : where,',
+  'saleIdsCount >= 0 ? saleParameters : parameters,',
+  '!listingFiltered,',
   "const sourceRows = sameResultSet",
+  "if (!cacheAllowed) {",
   "precomputedSourceRows ?? measureSync(timings, \"sqlite\", () => countRows(sourceWhere, baseParameters))",
   "totalRows,\n    sourceRows,",
 ]) {
