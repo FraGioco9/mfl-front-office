@@ -137,5 +137,4 @@ console.log("LOAD02_DIAGNOSTIC " + JSON.stringify({
   manualRetrySuccess: true,
   failedRefreshPreservesCommittedRows: preserved,
   synthetic: true,
-  applicationFilesChanged: 0,
 }));
