@@ -121,7 +121,20 @@ def request_json(url: str, label: str) -> object:
         except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
             if attempt == MAX_RETRIES:
                 raise RuntimeError(f"{label} failed: {error}") from error
-            time.sleep(RETRY_DELAY_SECONDS * (attempt + 1))
+            delay_seconds = RETRY_DELAY_SECONDS * (attempt + 1)
+            if isinstance(error, HTTPError):
+                reason = f"HTTP {error.code}"
+            elif isinstance(error, TimeoutError):
+                reason = "timeout"
+            elif isinstance(error, json.JSONDecodeError):
+                reason = "invalid JSON"
+            else:
+                reason = "network error"
+            print(
+                f"{label}: retry {attempt + 1}/{MAX_RETRIES} after {reason}; "
+                f"sleeping {delay_seconds:.1f}s."
+            )
+            time.sleep(delay_seconds)
     raise RuntimeError(f"{label} failed after retries")
 
 
@@ -223,7 +236,13 @@ def execute_flow_script(
         ) as error:
             if attempt == MAX_RETRIES:
                 raise RuntimeError(f"Flow query for {owner} failed: {error}") from error
-        time.sleep(RETRY_DELAY_SECONDS * (attempt + 1))
+        delay_seconds = RETRY_DELAY_SECONDS * (attempt + 1)
+        reason = f"HTTP {error.code}" if isinstance(error, HTTPError) else type(error).__name__
+        print(
+            f"Flow marketplace wallet query: retry {attempt + 1}/{MAX_RETRIES} "
+            f"after {reason}; page size {limit}; sleeping {delay_seconds:.1f}s."
+        )
+        time.sleep(delay_seconds)
     raise RuntimeError(f"Flow query for {owner} failed after retries")
 
 
