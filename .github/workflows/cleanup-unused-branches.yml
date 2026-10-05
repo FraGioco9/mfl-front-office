@@ -10,7 +10,24 @@ on:
     paths:
       - release.json
       - .github/workflows/cleanup-unused-branches.yml
+      - scripts/workflows/cleanup-unused-branches.mjs
+      - tests/test_cleanup_unused_branches.mjs
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Report eligible branches without deleting them
+        required: true
+        type: boolean
+        default: true
+      min_age_days:
+        description: Minimum age of an unreferenced branch before deletion
+        required: true
+        type: choice
+        default: "14"
+        options:
+          - "7"
+          - "14"
+          - "30"
 
 # Two cleanup triggers must never delete remote refs concurrently.
 concurrency:
@@ -38,7 +55,10 @@ jobs:
       - name: Verify cleanup protections with isolated GitHub/git fixtures
         run: node --test tests/test_cleanup_unused_branches.mjs
 
-      - name: Delete only unreferenced remote branches
+      - name: Delete only old unreferenced remote branches
         env:
           GH_TOKEN: ${{ github.token }}
+          CLEANUP_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+          CLEANUP_MIN_AGE_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.min_age_days || '14' }}
+          CLEANUP_BRANCH_ALLOWLIST: audit-*,wip-*,wip/*,keep-*,keep/*,release-*,release/*
         run: node scripts/workflows/cleanup-unused-branches.mjs
