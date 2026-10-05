@@ -17,6 +17,16 @@ try{
  const insert=fixture.prepare(
   "INSERT INTO players(player_id,wallet_address,name,overall,age,nationality,retirement_years,owned_since) VALUES (?,?,?,?,?,?,?,?)");
  for(let i=3;i<=200;i++)insert.run(String(i),"0x2222222222222222","Player "+i,String(i%95),String(18+i%24),"Italy","4","1700000000");
+ fixture.prepare("UPDATE players SET name = ? WHERE player_id = ?").run("Nicolò", "3");
+ fixture.prepare("UPDATE players SET name = ? WHERE player_id = ?").run("İnci", "4");
+ // Exercise the #1097 indexed equality path in the same process as #1098 price
+ // filtering; an exhaustive Unicode-safe lookup is necessary for a true A/B.
+ const normalize=(await import("./api/_database.js")).normalizeSearchText;
+ fixture.exec("CREATE TABLE runtime_player_search (player_id TEXT PRIMARY KEY, normalized_name TEXT NOT NULL)");
+ const insSearch=fixture.prepare("INSERT INTO runtime_player_search VALUES (?, ?)");
+ for(const row of fixture.prepare("SELECT player_id, name FROM players").all())
+  insSearch.run(row.player_id,normalize(row.name));
+ fixture.exec("CREATE INDEX runtime_player_search_name_index ON runtime_player_search(normalized_name, player_id)");
  fixture.close();
  const child=String.raw`
 "use strict";
@@ -28,8 +38,10 @@ const state=require("./api/_marketplace-state.js");
 state.marketplaceState=async()=>({prices,generatedAt:"2026-09-14T00:00:00.000Z",flowBlockHeight:0});
 const oldRows=dba.queryRows,oldOne=dba.queryOne;
 const candidate="player_id IN (SELECT CAST(value AS INTEGER) FROM json_each(?))";
+const nameCandidate="player_id IN (SELECT player_id FROM runtime_player_search WHERE normalized_name = ?)";
 function restore(sql,args){
- const original=sql.replaceAll(candidate,"marketplace_price(player_id) IS NOT NULL");
+ const original=sql.replaceAll(candidate,"marketplace_price(player_id) IS NOT NULL")
+   .replaceAll(nameCandidate,'normalize_search("name") = ?');
  const params=[...args];
  if(sql.includes(candidate)){
   const at=sql.indexOf(candidate),index=(sql.slice(0,at).match(/\?/g)||[]).length;
@@ -59,6 +71,13 @@ const scenarios=[
  {name:"for_sale_last",q:{sortKey:"listing_price",sortDirection:"asc",page:99999,pageSize:25,filters:rules([{column:"listing_price",operator:"=",value:"for_sale"}])}},
  {name:"for_sale_hidden",q:{hideRetired:"1",filters:rules([{column:"listing_price",operator:"=",value:"for_sale"}])}},
  {name:"for_sale_agent",q:{scope:"agent",walletAddress:"synthetic-wallet",filters:rules([{column:"listing_price",operator:"=",value:"for_sale"}])}},
+ {name:"name_exact_unicode",q:{filters:rules([{column:"name",operator:"=",value:"NICOLÒ"}])}},
+ {name:"name_exact_turkish",q:{filters:rules([{column:"name",operator:"=",value:"İnci"}])}},
+ {name:"name_exact_price_sort",q:{sortKey:"listing_price",sortDirection:"asc",filters:rules([{column:"name",operator:"=",value:"Nicolò"}])}},
+ {name:"name_exact_and_sale",q:{filters:rules([{column:"name",operator:"=",value:"Nicolò"},{column:"listing_price",operator:"=",value:"for_sale"}])}},
+ {name:"name_exact_or_sale",q:{filters:rules([{column:"name",operator:"=",value:"İnci"},{column:"listing_price",operator:"=",value:"for_sale",connector:"or"}])}},
+ {name:"name_contains_and_sale",q:{filters:rules([{column:"name",operator:"contains",value:"inci"},{column:"listing_price",operator:"=",value:"for_sale"}])}},
+ {name:"name_missing_and_sale",q:{filters:rules([{column:"name",operator:"=",value:"not present"},{column:"listing_price",operator:"=",value:"for_sale"}])}},
 ];
 async function invoke(q,flag){
  baseline=flag;captured=[];
@@ -75,6 +94,13 @@ async function invoke(q,flag){
    const B=await invoke(s.q,true);
    same(A.res,B.res);
    const countSql=A.sql.find(t=>t.sql.includes("SELECT count(*) AS count FROM players")&&t.sql.includes("json_each"));
+   const nameIndexUsed=A.sql.some(t=>t.sql.includes(nameCandidate));
+   const pureName=["name_exact_unicode","name_exact_turkish"].includes(s.name);
+   assert.equal(nameIndexUsed,pureName,"unexpected indexed-name interaction: "+s.name);
+   if(s.name==="name_exact_and_sale"||s.name==="name_exact_or_sale"||s.name==="name_contains_and_sale"){
+     assert.ok(!A.sql.some(t=>t.sql.includes(nameCandidate)||t.sql.includes(candidate)),
+       "combined filters must stay canonical: "+s.name);
+   }
    const saleOnly=s.name.startsWith("for_sale_")&&
      !["for_sale_and_overall","for_sale_or_not","for_sale_hidden","for_sale_agent"].includes(s.name);
    if(saleOnly&&density<=9000){
@@ -102,7 +128,7 @@ async function invoke(q,flag){
    env:{...process.env,MFL_DATABASE_PATH:filepath}});
  assert.equal(test.status,0,test.stderr+"\n"+test.stdout);
  const o=JSON.parse(test.stdout.trim());
- assert.equal(o.validated,66);
+ assert.equal(o.validated,108);
  assert.equal(o.priceCountChanges[1],o.priceCountChanges[0]+1);
- console.log("PERF-05D2 positive sale, price sort, 9k cap, stale count and API parity passed:",o);
+ console.log("PERF-05D2 name+sale integration, Unicode, SQL fallback, 9k cap, stale count and API parity passed:",o);
 }finally{rmSync(dir,{recursive:true,force:true})}
