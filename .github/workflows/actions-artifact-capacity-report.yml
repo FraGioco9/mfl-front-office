@@ -1,0 +1,51 @@
+name: Actions artifact capacity report
+
+on:
+  schedule:
+    - cron: "17 5 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: actions-artifact-capacity-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Inventory non-expired Actions artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --paginate             "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100"             --jq '.artifacts[] | select(.expired == false)'             | jq -s '.' > actions-artifacts.json
+          jq -e 'type == "array"' actions-artifacts.json >/dev/null
+
+      - name: Build capacity and retention report
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/workflows/report-actions-artifact-capacity.py             --input actions-artifacts.json             --output actions-artifact-capacity.json             --summary actions-artifact-capacity.md
+          cat actions-artifact-capacity.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload monthly capacity report
+        uses: actions/upload-artifact@v7
+        with:
+          name: actions-artifact-capacity-${{ github.run_id }}
+          path: actions-artifact-capacity.json
+          if-no-files-found: error
+          retention-days: 30
