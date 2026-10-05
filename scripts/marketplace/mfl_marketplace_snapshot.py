@@ -121,7 +121,20 @@ def request_json(url: str, label: str) -> object:
         except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
             if attempt == MAX_RETRIES:
                 raise RuntimeError(f"{label} failed: {error}") from error
-            time.sleep(RETRY_DELAY_SECONDS * (attempt + 1))
+            delay_seconds = RETRY_DELAY_SECONDS * (attempt + 1)
+            if isinstance(error, HTTPError):
+                reason = f"HTTP {error.code}"
+            elif isinstance(error, TimeoutError):
+                reason = "timeout"
+            elif isinstance(error, json.JSONDecodeError):
+                reason = "invalid JSON"
+            else:
+                reason = "network error"
+            print(
+                f"{label}: retry {attempt + 1}/{MAX_RETRIES} after {reason}; "
+                f"sleeping {delay_seconds:.1f}s."
+            )
+            time.sleep(delay_seconds)
     raise RuntimeError(f"{label} failed after retries")
 
 
@@ -184,6 +197,7 @@ def execute_flow_script(
     url = f"{FLOW_SCRIPTS_URL}?block_height={block}"
 
     for attempt in range(MAX_RETRIES + 1):
+        retry_reason = "retryable error"
         request = Request(
             url,
             data=body,
@@ -210,6 +224,7 @@ def execute_flow_script(
                     f"Flow computation limit exceeded for {owner} at page size {limit}"
                 ) from error
             retryable = error.code in {429, 500, 502, 503, 504}
+            retry_reason = f"HTTP {error.code}"
             if not retryable or attempt == MAX_RETRIES:
                 raise RuntimeError(
                     f"Flow query for {owner} returned {error.code}: {body_text}"
@@ -221,9 +236,15 @@ def execute_flow_script(
             ValueError,
             RuntimeError,
         ) as error:
+            retry_reason = type(error).__name__
             if attempt == MAX_RETRIES:
                 raise RuntimeError(f"Flow query for {owner} failed: {error}") from error
-        time.sleep(RETRY_DELAY_SECONDS * (attempt + 1))
+        delay_seconds = RETRY_DELAY_SECONDS * (attempt + 1)
+        print(
+            f"Flow marketplace wallet query: retry {attempt + 1}/{MAX_RETRIES} "
+            f"after {retry_reason}; page size {limit}; sleeping {delay_seconds:.1f}s."
+        )
+        time.sleep(delay_seconds)
     raise RuntimeError(f"Flow query for {owner} failed after retries")
 
 
