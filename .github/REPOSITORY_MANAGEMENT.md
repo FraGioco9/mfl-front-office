@@ -33,6 +33,11 @@ Keep only the next relevant patch/minor milestones open. Assign both Issues and 
 
 ## Dependabot
 
-Dependabot checks npm dependencies under `/site` and GitHub Actions weekly on Monday morning (Europe/Rome). Minor and patch updates are grouped to reduce pull-request noise; major updates remain separate so breaking changes can be reviewed independently.
+Dependabot checks the root npm application package under `/` at 06:00 Europe/Rome every Monday and GitHub Actions under `/` at 06:15. Minor and patch npm updates are grouped; ESLint majors have their own group. GitHub Actions minor/patch updates and major updates are grouped separately. The root paths and grouping rules are defined in `.github/dependabot.yml`; update this document whenever that source changes.
 
 Dependabot Alerts and Dependabot Security Updates should also be enabled in **Settings > Security > Code security and analysis** so vulnerable dependencies can trigger security-focused updates outside the normal weekly version-update cadence.
+
+
+## Workflow inventory
+
+The human-readable workflow index is [docs/github-actions-workflows.md](../docs/github-actions-workflows.md). The YAML under `.github/workflows/` remains authoritative for exact triggers, permissions and path filters. When workflows are added, removed, renamed or materially retargeted, update that inventory and the README summary in the same pull request.
