@@ -89,7 +89,7 @@
   }
   let roster=[],rosterSequence=0,rosterController=null;
   let searchTimer=0,searchSequence=0,selectedTeamId="",selectedTeamData=null;
-  let playerSearchTimer=0,playerSearchSequence=0;
+  let playerSearchTimer=0,playerSearchSequence=0,playerSearchController=null;
   let playerSearchPayload=null,clubSearchPlayers=[];
   let pendingPlayers=new Map();
   let activeContractEditor=null;
@@ -281,6 +281,8 @@
   }
   function clearPlayerResults(){
     playerSearchSequence+=1;
+    playerSearchController?.abort();
+    playerSearchController=null;
     playerSearchPayload=null;
     if(playerSearchBody instanceof HTMLElement)playerSearchBody.replaceChildren();
     if(playerSearchEmpty instanceof HTMLElement)playerSearchEmpty.hidden=true;
@@ -559,11 +561,14 @@
     if(!q){clearPlayerResults();return null;}
     if(append&&(!playerSearchPayload?.hasMore||normalizePlannerSearchQuery(playerSearchInput?.value)!==normalizePlannerSearchQuery(q)))return null;
     const seq=++playerSearchSequence;
+    playerSearchController?.abort();
+    const searchController=new AbortController();
+    playerSearchController=searchController;
     const offset=append&&Array.isArray(playerSearchPayload?.rows)?playerSearchPayload.rows.length:0;
     const params=new URLSearchParams({mode:"search",type:"players",view:"attributes",limit:"50",offset:String(offset),q});
     if(append&&playerSearchMore instanceof HTMLButtonElement)playerSearchMore.disabled=true;
     try{
-      const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"}});
+      const response=await window.__mflDataClient.fetch("/api/data?"+params,{cache:"no-store",headers:{Accept:"application/json"},signal:searchController.signal});
       const payload=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(payload?.error||"Could not search players.");
       if(seq!==playerSearchSequence||normalizePlannerSearchQuery(playerSearchInput?.value)!==normalizePlannerSearchQuery(q))return null;
@@ -574,11 +579,17 @@
       if(typeof announceActionStatus==="function")announceActionStatus(playerSearchBody?.querySelectorAll("tr[data-player-id]")?.length+" player search results for "+q+".");
       return playerSearchPayload;
     }catch(error){
-      if(seq!==playerSearchSequence)return null;
-      if(!append){playerSearchPayload=null;renderPlayerResults({},q);}
-      else if(playerSearchMore instanceof HTMLButtonElement)playerSearchMore.disabled=false;
+      if(seq!==playerSearchSequence||searchController.signal.aborted||normalizePlannerSearchQuery(playerSearchInput?.value)!==normalizePlannerSearchQuery(q))return null;
+      if(!append){
+        playerSearchPayload=null;
+        if(playerSearchBody instanceof HTMLElement)playerSearchBody.replaceChildren();
+        if(playerSearchEmpty instanceof HTMLElement)playerSearchEmpty.hidden=true;
+        if(playerSearchResults instanceof HTMLElement)playerSearchResults.hidden=true;
+      }else if(playerSearchMore instanceof HTMLButtonElement)playerSearchMore.disabled=false;
       rosterMessage(error?.message||"Could not search players.");
       return null;
+    }finally{
+      if(playerSearchController===searchController)playerSearchController=null;
     }
   }
   function renderRoster(){
@@ -1769,8 +1780,19 @@
     rosterMessage("");
     if(playerSearchClearButton instanceof HTMLElement)playerSearchClearButton.hidden=!playerSearchInput.value.trim();
     clearTimeout(playerSearchTimer);
+    playerSearchSequence+=1;
+    playerSearchController?.abort();
+    playerSearchController=null;
     const q=playerSearchInput.value.trim();
     if(!q){clearPlayerResults();return;}
+    // An edited query is pending, never a confirmed empty result.
+    if(playerSearchBody instanceof HTMLElement)playerSearchBody.replaceChildren();
+    if(playerSearchEmpty instanceof HTMLElement){
+      playerSearchEmpty.textContent="Searching players…";
+      playerSearchEmpty.hidden=false;
+    }
+    if(playerSearchResults instanceof HTMLElement)playerSearchResults.hidden=false;
+    if(playerSearchMore instanceof HTMLElement)playerSearchMore.hidden=true;
     playerSearchTimer=setTimeout(()=>void requestPlayers(q),140);
   });
   playerSearchInput?.addEventListener("keydown",event=>{
