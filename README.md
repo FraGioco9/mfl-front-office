@@ -72,10 +72,10 @@ FCL may warn that some WalletConnect wallets are not available until a real
 project ID is supplied.
 
 
-For repository checks:
+For a clean dependency install and repository checks:
 
 ```powershell
-npm install
+npm ci --no-audit --no-fund
 npm run check
 ```
 
@@ -83,15 +83,17 @@ The check path regenerates canonical HTML/application-core/style artifacts, prep
 
 ## GitHub Actions
 
-The repository currently contains seven workflows:
+The repository currently tracks **26 workflows** under `.github/workflows/`. The exact file-by-file trigger and ownership inventory is maintained in [GitHub Actions workflow inventory](docs/github-actions-workflows.md).
 
-- **Cleanup unused branches** removes remote branches that do not back an open PR after release metadata reaches `main`.
-- **Full database refresh** rebuilds SQLite, sends progression notifications when a valid previous database exists, and publishes/deploys the refreshed database through the protected production path.
-- **MFL marketplace snapshot** records scheduled marketplace state used by the application.
-- **Progression email Gmail test** sends the explicit Gmail delivery test workflow.
-- **Progression email preview** renders and uploads progression-email previews without deploying the site.
-- **Site quality** classifies the changed scope, runs the relevant regression/build/lint/typecheck/validation checks, regenerates tracked artifacts once, and publishes a successful `quality` check on the exact generated PR head.
-- **Vercel site update** performs the explicit production site update with the latest valid database and regenerated canonical deployment assets.
+At a high level:
+
+- **Site quality** owns the required `quality` check and is the sole writer of tracked generated application artifacts.
+- **A11Y, mobile, table, LOAD and focused security workflows** provide pull-request regressions, with path filters where appropriate.
+- **Full database refresh** and the production **Marketplace snapshot** cadence are scheduled by Supabase Cron and reach GitHub through `workflow_dispatch`; they are not GitHub-scheduled production clocks.
+- **Operational health monitor** is the production monitor that does use a GitHub `schedule:` trigger, every hour at minutes 07 and 37.
+- **Performance baseline, progression-email preview/test and Vercel site update** are explicit/manual operational tools.
+- **Actions artifact capacity report** is a monthly/manual read-only storage inventory; **Secret scope presence audit** is a manual presence-only credential-scope check.
+- **Cleanup unused branches** is the only workflow with branch-deletion authority and retains its dedicated safeguards.
 
 Generated artifacts have one writer: **Site quality**. Release projection logic is
 part of the canonical application-core build, so there is no second projection
