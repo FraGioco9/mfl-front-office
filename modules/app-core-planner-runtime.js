@@ -1289,6 +1289,15 @@
     syncPlannerDirtyState();
     Reflect.get(window,"__mflDocumentTitleRuntime")?.sync?.();
   }
+  function plannerActionErrorMessage(error,fallback="Plan action failed."){
+    const message=String(error?.message||"").trim();
+    const status=Number(error?.status)||0;
+    // Keep the established, actionable domain responses from the API.
+    if(status===409&&!/^Saved plan changed\./i.test(message))return "Saved plan changed. Reopen it from Plans before retrying.";
+    if(status===429&&!/^You can save a maximum of \d+ plans\./i.test(message))return "Too many requests. Try again later.";
+    if(/^(Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?)$/i.test(message))return "Network unavailable. Check your connection and try again.";
+    return message||fallback;
+  }
   async function runPlannerToolbarAction(action,failureMessage="Plan action failed."){
     // Share, Revoke, Save and Duplicate are wallet-backed mutations. Lock their
     // shared toolbar before any await (including name/confirmation dialogs),
@@ -1300,7 +1309,7 @@
       return await action();
     }catch(error){
       if(Number(error?.status)===409&&activePlanId)plannerConflictPlanId=activePlanId;
-      setStatus(error?.message||failureMessage,{urgent:true});
+      setStatus(plannerActionErrorMessage(error,failureMessage),{urgent:true});
       return false;
     }finally{
       plannerToolbarActionPending=false;
@@ -1518,8 +1527,9 @@
     try{
       return await action();
     }catch(error){
-      if(plansStatus)plansStatus.textContent=error?.message||"Plan action failed.";
-      if(typeof announceActionStatus==="function")announceActionStatus(error?.message||"Plan action failed.",{urgent:true});
+      const message=plannerActionErrorMessage(error);
+      if(plansStatus)plansStatus.textContent=message;
+      if(typeof announceActionStatus==="function")announceActionStatus(message,{urgent:true});
       return false;
     }finally{
       plannerPlansActionPending=false;

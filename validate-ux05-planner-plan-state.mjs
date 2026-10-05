@@ -38,14 +38,14 @@ check({plannerPlansActionPending:false,plannerConflictPlanId:"id1"}, {mode:"Save
 check({activePlanId:"id2"}, {mode:"Saved",warning:true,conflict:false,disabled:false,dirty:true});
 check({plannerReadOnly:true,activePlanId:"",hasDirty:false}, {mode:"Shared",warning:false,conflict:false,disabled:true,dirty:false});
 
-const actions = extract("  async function runPlannerToolbarAction(", "  async function plannerPrivateRequest(");
+const actions = extract("  function plannerActionErrorMessage(", "  async function plannerPrivateRequest(");
 const errors = [];
 const a = vm.createContext({setStatus: message => errors.push(message),syncPlanUi(){}});
 vm.runInContext('let plannerToolbarActionPending=false,plannerPlansActionPending=false,plannerConflictPlanId="",activePlanId="id1";\n'+actions,a);
 assert.equal(await a.runPlannerToolbarAction(async () => {throw Object.assign(new Error("Conflict"),{status:409});}),false);
 assert.equal(vm.runInContext("plannerConflictPlanId",a),"id1");
 assert.equal(vm.runInContext("plannerToolbarActionPending",a),false);
-assert.equal(errors.at(-1),"Conflict");
+assert.equal(errors.at(-1),"Saved plan changed. Reopen it from Plans before retrying.");
 vm.runInContext('plannerConflictPlanId="";',a);
 assert.equal(await a.runPlannerToolbarAction(async () => {throw Object.assign(new Error("Offline"),{status:503});}),false);
 assert.equal(vm.runInContext("plannerConflictPlanId",a),"","Network failure must not look like a revision conflict");

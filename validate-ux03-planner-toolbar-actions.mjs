@@ -8,7 +8,7 @@ const html = read("html-sources/planner.html");
 const audit = read("docs/ui-behavior-foundations.md");
 
 // Execute the production single-flight gate, not a copy of its algorithm.
-const start = planner.indexOf("  async function runPlannerToolbarAction(");
+const start = planner.indexOf("  function plannerActionErrorMessage(");
 const end = planner.indexOf("  async function plannerPrivateRequest(", start);
 assert.ok(start > 0 && end > start, "Planner must have one shared toolbar mutation owner");
 const source = planner.slice(start, end);

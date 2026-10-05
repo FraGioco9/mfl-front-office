@@ -47,6 +47,7 @@ const ctx=vm.createContext({
 });
 const routines=[
   "let plannerPlansActionPending=false;let plannerToolbarActionPending=false;",
+  extract("  function plannerActionErrorMessage(", "  async function runPlannerToolbarAction("),
   extract("  function syncPlannerSavedPlanActionButtons(){","  function plannerFormationLabel(code){"),
   extract("  function syncPlannerNestedDialogAccessibility(){","  function closePlannerPlanNameModal(value=\"\"){"),
 ].join("\n");
@@ -137,5 +138,6 @@ for(const name of ["Delete","Revoke"]){
   assert.ok(html.includes('id="plannerPlan'+name+'CancelButton" type="button">Cancel'));
   assert.ok(html.includes('id="plannerPlan'+name+'ConfirmButton"'));
 }
-assert.match(planner,/if\(plansStatus\)plansStatus.textContent=error\?\.message\|\|"Plan action failed\."/);
+assert.match(planner,/const message=plannerActionErrorMessage\(error\);\s*if\(plansStatus\)plansStatus.textContent=message;/,
+  "Saved Plans failures must use the same contextual mapper as toolbar actions.");
 console.log("UX-03C Saved Plans: cross-row single flight, success/cancel/failure/retry, focus restoration, nested dialog accessibility and Tab trapping passed.");

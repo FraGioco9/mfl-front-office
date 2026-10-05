@@ -80,7 +80,7 @@ assert.equal(nodes.get("mflActionAlert").textContent, "");
 assert.equal(nodes.get("mflActionStatus").textContent, "Plan share revoked.");
 assert.equal(nodes.get("toastMessage").textContent, "Plan share revoked.");
 
-assert.match(planner, /setStatus\(error\?\.message\|\|failureMessage,\{urgent:true\}\)/, "Planner HTTP/409 error must use assertive global announcement.");
+assert.match(planner, /setStatus\(plannerActionErrorMessage\(error,failureMessage\),\{urgent:true\}\)/, "Planner contextual HTTP/409 errors must use assertive global announcement.");
 assert.ok(planner.includes('announceActionStatus("Loading saved plans.")'), "Saved Plan loading needs spoken feedback.");
 assert.ok(planner.includes('announceActionStatus(error?.message||"Could not load saved plans.",{urgent:true})'), "Saved Plan retry/failure needs spoken feedback.");
 assert.ok(planner.includes('announceActionStatus(message,{urgent:/^(could not|failed|unable|error)/i.test(String(message))})'), "Roster and player-search errors must announce.");
