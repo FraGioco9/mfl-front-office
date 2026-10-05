@@ -3,6 +3,7 @@ const { requireSameOriginMutation } = require("./_request-origin");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
 const { readJsonBody, sendRequestBodyError } = require("./_request-body");
 const { sendPlannerPersistenceUnavailable } = require("./_planner-persistence");
+const { createRequestLog } = require("./_request-log");
 const {
   normalizePlannerId,
   generatePlannerId,
@@ -38,8 +39,10 @@ function responsePlan(row) {
 
 module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
+  const trace = createRequestLog(response, { category: "planner-save" });
   if ((request.method === "POST" || request.method === "DELETE") && !requireSameOriginMutation(request, response)) return;
   if (!supabaseConfig()) {
+    trace.error("persistence_config_missing", { status: 500 });
     response.status(500).json({ error: "Supabase is not configured." });
     return;
   }
@@ -47,6 +50,7 @@ module.exports = async function handler(request, response) {
   try {
     const wallet = await signedWalletFromRequest(request);
     if (!wallet) {
+      trace.info("authentication_required", { status: 401 });
       response.status(401).json({ error: "Opt in to use saved plans." });
       return;
     }
@@ -73,6 +77,7 @@ module.exports = async function handler(request, response) {
           return;
         }
         if (normalizePlannerRevision(existingRows[0].revision) !== expectedRevision) {
+          trace.warn("revision_conflict", { status: 409, idempotencyKey: requestedId });
           response.status(409).json({ error: "Saved plan changed. Reload it before saving." });
           return;
         }
@@ -82,6 +87,7 @@ module.exports = async function handler(request, response) {
           body: JSON.stringify({ name, club_id: payload.clubId, payload, revision: expectedRevision + 1, updated_at: new Date().toISOString() }),
         });
         if (!Array.isArray(rows) || !rows[0]) {
+          trace.warn("revision_conflict", { status: 409, idempotencyKey: requestedId });
           response.status(409).json({ error: "Saved plan changed. Reload it before saving." });
           return;
         }
@@ -90,6 +96,7 @@ module.exports = async function handler(request, response) {
       }
 
       if (await savedPlanCount(wallet) >= MAX_SAVED_PLANS_PER_WALLET) {
+        trace.warn("capacity_limit", { status: 429 });
         response.status(429).json({ error: `You can save a maximum of ${MAX_SAVED_PLANS_PER_WALLET} plans.` });
         return;
       }
@@ -140,6 +147,7 @@ module.exports = async function handler(request, response) {
         return;
       }
       if (normalizePlannerRevision(existingRows[0].revision) !== expectedRevision) {
+        trace.warn("revision_conflict", { status: 409, idempotencyKey: id });
         response.status(409).json({ error: "Saved plan changed. Reload it before deleting." });
         return;
       }
@@ -148,6 +156,7 @@ module.exports = async function handler(request, response) {
         headers: { Prefer: "return=representation" },
       });
       if (!Array.isArray(rows) || !rows[0]) {
+        trace.warn("revision_conflict", { status: 409, idempotencyKey: id });
         response.status(409).json({ error: "Saved plan changed. Reload it before deleting." });
         return;
       }
@@ -158,8 +167,11 @@ module.exports = async function handler(request, response) {
     response.status(405).json({ error: "Method not allowed." });
   } catch (error) {
     if (sendRequestBodyError(response, error)) return;
-    if (sendPlannerPersistenceUnavailable(response, error, "planner_plans")) return;
-    console.warn("Could not handle saved planner plan.", error);
+    if (sendPlannerPersistenceUnavailable(response, error, "planner_plans")) {
+      trace.error("persistence_unavailable", { status: 503, error });
+      return;
+    }
+    trace.error("request_failed", { status: 500, error });
     response.status(500).json({ error: "Could not handle saved plan." });
   }
 };
