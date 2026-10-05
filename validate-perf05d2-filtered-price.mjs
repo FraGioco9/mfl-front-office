@@ -57,6 +57,8 @@ const scenarios=[
  {name:"for_sale_or_not",q:{filters:rules([{column:"listing_price",operator:"=",value:"for_sale"},{column:"listing_price",operator:"=",value:"not_for_sale",connector:"or"}])}},
  {name:"not_for_sale",q:{filters:rules([{column:"listing_price",operator:"=",value:"not_for_sale"}])}},
  {name:"for_sale_last",q:{sortKey:"listing_price",sortDirection:"asc",page:99999,pageSize:25,filters:rules([{column:"listing_price",operator:"=",value:"for_sale"}])}},
+ {name:"for_sale_hidden",q:{hideRetired:"1",filters:rules([{column:"listing_price",operator:"=",value:"for_sale"}])}},
+ {name:"for_sale_agent",q:{scope:"agent",walletAddress:"synthetic-wallet",filters:rules([{column:"listing_price",operator:"=",value:"for_sale"}])}},
 ];
 async function invoke(q,flag){
  baseline=flag;captured=[];
@@ -74,7 +76,7 @@ async function invoke(q,flag){
    same(A.res,B.res);
    const countSql=A.sql.find(t=>t.sql.includes("SELECT count(*) AS count FROM players")&&t.sql.includes("json_each"));
    const saleOnly=s.name.startsWith("for_sale_")&&
-     !["for_sale_and_overall","for_sale_or_not"].includes(s.name);
+     !["for_sale_and_overall","for_sale_or_not","for_sale_hidden","for_sale_agent"].includes(s.name);
    if(saleOnly&&density<=9000){
      assert.ok(countSql,"eligible count did not use JSON lookup");
      const page=A.sql.find(t=>t.sql.includes("LIMIT ? OFFSET ?"));
@@ -100,7 +102,7 @@ async function invoke(q,flag){
    env:{...process.env,MFL_DATABASE_PATH:filepath}});
  assert.equal(test.status,0,test.stderr+"\n"+test.stdout);
  const o=JSON.parse(test.stdout.trim());
- assert.equal(o.validated,54);
+ assert.equal(o.validated,66);
  assert.equal(o.priceCountChanges[1],o.priceCountChanges[0]+1);
  console.log("PERF-05D2 positive sale, price sort, 9k cap, stale count and API parity passed:",o);
 }finally{rmSync(dir,{recursive:true,force:true})}
