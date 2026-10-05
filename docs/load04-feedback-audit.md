@@ -31,3 +31,6 @@ No automatic retry/backoff, global HTTP error mapper, timer change, wallet/sessi
 ## Decision
 
 Integrate only these Planner/Settings feedback corrections after exact-head CI. Do not import #1118 history or unrelated generated artifacts. Do not merge without explicit maintainer approval.
+## Generated artifact synchronization
+
+Site Quality on user head `2af3facfc4400bdcf5849f5432316092cbb64371` passed the application/browser gates and produced CI-owned commit `cdcd9772a45ba12623c5ea1f89b5597588562927`, changing only the derived `table-width-runtime.js` core build ID. The bot-authored pull-request events are `action_required`, so this documentation-only commit retriggers the complete exact-head workflow set on the synchronized generated state. No application behavior changes here.
