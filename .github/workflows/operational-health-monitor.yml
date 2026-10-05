@@ -1,0 +1,93 @@
+name: Operational health monitor
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: operational-health-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check production health and maintain one incident issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEALTH_URL: https://mfl-front-office.vercel.app/api/operational-health
+          ALERT_TITLE: "[OPS-02] MFL operational health alert"
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          response_file="$(mktemp)"
+          http_code="$(
+            curl               --silent               --show-error               --location               --max-time 20               --output "$response_file"               --write-out "%{http_code}"               "$HEALTH_URL"               || true
+          )"
+
+          if [[ "$http_code" == "200" ]] && jq -e '.status | type == "string"' "$response_file" >/dev/null 2>&1; then
+            status="$(jq -r '.status' "$response_file")"
+            summary="$(
+              jq -r '
+                [
+                  "- Overall: `" + (.status // "unknown") + "`",
+                  "- Database freshness: `" + (.database.freshness.status // "unknown") + "`",
+                  "- Database refresh: `" + (.database.refresh.status // "unknown") + "` (failures: " + ((.database.refresh.consecutiveFailures // "n/a") | tostring) + ")",
+                  "- Marketplace freshness: `" + (.marketplace.freshness.status // "unknown") + "`",
+                  "- Marketplace refresh: `" + (.marketplace.refresh.status // "unknown") + "` (failures: " + ((.marketplace.refresh.consecutiveFailures // "n/a") | tostring) + ")",
+                  "- Database last attempt: " + (.database.refresh.lastAttemptAt // "n/a"),
+                  "- Marketplace last attempt: " + (.marketplace.refresh.lastAttemptAt // "n/a")
+                ] | join("\n")
+              ' "$response_file"
+            )"
+          else
+            status="unknown"
+            summary="- Overall: `unknown`\n- Health endpoint HTTP status: ${http_code:-network-error}"
+          fi
+
+          open_issue="$(
+            gh api "repos/$GITHUB_REPOSITORY/issues?state=open&per_page=100"               | jq -r --arg title "$ALERT_TITLE" '
+                  .[]
+                  | select(has("pull_request") | not)
+                  | select(.title == $title)
+                  | .number
+                '               | head -n 1
+          )"
+
+          if [[ "$status" != "unknown" && "$status" != "degraded" ]]; then
+            if [[ -n "$open_issue" ]]; then
+              gh api                 --method POST                 "repos/$GITHUB_REPOSITORY/issues/$open_issue/comments"                 -f body="Operational health recovered to **$status** at $(date -u +'%Y-%m-%dT%H:%M:%SZ'). The monitor is closing this incident automatically."
+              gh api                 --method PATCH                 "repos/$GITHUB_REPOSITORY/issues/$open_issue"                 -f state=closed                 -f state_reason=completed                 >/dev/null
+            fi
+            echo "Operational health is $status; no alert required."
+            exit 0
+          fi
+
+          if [[ -n "$open_issue" ]]; then
+            echo "Operational health is $status and incident #$open_issue is already open; suppressing duplicate alert."
+            exit 0
+          fi
+
+          body="$(
+            cat <<EOF
+          <!-- mfl-operational-health-alert -->
+          Automated OPS-02 incident opened at $(date -u +'%Y-%m-%dT%H:%M:%SZ').
+
+          $summary
+
+          Source: `GET /api/operational-health`.
+
+          This issue is intentionally deduplicated: the monitor will not create another incident while this one remains open, and will close it automatically after recovery. It does not expose raw runtime objects, wallet data or credentials.
+          EOF
+          )"
+
+          gh api             --method POST             "repos/$GITHUB_REPOSITORY/issues"             -f title="$ALERT_TITLE"             -f body="$body"             >/dev/null
+
+          echo "Opened one deduplicated operational-health incident for status $status."
