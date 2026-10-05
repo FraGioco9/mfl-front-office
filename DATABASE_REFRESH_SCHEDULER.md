@@ -75,6 +75,12 @@ Generate a long random secret (32+ bytes is recommended). Store the same value i
 - Edge Function secret: `SCHEDULER_SHARED_SECRET`
 - Supabase Vault secret named: `mfl_scheduler_shared_secret`
 
+For zero-downtime rotation, the dispatch functions also accept an optional temporary
+`SCHEDULER_SHARED_SECRET_NEXT`. Add the new value there first, move the Vault value
+to the new secret, then promote the new value to `SCHEDULER_SHARED_SECRET` and remove
+the temporary variable after verification. Never remove the current primary before
+Vault has switched.
+
 Also store the MFL Supabase project URL in Vault as `mfl_scheduler_project_url`.
 
 Example SQL in the Supabase SQL Editor:

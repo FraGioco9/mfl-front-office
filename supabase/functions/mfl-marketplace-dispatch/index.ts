@@ -90,9 +90,19 @@ Deno.serve(async (request: Request) => {
     return json(405, { ok: false, error: "method_not_allowed" });
   }
 
-  const expectedSecret = Deno.env.get("SCHEDULER_SHARED_SECRET") || "";
+  const expectedSecrets = [
+    Deno.env.get("SCHEDULER_SHARED_SECRET") || "",
+    Deno.env.get("SCHEDULER_SHARED_SECRET_NEXT") || "",
+  ].filter(Boolean);
   const receivedSecret = request.headers.get("x-scheduler-secret") || "";
-  if (!expectedSecret || !receivedSecret || !(await secretsMatch(receivedSecret, expectedSecret))) {
+  let schedulerAuthorized = false;
+  for (const expectedSecret of expectedSecrets) {
+    if (receivedSecret && await secretsMatch(receivedSecret, expectedSecret)) {
+      schedulerAuthorized = true;
+      break;
+    }
+  }
+  if (!schedulerAuthorized) {
     return json(401, { ok: false, error: "unauthorized" });
   }
 
