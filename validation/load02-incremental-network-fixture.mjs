@@ -35,8 +35,10 @@ const context = {
   walletProofHeaders: () => ({ Accept: "application/json" }),
   incrementalRequestDetails: (route, page = 1) => {
     const requestKey = "mode=page&scope=" + route.scope + "&page=" + page;
-    return { requestKey, cacheKey: "version-A:" + requestKey };
+    return { query: {}, requestKey, cacheKey: "version-A:" + requestKey };
   },
+  incrementalQueryEmbedsMarketplace: () => false,
+  incrementalPayloadGenerationIsOlder: () => false,
   beginIncrementalRouteRequest(cacheKey, force) {
     const generation = ++nextGeneration;
     const active = context.activeIncrementalNetworkRequest;
