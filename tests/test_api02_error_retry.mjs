@@ -55,7 +55,7 @@ assert(end > 0, "Could not isolate canonical data client source");
 
 const events = [];
 const windowObject = {
-  location: { href: "https://example.test/" },
+  location: { href: "https://example.test/", origin: "https://example.test" },
   fetch: async () => { throw new Error("transport not configured"); },
   setTimeout,
   clearTimeout,
