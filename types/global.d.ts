@@ -77,7 +77,7 @@ interface MflIncrementalPayload extends Record<string, unknown> {
 }
 
 interface MflTableSortStateInput {
-  sortKey?: unknown;
+  sortKey?: string;
   sortDirection?: unknown;
 }
 
