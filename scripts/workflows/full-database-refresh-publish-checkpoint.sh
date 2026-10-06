@@ -8,6 +8,14 @@ if [ ! -s "$DATABASE_SOURCE_PATH" ]; then
   echo "Checkpoint database does not exist or is empty: $DATABASE_SOURCE_PATH" >&2
   exit 1
 fi
+
+CHECKPOINT_MANIFEST_PATH="$(dirname "$DATABASE_SOURCE_PATH")/checkpoint-manifest.json"
+EXPECTED_MANIFEST_STAGE="${CHECKPOINT_NAME//-/_}"
+python -m scripts.database.checkpoint_manifest verify \
+  --database "$DATABASE_SOURCE_PATH" \
+  --manifest "$CHECKPOINT_MANIFEST_PATH" \
+  --expected-stage "$EXPECTED_MANIFEST_STAGE" \
+  --expected-run-id "$GITHUB_RUN_ID"
 if [ ! -d production-site/.git ]; then
   echo "Published site source is not checked out." >&2
   exit 1
@@ -87,6 +95,9 @@ COMPLETED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 IDENTITY_PATH="$RUNNER_TEMP/mfl-production-expected.json"
 VERSION="$(jq -r '.version' "$IDENTITY_PATH")"
 GENERATED_AT="$(jq -r '.database.generatedAt' "$IDENTITY_PATH")"
+DATABASE_SHA256="$(jq -r '.sha256' "$CHECKPOINT_MANIFEST_PATH")"
+DATABASE_SIZE_BYTES="$(jq -r '.sizeBytes' "$CHECKPOINT_MANIFEST_PATH")"
+DATABASE_SCHEMA_SHA256="$(jq -r '.schemaSha256' "$CHECKPOINT_MANIFEST_PATH")"
 
 case "$CHECKPOINT_NAME" in
   core)
@@ -116,8 +127,11 @@ jq -n \
   --arg sourceSha "$EXPECTED_SHA" \
   --arg version "$VERSION" \
   --arg generatedAt "$GENERATED_AT" \
+  --arg databaseSha256 "$DATABASE_SHA256" \
+  --arg databaseSizeBytes "$DATABASE_SIZE_BYTES" \
+  --arg databaseSchemaSha256 "$DATABASE_SCHEMA_SHA256" \
   --argjson domains "$DOMAIN_STATUS" \
-  '{checkpoint:$checkpoint,completedAt:$completedAt,runId:$runId,runAttempt:$runAttempt,publishedSiteSha:$sourceSha,deploymentIdentity:{siteCommit:$sourceSha,version:$version,databaseGeneratedAt:$generatedAt},domains:$domains}' \
+  '{checkpoint:$checkpoint,completedAt:$completedAt,runId:$runId,runAttempt:$runAttempt,publishedSiteSha:$sourceSha,deploymentIdentity:{siteCommit:$sourceSha,version:$version,databaseGeneratedAt:$generatedAt},databaseArtifact:{sha256:$databaseSha256,sizeBytes:($databaseSizeBytes|tonumber),schemaSha256:$databaseSchemaSha256},domains:$domains}' \
   > "$METADATA_PATH"
 
 {
@@ -130,6 +144,9 @@ jq -n \
   echo "| Site commit | $EXPECTED_SHA |"
   echo "| Application version | $VERSION |"
   echo "| Database generated at | $GENERATED_AT |"
+  echo "| Database SHA-256 | $DATABASE_SHA256 |"
+  echo "| Database bytes | $DATABASE_SIZE_BYTES |"
+  echo "| Schema SHA-256 | $DATABASE_SCHEMA_SHA256 |"
   echo
   echo '| Domain | Status |'
   echo '| --- | --- |'
