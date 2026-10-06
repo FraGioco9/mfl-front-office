@@ -18,6 +18,7 @@ for (const contract of [
   "interface MflIncrementalTableFilters",
   "interface MflIncrementalRoute",
   "interface MflIncrementalPayload",
+  "interface MflTableSortStateInput",
   "interface MflTableSortState",
 ]) {
   invariant(types.includes(contract), `ARCH-02 must retain named boundary contract: ${contract}.`);
@@ -64,7 +65,7 @@ invariant(
 
 invariant(
   tableState.includes("@returns {MflTableSortState}")
-    && tableState.includes("@param {Partial<MflTableSortState> | null | undefined} sortState")
+    && tableState.includes("@param {MflTableSortStateInput | null | undefined} sortState")
     && tableState.includes("@param {MflTableSortState | null} [fallbackSortState]"),
   "Table sort state must retain its named incremental typing boundary.",
 );
