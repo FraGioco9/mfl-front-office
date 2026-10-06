@@ -18,6 +18,20 @@ while IFS=$'\t' read -r CREATED_AT ARTIFACT_ID RUN_ID; do
     continue
   fi
 
+  if [ -s previous-database/checkpoint-manifest.json ]; then
+    if python -m scripts.database.checkpoint_manifest verify \
+      --database previous-database/mfl_database.db \
+      --manifest previous-database/checkpoint-manifest.json; then
+      PREVIOUS_RUN_ID="$RUN_ID"
+      PREVIOUS_ARTIFACT_ID="$ARTIFACT_ID"
+      PREVIOUS_CREATED_AT="$CREATED_AT"
+      break
+    fi
+    echo "Artifact $ARTIFACT_ID failed checkpoint manifest verification; trying the next candidate."
+    continue
+  fi
+
+  # Backward-compatible path for canonical artifacts created before DATA-03.
   if python -m scripts.database.prepare_runtime_database previous-database/mfl_database.db --validate-only; then
     PREVIOUS_RUN_ID="$RUN_ID"
     PREVIOUS_ARTIFACT_ID="$ARTIFACT_ID"
