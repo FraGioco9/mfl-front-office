@@ -41,7 +41,7 @@ invariant(
 );
 
 const routeParserStart = eagerCore.indexOf("function pageTargetFromPath(path) {");
-const routeParserEnd = eagerCore.indexOf("\n}\n\nfunction pagePath", routeParserStart);
+const routeParserEnd = eagerCore.indexOf("function pagePath(pageName, options = {}) {", routeParserStart);
 invariant(routeParserStart >= 0 && routeParserEnd > routeParserStart, "The shared startup route parser must exist.");
 const routeParser = eagerCore.slice(routeParserStart, routeParserEnd);
 
