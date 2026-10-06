@@ -194,6 +194,7 @@ for (const table of [
   "evaluation_shares",
   "planner_plans",
   "planner_shares",
+  "private_data_retention_audit",
   "mfl_season_ratios",
 ]) {
   includes(documentation, `\`${table}\``, `SUPABASE_PERSISTENCE.md must document ${table}.`);
