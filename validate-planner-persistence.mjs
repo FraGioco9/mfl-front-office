@@ -49,7 +49,7 @@ const budgeted = normalizePlannerPayload({
 });
 assert.equal(budgeted.squad.reduce((sum, player) => sum + player.contract, 0), 100, "Server normalization must cap the aggregate contract budget at 100%.");
 
-const [saveApi, shareApi, persistenceErrors, schema, migration, shareSourceMigration, shareUniqueSourceMigration, planRevisionMigration, sourcePlanIndexMigration, docs, html, planner, generatedPlanner, styles, generatedStyles, routing, lifecycle, bootstrap, stableRoutePage] = await Promise.all([
+const [saveApi, shareApi, persistenceErrors, schema, migration, shareSourceMigration, shareUniqueSourceMigration, planRevisionMigration, sourcePlanIndexMigration, capacityMigration, docs, html, planner, generatedPlanner, styles, generatedStyles, routing, lifecycle, bootstrap, stableRoutePage] = await Promise.all([
   readFile(new URL("./api/planner-save.js", import.meta.url), "utf8"),
   readFile(new URL("./api/planner-share.js", import.meta.url), "utf8"),
   readFile(new URL("./api/_planner-persistence.js", import.meta.url), "utf8"),
@@ -59,6 +59,7 @@ const [saveApi, shareApi, persistenceErrors, schema, migration, shareSourceMigra
   readFile(new URL("./supabase/migrations/20260930220112_planner_share_unique_source.sql", import.meta.url), "utf8"),
   readFile(new URL("./supabase/migrations/20260930220121_planner_plan_revision.sql", import.meta.url), "utf8"),
   readFile(new URL("./supabase/migrations/20260930220230_planner_share_source_plan_index.sql", import.meta.url), "utf8"),
+  readFile(new URL("./supabase/migrations/20261006183001_planner_plan_capacity_guard.sql", import.meta.url), "utf8"),
   readFile(new URL("./SUPABASE_PERSISTENCE.md", import.meta.url), "utf8"),
   readFile(new URL("./html-sources/planner.html", import.meta.url), "utf8"),
   readFile(new URL("./modules/core-sources/planner.js", import.meta.url), "utf8"),
@@ -108,6 +109,15 @@ assert(schema.includes("revision integer not null default 1")
 assert(sourcePlanIndexMigration.includes("create index if not exists planner_shares_source_plan_idx")
   && sourcePlanIndexMigration.includes("on public.planner_shares (source_plan_id)"));
 assert(schema.includes("create index if not exists planner_shares_source_plan_idx on public.planner_shares (source_plan_id);"));
+assert(capacityMigration.includes("create or replace function public.enforce_planner_plan_wallet_limit()")
+  && capacityMigration.includes("pg_catalog.pg_advisory_xact_lock")
+  && capacityMigration.includes("if v_plan_count >= 50 then")
+  && capacityMigration.includes("planner_plan_limit_exceeded")
+  && capacityMigration.includes("create trigger planner_plans_wallet_limit_guard")
+  && schema.includes(capacityMigration.trim()));
+assert(saveApi.includes("sendPlannerPlanCapacityExceeded")
+  && persistenceErrors.includes("plannerPlanCapacityExceeded")
+  && persistenceErrors.includes("planner_plan_limit_exceeded"));
 assert(saveApi.includes("normalizePlannerRevision")
   && saveApi.includes("revision=eq." + "${expectedRevision}")
   && saveApi.includes("revision: expectedRevision + 1")

@@ -9,7 +9,8 @@
     "rlsPolicies": 0,
     "notes": [
       "SEC-05 restrict_application_grants is staged in Git and intentionally not applied live.",
-      "DB-02 private_data_retention is staged in Git and intentionally not applied live."
+      "DB-02 private_data_retention is staged in Git and intentionally not applied live.",
+      "DB-05 planner_plan_capacity_guard is staged in Git and intentionally not applied live."
     ]
   },
   "migrations": [
@@ -96,6 +97,11 @@
       "file": "20261006183000_private_data_retention.sql",
       "gitBlobSha1": "f559b2890e267076581f066e7fea012f21467ad4",
       "status": "staged_release"
+    },
+    {
+      "file": "20261006183001_planner_plan_capacity_guard.sql",
+      "gitBlobSha1": "98c4a5cc52f6aa7921ad581b9c5cb3944dfd0edb",
+      "status": "staged_release"
     }
   ],
   "liveOnlyMigrationHistory": [
@@ -151,6 +157,7 @@
     "revision": "integer not null default 1",
     "sourcePlanFk": "planner_shares.source_plan_id -> planner_plans.id on delete cascade",
     "walletSourceUnique": "planner_shares(wallet_address, source_plan_id)",
-    "cas": "PATCH/DELETE include the expected revision; stale revision returns no row and maps to HTTP 409."
+    "cas": "PATCH/DELETE include the expected revision; stale revision returns no row and maps to HTTP 409.",
+    "capacity": "maximum 50 saved plans per wallet; DB-05 trigger serializes same-wallet inserts and rejects plan 51"
   }
 }

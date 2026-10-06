@@ -200,7 +200,7 @@ Stored values:
 - `created_at`: creation metadata.
 - `updated_at`: ordering metadata refreshed when the plan is overwritten or renamed.
 
-The API permits up to 50 saved plans per wallet. Saved-plan updates and deletes are wallet-scoped and revision-checked; stale clients receive HTTP 409 instead of overwriting or deleting a newer revision. Deleting a saved plan cascades to its linked share so an external link cannot outlive its source plan. Player names, ratings, portraits, club display metadata, and other public MFL data are intentionally not copied into the plan snapshot; opening a plan resolves player IDs against the current packaged database so public player data stays current.
+The API permits up to 50 saved plans per wallet. The normal application pre-check provides the fast HTTP 429 path, while `planner_plans_wallet_limit_guard` serializes same-wallet inserts with a transaction-scoped advisory lock and rechecks the count before INSERT, so concurrent creates cannot produce plan 51. A race loser raises the private `planner_plan_limit_exceeded` sentinel and the API maps it to the same HTTP 429 response. Saved-plan updates and deletes are wallet-scoped and revision-checked; stale clients receive HTTP 409 instead of overwriting or deleting a newer revision. Deleting a saved plan cascades to its linked share so an external link cannot outlive its source plan. Player names, ratings, portraits, club display metadata, and other public MFL data are intentionally not copied into the plan snapshot; opening a plan resolves player IDs against the current packaged database so public player data stays current.
 
 ### `planner_shares`
 
