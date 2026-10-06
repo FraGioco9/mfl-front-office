@@ -1196,7 +1196,15 @@ function toggleMenu() {
 
 function playerIdFromUrl() {
   const match = window.location.pathname.match(/^\/players\/([^/]+)$/);
-  return match ? decodeURIComponent(match[1]) : null;
+  return match ? decodeRoutePartSafely(match[1]) : null;
+}
+
+function decodeRoutePartSafely(value) {
+  try {
+    return decodeURIComponent(String(value || ""));
+  } catch {
+    return String(value || "");
+  }
 }
 
 function evaluationPlayerIdFromUrl() {
@@ -3776,7 +3784,7 @@ function updateSettingsDateFormat(format) {
   } else if (state.currentPage === "player") {
     const match = window.location.pathname.match(/^\/players\/([^/]+)$/);
     if (match) {
-      renderPlayerPage(decodeURIComponent(match[1]));
+      renderPlayerPage(decodeRoutePartSafely(match[1]));
     }
   }
 }
