@@ -53,12 +53,12 @@ excludes(appEntry, "if (callerSignal) {\n      requestInit.signal = callerSignal
 invariant(
   appEntry.includes('return method === "GET" || method === "HEAD";')
     && appEntry.includes("retryCount < MAX_IDEMPOTENT_RETRIES")
-    && appEntry.includes("shouldRetryFetchError(error, method, requestInit.signal)"),
+    && appEntry.includes("shouldRetryFetchError(error, method, requestSignal)"),
   "Automatic retries must remain bounded to idempotent GET/HEAD requests.",
 );
 
 invariant(
-  appEntry.includes('if (name === "AbortError" || name === "TimeoutError") return false;')
+  appEntry.includes('const name = error instanceof Error ? error.name : "";') && appEntry.includes('if (name === "AbortError" || name === "TimeoutError") return false;')
     && appEntry.includes('navigator.onLine === false')
     && appEntry.includes("delay > MAX_AUTOMATIC_RETRY_DELAY_MS"),
   "Abort, timeout, known-offline and long Retry-After cases must remain fail-fast.",
