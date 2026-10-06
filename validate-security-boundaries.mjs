@@ -9,18 +9,36 @@ const [
   bugReports,
   evaluationSave,
   evaluationShare,
+  plannerShare,
+  evaluationPreview,
+  evaluationPreviewImage,
+  walletAccess,
   walletPreferences,
   walletOptIns,
+  walletSessionState,
+  operationalHealth,
+  identity,
+  dataAuth,
   securityDoc,
+  api03Doc,
 ] = await Promise.all([
   read("./api/wallet-session.js"),
   read("./api/_wallet-rate-limit.js"),
   read("./api/bug-reports.js"),
   read("./api/evaluation-save.js"),
   read("./api/evaluation-share.js"),
+  read("./api/planner-share.js"),
+  read("./api/evaluation-preview.js"),
+  read("./api/evaluation-preview-image.js"),
+  read("./api/wallet-access.js"),
   read("./api/wallet-preferences.js"),
   read("./api/wallet-opt-ins.js"),
+  read("./api/wallet-session.js"),
+  read("./api/operational-health.js"),
+  read("./api/identity.js"),
+  read("./api/_data-auth.js"),
   read("./docs/security-boundaries-969.md"),
+  read("./docs/api03-cache-privacy-contract.md"),
 ]);
 
 const headerMap = new Map(
@@ -70,6 +88,47 @@ for (const [name, headers] of [
   for (const [key, value] of headerMap) {
     invariant(values.get(key) === value, `${name} global rule must apply ${key}.`);
   }
+}
+
+for (const [name, source, token] of [
+  ["Planner share", plannerShare, 'response.setHeader("Cache-Control", "no-store");'],
+  ["Evaluation share", evaluationShare, 'response.setHeader("Cache-Control", "no-store");'],
+  ["Evaluation preview HTML", evaluationPreview, 'response.setHeader("Cache-Control", "no-store, max-age=0");'],
+  ["Evaluation preview image", evaluationPreviewImage, 'response.setHeader("Cache-Control", "no-store, max-age=0");'],
+  ["Wallet access", walletAccess, 'response.setHeader("Cache-Control", "no-store");'],
+  ["Wallet preferences", walletPreferences, 'response.setHeader("Cache-Control", "no-store");'],
+  ["Wallet opt-in", walletOptIns, 'response.setHeader("Cache-Control", "no-store");'],
+]) {
+  invariant(source.includes(token), `${name} must retain its reviewed no-store cache boundary.`);
+}
+invariant(
+  walletSessionState.includes('response.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate, max-age=0");')
+    && walletSessionState.includes('response.setHeader("Vary", "Cookie");'),
+  "Wallet session responses must remain private/no-store and explicitly vary by Cookie.",
+);
+invariant(
+  operationalHealth.includes('response.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate, max-age=0");'),
+  "Operational health must remain private and no-store.",
+);
+invariant(
+  identity.includes("PUBLIC_REVALIDATE_CACHE_CONTROL")
+    && identity.includes("requestMatchesEtag(request, etag)")
+    && identity.includes("sendNotModified(response, startedAt, timings, cacheOptions);"),
+  "Public runtime identity must retain conditional browser revalidation.",
+);
+invariant(
+  dataAuth.includes('const PUBLIC_REVALIDATE_CACHE_CONTROL = "public, max-age=0, must-revalidate";')
+    && dataAuth.includes('response.setHeader("CDN-Cache-Control", "no-store, max-age=0");')
+    && dataAuth.includes('response.setHeader("Vercel-CDN-Cache-Control", "no-store, max-age=0");'),
+  "Public JSON reuse must stay browser-revalidation-only while both CDN cache layers remain no-store.",
+);
+for (const phrase of [
+  "Public `/api/data` snapshot reads",
+  "Private/wallet-dependent `/api/data`",
+  "Planner/Evaluation share JSON",
+  "Effective production/CDN headers remain a final-release check",
+]) {
+  invariant(api03Doc.includes(phrase), "API-03 documentation must retain the reviewed endpoint/cache matrix and release boundary.");
 }
 
 for (const token of [
