@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 
-// EDGE-04: isolated source-execution fixture. No account, Supabase, Vercel,
+// EDGE-04: isolated source-execution fixture; generated runtimes remain Site Quality-owned.
+// No account, Supabase, Vercel,
 // production database, browser profile or external network.
 const personalSource = await readFile("modules/core-sources/shared-personal-state.js", "utf8");
 const plannerSource = await readFile("modules/core-sources/planner.js", "utf8");
