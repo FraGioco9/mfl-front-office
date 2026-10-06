@@ -33,6 +33,9 @@ class FullDatabaseRefreshResumeTests(unittest.TestCase):
             "name: full-database-refresh-baseline-${{ github.run_id }}",
             self.workflow,
         )
+        self.assertIn("checkpoint-manifest.json", self.baseline)
+        self.assertIn("scripts.database.checkpoint_manifest create", self.baseline)
+        self.assertIn("scripts.database.checkpoint_manifest verify", self.baseline)
         self.assertLess(
             self.workflow.index("- name: Restore immutable refresh baseline"),
             self.workflow.index("- name: Restore latest validated refresh checkpoint"),
@@ -48,6 +51,8 @@ class FullDatabaseRefreshResumeTests(unittest.TestCase):
             'python -m scripts.database.prepare_runtime_database "$DATABASE_PATH" --validate-only',
             self.restore,
         )
+        self.assertIn("scripts.database.checkpoint_manifest verify", self.restore)
+        self.assertIn('--expected-run-id "$GITHUB_RUN_ID"', self.restore)
         self.assertIn('cp "$DATABASE_PATH" mfl_database.db', self.restore)
 
     def test_resume_stage_outputs_skip_completed_work(self) -> None:
@@ -76,6 +81,11 @@ class FullDatabaseRefreshResumeTests(unittest.TestCase):
                 self.workflow,
             )
         self.assertIn("core|player_seasons|player_data|final", self.writer)
+        self.assertIn("scripts.database.checkpoint_manifest create", self.writer)
+        self.assertEqual(
+            self.workflow.count("builder/resume-checkpoint/checkpoint-manifest.json"),
+            4,
+        )
 
     def test_player_data_resume_is_recorded_after_email_side_effect(self) -> None:
         self.assertLess(
@@ -91,6 +101,10 @@ class FullDatabaseRefreshResumeTests(unittest.TestCase):
     def test_final_snapshot_can_resume_at_publication(self) -> None:
         self.assertIn(
             'mkdir -p checkpoints/final\n    cp "$DATABASE_PATH" checkpoints/final/mfl_database.db',
+            self.restore,
+        )
+        self.assertIn(
+            'cp "$MANIFEST_PATH" checkpoints/final/checkpoint-manifest.json',
             self.restore,
         )
         self.assertLess(
