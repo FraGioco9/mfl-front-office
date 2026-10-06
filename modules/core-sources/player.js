@@ -2176,30 +2176,56 @@ function renderPlayerPageOwner(playerId) {
   const agentTooltip = joinedAgencyTooltip(row);
   const agentTooltipHtml = agentTooltip ? ` data-tooltip="${escapeHtml(agentTooltip)}" aria-label="${escapeHtml(agentTooltip)}"` : "";
   const agentLinkHtml = `<a class="agentTableLink playerAgentLink" href="${escapeHtml(agentRoute(agentWalletAddress))}"${agentTooltipHtml}>${escapeHtml(formatCellValue(row, "wallet_name"))}</a>`;
-  const contractDivision = rowHasActiveContract(row) ? contractDivisionInfo(getValue(row, "active_contract_club_division")) : null;
-  const contractDivisionHtml = contractDivision ? `<span class="playerContractDivision" style="color: ${escapeHtml(accessibleDivisionLabelColor(contractDivision.color))}">${escapeHtml(contractDivision.name)}</span>` : "";
+  const contractDivisionRaw = getValue(row, "active_contract_club_division");
+  const contractDivision = rowHasActiveContract(row) ? contractDivisionInfo(contractDivisionRaw) : null;
+  const contractDivisionHtml = contractDivision
+    ? `<span class="playerContractDivision" style="color: ${escapeHtml(accessibleDivisionLabelColor(contractDivision.color))}">${escapeHtml(contractDivision.name)}</span>`
+    : (rowHasActiveContract(row) ? unknownDataValueHtml(contractDivisionRaw) : "");
   const contractTeamName = formatContractClubName(row);
   const contractClubId = String(getValue(row, "active_contract_club_id") || "").trim();
   const contractTeamHtml = contractClubId
     ? `<a class="playerContractTeam playerContractTeamLink clubPageLink" href="${escapeHtml(window.__mflAppConfig?.routes?.clubPath?.(contractClubId, "attributes") || `/clubs/${encodeURIComponent(contractClubId)}/squad`)}" data-club-id="${escapeHtml(contractClubId)}">${escapeHtml(contractTeamName)}</a>`
     : `<span class="playerContractTeam">${escapeHtml(contractTeamName)}</span>`;
   const contractLabel = `<span class="playerContractLine">${contractTeamHtml}${contractDivisionHtml}</span>`;
+  const rawRevenueShare = getValue(row, "active_contract_revenue_share");
   const revenueShare = rowHasActiveContract(row)
     ? formatContractRevenueShare(
-      getValue(row, "active_contract_revenue_share"),
+      rawRevenueShare,
       getValue(row, "active_contract_revenue_share_penalty"),
     )
     : "";
+  const rawAge = getValue(row, "age");
+  const rawHeight = getValue(row, "height");
+  const rawFoot = getValue(row, "preferred_foot");
+  const rawSeasons = getValue(row, "player_seasons");
+  const nationalityHtml = isBlankValue(rawNationality)
+    ? unknownDataValueHtml(rawNationality)
+    : (playerRuntime?.playerNationalityHtml?.(rawNationality, nationality) || `${countryFlagHtml(rawNationality)} ${escapeHtml(nationality)}`);
+  const ageHtml = isBlankValue(rawAge)
+    ? unknownDataValueHtml(rawAge)
+    : escapeHtml(formatCellValue(row, "age"));
+  const heightHtml = isBlankValue(rawHeight)
+    ? unknownDataValueHtml(rawHeight)
+    : escapeHtml(heightLabel);
+  const footHtml = isBlankValue(rawFoot)
+    ? unknownDataValueHtml(rawFoot)
+    : escapeHtml(formatFootedness(rawFoot));
+  const seasonsHtml = isBlankValue(rawSeasons)
+    ? unknownDataValueHtml(rawSeasons)
+    : escapeHtml(formatCellValue(row, "player_seasons"));
   const infoCardsData = [
-    ["Nationality", playerRuntime?.playerNationalityHtml?.(rawNationality, nationality) || `${countryFlagHtml(rawNationality)} ${escapeHtml(nationality)}`],
-    ["Age", `<span class="playerDetailAgeLine">${escapeHtml(formatCellValue(row, "age"))}${ageMarkerHtml}</span>`],
-    ["Height", escapeHtml(heightLabel)],
-    ["Foot", escapeHtml(formatFootedness(getValue(row, "preferred_foot")))],
-    ["Seasons", escapeHtml(formatCellValue(row, "player_seasons"))],
+    ["Nationality", nationalityHtml],
+    ["Age", `<span class="playerDetailAgeLine">${ageHtml}${ageMarkerHtml}</span>`],
+    ["Height", heightHtml],
+    ["Foot", footHtml],
+    ["Seasons", seasonsHtml],
     ["Agent", agentLinkHtml],
     ["Contract", contractLabel],
   ];
-  infoCardsData.push(["Rev Share", escapeHtml(revenueShare || "–")]);
+  const revenueShareHtml = rowHasActiveContract(row)
+    ? (revenueShare ? escapeHtml(revenueShare) : unknownDataValueHtml(rawRevenueShare))
+    : "–";
+  infoCardsData.push(["Rev Share", revenueShareHtml]);
   const infoCards = infoCardsData.map(([label, value]) => {
     const cardClass = label === "Nationality"
       ? "nationalityDetailCard"
