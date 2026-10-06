@@ -95,6 +95,7 @@ function normalizeCurrentViewsAfterProgressionAccessLoss() {
     renderPlayerPage(playerIdFromUrl());
   }
 }
+/** @returns {MflTableSortState} */
 function defaultSortStateForView(
   viewName = defaultViewForPage(tablePageKey() || "progression"),
   pageName = tablePageKey() || state.currentPage || "progression",
@@ -127,6 +128,10 @@ function sortKeySupportedByView(
   return sortableColumns.has(sortKey) && visibleColumns.includes(sortKey);
 }
 
+/**
+ * @param {MflTableSortStateInput | null | undefined} sortState
+ * @returns {MflTableSortState}
+ */
 function normalizedViewSortState(
   sortState,
   viewName = defaultViewForPage(tablePageKey() || "progression"),
@@ -166,6 +171,7 @@ function tableSortSessionKey(pageName = state.currentPage, options = {}) {
   return tablePages.has(normalizedPageName) ? normalizedPageName : "";
 }
 
+/** @returns {MflTableSortState} */
 function tableSortStateForView(
   viewName = state.view,
   pageName = tablePageKey() || state.currentPage || "progression",
@@ -186,6 +192,7 @@ function tableSortStateForView(
   return resolvedSortState;
 }
 
+/** @returns {boolean} */
 function rememberTableSortState(
   sortState = { sortKey: state.sortKey, sortDirection: state.sortDirection },
   viewName = state.view,
@@ -211,6 +218,13 @@ function tableSortSearchForSessionEntry(options = {}) {
   return String(window.location.search || "");
 }
 
+/**
+ * @param {string} pageName
+ * @param {string} viewName
+ * @param {MflRouteOptions} [options]
+ * @param {MflTableSortState | null} [fallbackSortState]
+ * @returns {MflTableSortState}
+ */
 function tableSortStateForSessionEntry(pageName, viewName, options = {}, fallbackSortState = null) {
   const fallback = fallbackSortState || defaultSortStateForView(viewName, pageName);
   if (pageName === "club") return fallback;

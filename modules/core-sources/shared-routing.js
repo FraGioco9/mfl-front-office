@@ -489,6 +489,11 @@ function pageTargetFromPath(path) {
   };
 }
 
+/**
+ * @param {string} pageName
+ * @param {MflRouteOptions} [options]
+ * @returns {string}
+ */
 function pagePath(pageName, options = {}) {
   if (pageName === "planner") {
     const explicitPath = String(options.path || "");
@@ -577,6 +582,10 @@ function pagePath(pageName, options = {}) {
   return pageName === "home" ? "/" : `/${pageName}`;
 }
 
+/**
+ * @param {string} pageName
+ * @param {MflRouteOptions} [options]
+ */
 function updatePageUrl(pageName, options = {}) {
   if (state.currentPage === "club" && pageName !== "club") {
     return;

@@ -5,6 +5,7 @@ function clubRouteTargetFromPath() {
     : null;
 }
 
+/** @param {MflRouteOptions} [options] @returns {string[]} */
 function incrementalWatchlistPlayerIds(options = {}) {
   const watchlistId = String(options.watchlistId || watchlistIdFromUrl() || state.currentWatchlistId || "");
   const watchlist = normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds))
@@ -12,6 +13,11 @@ function incrementalWatchlistPlayerIds(options = {}) {
   return normalizeWatchlistIdList(watchlist?.playerIds || Array.from(state.watchlistPlayerIds));
 }
 
+/**
+ * @param {string} pageName
+ * @param {MflRouteOptions} [options]
+ * @returns {MflIncrementalRoute | null}
+ */
 function incrementalRouteTarget(pageName, options = {}) {
   const clubTarget = options.ignoreCurrentClubRoute ? null : clubRouteTargetFromPath();
   if (pageName === "club") {
@@ -73,6 +79,7 @@ function incrementalRouteTarget(pageName, options = {}) {
   return null;
 }
 
+/** @param {MflIncrementalRoute} route @param {number} [page] @returns {URLSearchParams} */
 function incrementalDataQuery(route, page = 1) {
   if (route.scope === "mflstats") {
     return new URLSearchParams({ mode: "mfl-stats-summary" });
@@ -131,12 +138,14 @@ function syncIncrementalCacheNamespace() {
   return { datasetKey, walletKey, namespace };
 }
 
+/** @param {MflIncrementalPayload | null | undefined} payload @returns {boolean} */
 function incrementalPayloadGenerationIsOlder(payload) {
   const incoming = Date.parse(String(payload?.generatedAt || ""));
   const current = Date.parse(String(state.manifest?.generated_at || ""));
   return Number.isFinite(incoming) && Number.isFinite(current) && incoming < current;
 }
 
+/** @param {MflIncrementalPayload | null | undefined} payload */
 function adoptIncrementalPayloadDataset(payload) {
   const generatedAt = String(payload?.generatedAt || "").trim();
   if (generatedAt && String(state.manifest?.generated_at || "").trim() !== generatedAt) {
@@ -149,6 +158,7 @@ function adoptIncrementalPayloadDataset(payload) {
   return syncIncrementalCacheNamespace();
 }
 
+/** @param {MflIncrementalRoute} route @param {number} [page] */
 function incrementalRequestDetails(route, page = 1) {
   const query = incrementalDataQuery(route, page);
   const requestKey = query.toString();
@@ -186,6 +196,7 @@ function readIncrementalPayloadCache(cacheKey) {
   return payload;
 }
 
+/** @param {string} cacheKey @param {MflIncrementalPayload | null | undefined} payload @returns {MflIncrementalPayload | null} */
 function rememberIncrementalPayload(cacheKey, payload) {
   const key = String(cacheKey || "");
   if (!key || !payload) return payload || null;
@@ -199,6 +210,7 @@ function rememberIncrementalPayload(cacheKey, payload) {
   return payload;
 }
 
+/** @param {MflIncrementalRoute | null | undefined} route @param {number} [page] @returns {MflIncrementalPayload | null} */
 function cachedIncrementalPayload(route, page = 1) {
   if (!route || route.scope === "empty") {
     return null;
@@ -207,6 +219,7 @@ function cachedIncrementalPayload(route, page = 1) {
   return incrementalQueryEmbedsMarketplace(query) ? null : readIncrementalPayloadCache(cacheKey);
 }
 
+/** @param {MflIncrementalRoute | null | undefined} route @param {number} [page] @returns {boolean} */
 function incrementalRouteIsCached(route, page = 1) {
   return Boolean(cachedIncrementalPayload(route, page));
 }
@@ -222,6 +235,7 @@ function settingsDataCacheReady() {
   return false;
 }
 
+/** @param {string} pageName @param {MflRouteOptions} [options] @returns {boolean} */
 function routeDataCacheReady(pageName, options = {}) {
   const page = String(pageName || "home");
   const routeOptions = /** @type {Record<string, unknown> & { view?: string }} */ (

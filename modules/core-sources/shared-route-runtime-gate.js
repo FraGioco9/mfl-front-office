@@ -1,3 +1,8 @@
+/**
+ * @param {string} pageName
+ * @param {boolean} [updateHash]
+ * @param {MflRouteOptions} [options]
+ */
 async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}) {
     const suppliedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
     const optedOutUpgradePage = hasWalletOptIn() ? optedOutPageFromPath(window.location.pathname) : "";

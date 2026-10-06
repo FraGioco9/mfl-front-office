@@ -1685,6 +1685,11 @@ function pageTargetFromPath(path) {
   };
 }
 
+/**
+ * @param {string} pageName
+ * @param {MflRouteOptions} [options]
+ * @returns {string}
+ */
 function pagePath(pageName, options = {}) {
   if (pageName === "planner") {
     const explicitPath = String(options.path || "");
@@ -1773,6 +1778,10 @@ function pagePath(pageName, options = {}) {
   return pageName === "home" ? "/" : `/${pageName}`;
 }
 
+/**
+ * @param {string} pageName
+ * @param {MflRouteOptions} [options]
+ */
 function updatePageUrl(pageName, options = {}) {
   if (state.currentPage === "club" && pageName !== "club") {
     return;
@@ -2966,6 +2975,7 @@ function normalizeCurrentViewsAfterProgressionAccessLoss() {
     renderPlayerPage(playerIdFromUrl());
   }
 }
+/** @returns {MflTableSortState} */
 function defaultSortStateForView(
   viewName = defaultViewForPage(tablePageKey() || "progression"),
   pageName = tablePageKey() || state.currentPage || "progression",
@@ -2998,6 +3008,10 @@ function sortKeySupportedByView(
   return sortableColumns.has(sortKey) && visibleColumns.includes(sortKey);
 }
 
+/**
+ * @param {MflTableSortStateInput | null | undefined} sortState
+ * @returns {MflTableSortState}
+ */
 function normalizedViewSortState(
   sortState,
   viewName = defaultViewForPage(tablePageKey() || "progression"),
@@ -3037,6 +3051,7 @@ function tableSortSessionKey(pageName = state.currentPage, options = {}) {
   return tablePages.has(normalizedPageName) ? normalizedPageName : "";
 }
 
+/** @returns {MflTableSortState} */
 function tableSortStateForView(
   viewName = state.view,
   pageName = tablePageKey() || state.currentPage || "progression",
@@ -3057,6 +3072,7 @@ function tableSortStateForView(
   return resolvedSortState;
 }
 
+/** @returns {boolean} */
 function rememberTableSortState(
   sortState = { sortKey: state.sortKey, sortDirection: state.sortDirection },
   viewName = state.view,
@@ -3082,6 +3098,13 @@ function tableSortSearchForSessionEntry(options = {}) {
   return String(window.location.search || "");
 }
 
+/**
+ * @param {string} pageName
+ * @param {string} viewName
+ * @param {MflRouteOptions} [options]
+ * @param {MflTableSortState | null} [fallbackSortState]
+ * @returns {MflTableSortState}
+ */
 function tableSortStateForSessionEntry(pageName, viewName, options = {}, fallbackSortState = null) {
   const fallback = fallbackSortState || defaultSortStateForView(viewName, pageName);
   if (pageName === "club") return fallback;
@@ -7324,6 +7347,7 @@ function clubRouteTargetFromPath() {
     : null;
 }
 
+/** @param {MflRouteOptions} [options] @returns {string[]} */
 function incrementalWatchlistPlayerIds(options = {}) {
   const watchlistId = String(options.watchlistId || watchlistIdFromUrl() || state.currentWatchlistId || "");
   const watchlist = normalizeWatchlists(state.watchlists, Array.from(state.watchlistPlayerIds))
@@ -7331,6 +7355,11 @@ function incrementalWatchlistPlayerIds(options = {}) {
   return normalizeWatchlistIdList(watchlist?.playerIds || Array.from(state.watchlistPlayerIds));
 }
 
+/**
+ * @param {string} pageName
+ * @param {MflRouteOptions} [options]
+ * @returns {MflIncrementalRoute | null}
+ */
 function incrementalRouteTarget(pageName, options = {}) {
   const clubTarget = options.ignoreCurrentClubRoute ? null : clubRouteTargetFromPath();
   if (pageName === "club") {
@@ -7392,6 +7421,7 @@ function incrementalRouteTarget(pageName, options = {}) {
   return null;
 }
 
+/** @param {MflIncrementalRoute} route @param {number} [page] @returns {URLSearchParams} */
 function incrementalDataQuery(route, page = 1) {
   if (route.scope === "mflstats") {
     return new URLSearchParams({ mode: "mfl-stats-summary" });
@@ -7450,12 +7480,14 @@ function syncIncrementalCacheNamespace() {
   return { datasetKey, walletKey, namespace };
 }
 
+/** @param {MflIncrementalPayload | null | undefined} payload @returns {boolean} */
 function incrementalPayloadGenerationIsOlder(payload) {
   const incoming = Date.parse(String(payload?.generatedAt || ""));
   const current = Date.parse(String(state.manifest?.generated_at || ""));
   return Number.isFinite(incoming) && Number.isFinite(current) && incoming < current;
 }
 
+/** @param {MflIncrementalPayload | null | undefined} payload */
 function adoptIncrementalPayloadDataset(payload) {
   const generatedAt = String(payload?.generatedAt || "").trim();
   if (generatedAt && String(state.manifest?.generated_at || "").trim() !== generatedAt) {
@@ -7468,6 +7500,7 @@ function adoptIncrementalPayloadDataset(payload) {
   return syncIncrementalCacheNamespace();
 }
 
+/** @param {MflIncrementalRoute} route @param {number} [page] */
 function incrementalRequestDetails(route, page = 1) {
   const query = incrementalDataQuery(route, page);
   const requestKey = query.toString();
@@ -7505,6 +7538,7 @@ function readIncrementalPayloadCache(cacheKey) {
   return payload;
 }
 
+/** @param {string} cacheKey @param {MflIncrementalPayload | null | undefined} payload @returns {MflIncrementalPayload | null} */
 function rememberIncrementalPayload(cacheKey, payload) {
   const key = String(cacheKey || "");
   if (!key || !payload) return payload || null;
@@ -7518,6 +7552,7 @@ function rememberIncrementalPayload(cacheKey, payload) {
   return payload;
 }
 
+/** @param {MflIncrementalRoute | null | undefined} route @param {number} [page] @returns {MflIncrementalPayload | null} */
 function cachedIncrementalPayload(route, page = 1) {
   if (!route || route.scope === "empty") {
     return null;
@@ -7526,6 +7561,7 @@ function cachedIncrementalPayload(route, page = 1) {
   return incrementalQueryEmbedsMarketplace(query) ? null : readIncrementalPayloadCache(cacheKey);
 }
 
+/** @param {MflIncrementalRoute | null | undefined} route @param {number} [page] @returns {boolean} */
 function incrementalRouteIsCached(route, page = 1) {
   return Boolean(cachedIncrementalPayload(route, page));
 }
@@ -7541,6 +7577,7 @@ function settingsDataCacheReady() {
   return false;
 }
 
+/** @param {string} pageName @param {MflRouteOptions} [options] @returns {boolean} */
 function routeDataCacheReady(pageName, options = {}) {
   const page = String(pageName || "home");
   const routeOptions = /** @type {Record<string, unknown> & { view?: string }} */ (
@@ -8983,6 +9020,11 @@ const setIncrementalView = async function setIncrementalView(viewName) {
 
 window.mflLoadIncrementalRoutePage = loadIncrementalRoutePage;
 
+/**
+ * @param {string} pageName
+ * @param {boolean} [updateHash]
+ * @param {MflRouteOptions} [options]
+ */
 async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}) {
     const suppliedOptions = options && typeof options === "object" && !Array.isArray(options) ? options : {};
     const optedOutUpgradePage = hasWalletOptIn() ? optedOutPageFromPath(window.location.pathname) : "";
