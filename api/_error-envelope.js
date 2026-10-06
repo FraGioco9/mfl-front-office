@@ -36,6 +36,28 @@ function retryAfterSeconds(response) {
   return Math.max(1, Math.ceil(parsed));
 }
 
+function normalizeApiErrorPayload(response, status, payload) {
+  if (Number(status) < 400 || !payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return payload;
+  }
+  const legacyMessage = typeof payload.error === "string" && payload.error.trim()
+    ? payload.error.trim()
+    : "Request failed.";
+  const code = stableErrorCode(status, payload.code);
+  const retryAfter = retryAfterSeconds(response);
+  response?.setHeader?.("Cache-Control", "no-store");
+  response?.setHeader?.("X-MFL-Error-Code", code);
+  return {
+    ...payload,
+    error: legacyMessage,
+    code,
+    retryable: typeof payload.retryable === "boolean"
+      ? payload.retryable
+      : retryableStatus(status),
+    ...(retryAfter ? { retryAfterSeconds: retryAfter } : {}),
+  };
+}
+
 function installApiErrorEnvelope(response) {
   if (!response || typeof response.json !== "function" || response.__mflErrorEnvelopeInstalled) {
     return response;
@@ -55,24 +77,7 @@ function installApiErrorEnvelope(response) {
       return originalJson(payload);
     }
 
-    const legacyMessage = typeof payload.error === "string" && payload.error.trim()
-      ? payload.error.trim()
-      : "Request failed.";
-    const code = stableErrorCode(status, payload.code);
-    const retryAfter = retryAfterSeconds(response);
-    const normalized = {
-      ...payload,
-      error: legacyMessage,
-      code,
-      retryable: typeof payload.retryable === "boolean"
-        ? payload.retryable
-        : retryableStatus(status),
-      ...(retryAfter ? { retryAfterSeconds: retryAfter } : {}),
-    };
-
-    response.setHeader?.("Cache-Control", "no-store");
-    response.setHeader?.("X-MFL-Error-Code", code);
-    return originalJson(normalized);
+    return originalJson(normalizeApiErrorPayload(response, status, payload));
   };
 
   return response;
@@ -80,6 +85,7 @@ function installApiErrorEnvelope(response) {
 
 module.exports = {
   installApiErrorEnvelope,
+  normalizeApiErrorPayload,
   retryableStatus,
   stableErrorCode,
 };
