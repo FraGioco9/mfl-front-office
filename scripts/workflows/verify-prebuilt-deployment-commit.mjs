@@ -3,18 +3,19 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { normalizeDeploymentCommit } from "../../deployment-commit.mjs";
+import { verifyNextBuildDeploymentCommit } from "./verify-next-build-deployment-commit.mjs";
 
-async function findIdentityFunctions(root) {
+async function findFunctionDirectories(root) {
   const matches = [];
   const entries = await readdir(root, { withFileTypes: true });
   for (const entry of entries) {
     const fullPath = resolve(root, entry.name);
     if (!entry.isDirectory()) continue;
-    if (entry.name === "identity.func") {
+    if (entry.name.endsWith(".func")) {
       matches.push(fullPath);
       continue;
     }
-    matches.push(...await findIdentityFunctions(fullPath));
+    matches.push(...await findFunctionDirectories(fullPath));
   }
   return matches;
 }
@@ -36,25 +37,36 @@ async function directoryContainsCommit(root, expected) {
 export async function verifyPrebuiltDeploymentCommit({
   expected,
   functionsRoot = resolve(process.cwd(), ".vercel/output/functions"),
+  manifestPath = resolve(process.cwd(), ".next/required-server-files.json"),
 } = {}) {
   const normalizedExpected = normalizeDeploymentCommit(expected, { allowEmpty: false });
-  const identityFunctions = await findIdentityFunctions(functionsRoot);
-  if (identityFunctions.length === 0) {
-    throw new Error(`Prebuilt Vercel output does not contain an identity function under ${functionsRoot}.`);
+
+  await verifyNextBuildDeploymentCommit({
+    expected: normalizedExpected,
+    manifestPath,
+  });
+
+  const functionDirectories = await findFunctionDirectories(functionsRoot);
+  if (functionDirectories.length === 0) {
+    throw new Error(`Prebuilt Vercel output does not contain any .func directories under ${functionsRoot}.`);
   }
 
-  for (const identityFunction of identityFunctions) {
-    if (await directoryContainsCommit(identityFunction, normalizedExpected)) {
-      return identityFunction;
+  for (const functionDirectory of functionDirectories) {
+    if (await directoryContainsCommit(functionDirectory, normalizedExpected)) {
+      return functionDirectory;
     }
   }
 
-  throw new Error(`Prebuilt identity function does not contain deployment commit ${normalizedExpected}.`);
+  throw new Error(
+    `Prebuilt Vercel functions do not contain deployment commit ${normalizedExpected}.`,
+  );
 }
 
 const isCli = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isCli) {
   const expected = normalizeDeploymentCommit(process.argv[2], { allowEmpty: false });
-  await verifyPrebuiltDeploymentCommit({ expected });
-  console.log(`Verified prebuilt identity function contains deployment commit ${expected}.`);
+  const matchedFunction = await verifyPrebuiltDeploymentCommit({ expected });
+  console.log(
+    `Verified Next build manifest and prebuilt Vercel function contain deployment commit ${expected}: ${matchedFunction}.`,
+  );
 }
