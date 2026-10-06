@@ -2,7 +2,10 @@ const { signedWalletFromRequest } = require("./_wallet-auth");
 const { requireSameOriginMutation } = require("./_request-origin");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
 const { readJsonBody, sendRequestBodyError } = require("./_request-body");
-const { sendPlannerPersistenceUnavailable } = require("./_planner-persistence");
+const {
+  sendPlannerPlanCapacityExceeded,
+  sendPlannerPersistenceUnavailable,
+} = require("./_planner-persistence");
 const { createRequestLog } = require("./_request-log");
 const {
   normalizePlannerId,
@@ -167,6 +170,10 @@ module.exports = async function handler(request, response) {
     response.status(405).json({ error: "Method not allowed." });
   } catch (error) {
     if (sendRequestBodyError(response, error)) return;
+    if (sendPlannerPlanCapacityExceeded(response, error, MAX_SAVED_PLANS_PER_WALLET)) {
+      trace.warn("capacity_limit", { status: 429 });
+      return;
+    }
     if (sendPlannerPersistenceUnavailable(response, error, "planner_plans")) {
       trace.error("persistence_unavailable", { status: 503, error });
       return;
