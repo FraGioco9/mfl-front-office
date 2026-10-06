@@ -20,8 +20,12 @@ const artifacts = readCanonicalCoreArtifacts(coreSource);
 const eagerCore = String(artifacts.core || "");
 
 const parserStart = eagerCore.indexOf("function pageTargetFromPath(path) {");
-const parserEnd = eagerCore.indexOf("function pagePath(pageName, options = {}) {", parserStart);
-invariant(parserStart >= 0 && parserEnd > parserStart, "Missing shared route parser.");
+const pagePathStart = eagerCore.indexOf("function pagePath(pageName, options = {}) {", parserStart);
+const parserEnd = eagerCore.lastIndexOf("\n}\n", pagePathStart);
+invariant(
+  parserStart >= 0 && pagePathStart > parserStart && parserEnd > parserStart && parserEnd < pagePathStart,
+  "Missing shared route parser.",
+);
 const parserSource = eagerCore.slice(parserStart, parserEnd + 2);
 
 const clubRoute = (pathname) => {
