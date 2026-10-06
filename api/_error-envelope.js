@@ -9,6 +9,7 @@ const STATUS_CODES = Object.freeze({
   408: "request_timeout",
   409: "conflict",
   413: "payload_too_large",
+  415: "unsupported_media_type",
   422: "validation_failed",
   429: "rate_limited",
   500: "internal_error",
