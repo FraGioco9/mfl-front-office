@@ -67,10 +67,14 @@ async function mockSupabaseRequest(resource, options = {}) {
   }
   if (table !== "planner_shares") throw new Error("Unexpected mock resource: " + resource);
   if (options.method === "DELETE") {
+    const deleted = [];
     for (const [id, row] of shares) {
-      if (eq("id", row.id) && eq("wallet_address", row.wallet_address)) shares.delete(id);
+      if (eq("id", row.id) && eq("wallet_address", row.wallet_address)) {
+        deleted.push(row);
+        shares.delete(id);
+      }
     }
-    return [];
+    return deleted;
   }
   if (options.method === "POST") {
     const [row] = JSON.parse(options.body);
@@ -140,7 +144,7 @@ assert.equal((await call(planner, "GET", "/api/planner-share?id=dddddddddddddddd
 
 // A signed wallet may request revocation of someone else's ID, but the SQL
 // write must be scoped to its own wallet and leave the other share unchanged.
-assert.equal((await call(planner, "DELETE", "/api/planner-share?id=" + shareId, walletB)).status, 200);
+assert.equal((await call(planner, "DELETE", "/api/planner-share?id=" + shareId, walletB)).status, 404);
 assert.equal(shares.has(shareId), true, "Wallet B must not revoke wallet A's share.");
 assert.ok(queries.some(q => q.method === "DELETE" && q.resource.includes("wallet_address=eq." + encodeURIComponent(walletB))));
 assert.equal((await call(planner, "DELETE", "/api/planner-share?id=" + shareId)).status, 401);

@@ -1461,7 +1461,15 @@
     const shareId=String(id||"").trim();
     if(!shareId)return false;
     if(!silent&&!await requestPlannerPlanRevoke(name||activePlanName||"this plan"))return false;
-    await plannerPrivateRequest("/api/planner-share?id="+encodeURIComponent(shareId),{method:"DELETE"});
+    try{
+      await plannerPrivateRequest("/api/planner-share?id="+encodeURIComponent(shareId),{method:"DELETE"});
+    }catch(error){
+      if(Number(error?.status)===404){
+        if(plansModal instanceof HTMLElement&&!plansModal.hidden)await openPlansModal();
+        else await refreshActivePlannerShare();
+      }
+      throw error;
+    }
     if(activeShareId===shareId)activeShareId="";
     syncPlanUi();
     if(!silent&&typeof showToast==="function")showToast("Plan share revoked.");
@@ -1526,6 +1534,7 @@
     try{
       return await action();
     }catch(error){
+      if(Number(error?.status)===409&&plansModal instanceof HTMLElement&&!plansModal.hidden)await openPlansModal();
       const message=plannerActionErrorMessage(error);
       if(plansStatus)plansStatus.textContent=message;
       if(typeof announceActionStatus==="function")announceActionStatus(message,{urgent:true});
@@ -1612,8 +1621,14 @@
     plansModal.hidden=false;plansModal.classList.add("modalOpen");if(plansStatus)plansStatus.textContent="Loading saved plans…";if(typeof announceActionStatus==="function")announceActionStatus("Loading saved plans.");plansList.replaceChildren();
     try{
       const [data,shareData]=await Promise.all([plannerPrivateRequest("/api/planner-save"),plannerPrivateRequest("/api/planner-share?owned=1")]);
+      const shares=Array.isArray(shareData?.shares)?shareData.shares:[];
+      if(!plannerReadOnly&&activePlanId){
+        const active=shares.find(share=>String(share?.sourcePlanId||"")===String(activePlanId));
+        activeShareId=String(active?.id||"");
+        syncPlanUi();
+      }
       if(plansStatus)plansStatus.textContent="";
-      renderPlannerPlans(data?.plans,shareData?.shares);
+      renderPlannerPlans(data?.plans,shares);
     }catch(error){
       if(plansStatus)plansStatus.textContent=error?.message||"Could not load saved plans.";
       if(typeof announceActionStatus==="function")announceActionStatus(error?.message||"Could not load saved plans.",{urgent:true});

@@ -115,10 +115,14 @@ module.exports = async function handler(request, response) {
         response.status(400).json({ error: "Missing share id." });
         return;
       }
-      await supabaseRequest(`planner_shares?id=eq.${encodeURIComponent(id)}&wallet_address=eq.${encodeURIComponent(wallet)}`, {
+      const rows = await supabaseRequest(`planner_shares?id=eq.${encodeURIComponent(id)}&wallet_address=eq.${encodeURIComponent(wallet)}`, {
         method: "DELETE",
-        headers: { Prefer: "return=minimal" },
+        headers: { Prefer: "return=representation" },
       });
+      if (!Array.isArray(rows) || !rows[0]) {
+        response.status(404).json({ error: "Plan share changed or was already revoked." });
+        return;
+      }
       response.status(200).json({ ok: true });
       return;
     }
