@@ -343,6 +343,39 @@ invariant(
   "Shared foundations, session, routing, transitions, page lifecycle, Home summary, table state, generic toast core, personal state, data/search, Evaluation lifecycle, Player first-paint/navigation, watchlist actions, Player display/calculation, Player action facades, generic modal lifecycle, Global Search lifecycle, wallet-row classification, HTML escaping, incremental routing, global interaction bindings, startup lifecycle, layout centering, incremental navigation, the route-runtime gate, explicit core contracts, application startup, and shell navigation must keep explicit terminal ownership boundaries.",
 );
 
+const tableEntry = coreSourceManifest.find(({ domain }) => domain === "table");
+invariant(
+  tableEntry?.source === "table.js"
+    && tableEntry?.sources?.length === 5
+    && tableEntry.sources[0] === "table.js"
+    && tableEntry.sources[1] === "table-selection-actions.js"
+    && tableEntry.sources[2] === "table-pager-controls.js"
+    && tableEntry.sources[3] === "table-render-lifecycle.js"
+    && tableEntry.sources[4] === "table-interaction-bindings.js",
+  "Table core must preserve base, selection actions, pager controls, render lifecycle, and interaction bindings in canonical execution order.",
+);
+const tableBase = await read("./modules/core-sources/table.js");
+const tableSelectionActions = await read("./modules/core-sources/table-selection-actions.js");
+const tablePagerControls = await read("./modules/core-sources/table-pager-controls.js");
+invariant(
+  tableBase.replace(/\s*$/, "").endsWith("renderTable();\n}"),
+  "Table base must end after the canonical filter-application owner.",
+);
+invariant(
+  tableSelectionActions.startsWith("function currentPageRows() {")
+    && tableSelectionActions.replace(/\s*$/, "").endsWith("  });\n}"),
+  "Table selection actions must own visible-row selection through bulk player-link opening.",
+);
+invariant(
+  tablePagerControls.startsWith('const PAGER_CURRENT_PAGE_INPUT_ID = "pagerCurrentPageInput";')
+    && tablePagerControls.replace(/\s*$/, "").endsWith("syncPagerCurrentPage(1, 1);"),
+  "Table pager controls must own editable page navigation and its startup binding.",
+);
+invariant(
+  Buffer.byteLength(tableBase, "utf8") < 95_000,
+  "ARCH-01 Table base must remain below the reviewed post-split ownership size.",
+);
+
 const retiredFiles = [
   "app-core-build-normalizer.js",
   "app-core-splitter-utils.js",

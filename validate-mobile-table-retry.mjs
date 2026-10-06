@@ -88,10 +88,12 @@ includes(bootstrap, "function firstPaintTableColumnLabel(page, column)", "Bootst
 
 excludes(buildCore, "app-core-mobile-table", "The canonical build must not depend on the retired mobile-table transform.");
 if (coreSourceByDomain.table?.source !== "table.js"
-  || coreSourceByDomain.table?.sources?.length !== 3
+  || coreSourceByDomain.table?.sources?.length !== 5
   || coreSourceByDomain.table.sources[0] !== "table.js"
-  || coreSourceByDomain.table.sources[1] !== "table-render-lifecycle.js"
-  || coreSourceByDomain.table.sources[2] !== "table-interaction-bindings.js"
+  || coreSourceByDomain.table.sources[1] !== "table-selection-actions.js"
+  || coreSourceByDomain.table.sources[2] !== "table-pager-controls.js"
+  || coreSourceByDomain.table.sources[3] !== "table-render-lifecycle.js"
+  || coreSourceByDomain.table.sources[4] !== "table-interaction-bindings.js"
   || coreSourceByDomain.table?.runtime !== "app-core-table-runtime.js") {
   throw new Error("The core manifest must emit Table runtime from its ordered canonical fragments.");
 }
