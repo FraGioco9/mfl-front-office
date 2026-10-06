@@ -232,29 +232,38 @@ try {
   );
 
   const fixtureFunctions = resolve(fixtureRoot, ".vercel/output/functions");
-  const fixtureIdentityFunction = resolve(fixtureFunctions, "api/identity.func");
-  await mkdir(fixtureIdentityFunction, { recursive: true });
-  await writeFile(resolve(fixtureIdentityFunction, "index.js"), `module.exports = "${fixtureCommit}";\n`);
+  const fixtureNextFunction = resolve(fixtureFunctions, "[...path].func");
+  await mkdir(fixtureNextFunction, { recursive: true });
+  await writeFile(resolve(fixtureNextFunction, "index.js"), `module.exports = "${fixtureCommit}";\n`);
   invariant(
-    await verifyPrebuiltDeploymentCommit({ expected: fixtureCommit, functionsRoot: fixtureFunctions }) === fixtureIdentityFunction,
-    "Prebuilt deployment verification must accept an identity function containing the exact source commit.",
+    await verifyPrebuiltDeploymentCommit({
+      expected: fixtureCommit,
+      functionsRoot: fixtureFunctions,
+      manifestPath: fixtureNextManifest,
+    }) === fixtureNextFunction,
+    "Prebuilt deployment verification must accept a Next function containing the exact source commit.",
   );
-  await writeFile(resolve(fixtureIdentityFunction, "index.js"), "module.exports = null;\n");
+  await writeFile(resolve(fixtureNextFunction, "index.js"), "module.exports = null;\n");
   let missingCommitRejected = false;
   try {
-    await verifyPrebuiltDeploymentCommit({ expected: fixtureCommit, functionsRoot: fixtureFunctions });
+    await verifyPrebuiltDeploymentCommit({
+      expected: fixtureCommit,
+      functionsRoot: fixtureFunctions,
+      manifestPath: fixtureNextManifest,
+    });
   } catch {
     missingCommitRejected = true;
   }
-  invariant(missingCommitRejected, "Prebuilt deployment verification must reject an identity function that lost its source commit.");
+  invariant(missingCommitRejected, "Prebuilt deployment verification must reject Vercel functions that lost the source commit.");
 } finally {
   await rm(fixtureRoot, { recursive: true, force: true });
 }
 invariant(
-  prebuiltVerifier.includes("identity.func")
+  prebuiltVerifier.includes('entry.name.endsWith(".func")')
     && prebuiltVerifier.includes(".vercel/output/functions")
+    && prebuiltVerifier.includes("verifyNextBuildDeploymentCommit")
     && prebuiltVerifier.includes("verifyPrebuiltDeploymentCommit"),
-  "Production deploys must retain the canonical prebuilt identity verifier.",
+  "Production deploys must bind the exact source commit through the Next manifest and packaged Vercel functions.",
 );
 
 invariant(
