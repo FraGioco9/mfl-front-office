@@ -39,10 +39,11 @@ contain one-off data/backfill material and are not the canonical replay source.
 
 ### Intentionally staged drift
 
-Two migrations are in Git but intentionally not live yet:
+Three migrations are in Git but intentionally not live yet:
 
 - SEC-05: `20261001172000_restrict_application_grants.sql`;
-- DB-02: `20261006183000_private_data_retention.sql`.
+- DB-02: `20261006183000_private_data_retention.sql`;
+- DB-05: `20261006183001_planner_plan_capacity_guard.sql`.
 
 This is release staging, not accidental drift.
 
@@ -118,8 +119,7 @@ It never contacts the Supabase project and never needs production secrets.
 ## Release interpretation
 
 A green DB-03 workflow means the **repository target state** is internally
-replayable and its drift assumptions are explicit. It does not mean SEC-05,
-DB-02, or a future legacy-agent cleanup has been applied live.
+replayable and its drift assumptions are explicit. It does not mean SEC-05, DB-02, DB-05, or a future legacy-agent cleanup has been applied live.
 
 Any future production reconciliation remains a separate explicit authorization,
 with backup/PITR and post-apply verification.
