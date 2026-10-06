@@ -23,6 +23,12 @@ RESUME_DIR="resume-checkpoint"
 rm -rf "$RESUME_DIR"
 mkdir -p "$RESUME_DIR"
 cp "$DATABASE_SOURCE_PATH" "$RESUME_DIR/mfl_database.db"
+python -m scripts.database.checkpoint_manifest create \
+  --database "$RESUME_DIR/mfl_database.db" \
+  --manifest "$RESUME_DIR/checkpoint-manifest.json" \
+  --stage "$STAGE" \
+  --run-id "$GITHUB_RUN_ID" \
+  --run-attempt "$GITHUB_RUN_ATTEMPT"
 
 RECORDED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 jq -n   --arg stage "$STAGE"   --arg runId "$GITHUB_RUN_ID"   --arg runAttempt "$GITHUB_RUN_ATTEMPT"   --arg recordedAt "$RECORDED_AT"   '{stage:$stage,runId:$runId,runAttempt:$runAttempt,recordedAt:$recordedAt}'   > "$RESUME_DIR/resume-state.json"
