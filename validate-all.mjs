@@ -11,6 +11,7 @@ const validators = [
   "tests/test_cleanup_unused_branches.mjs",
   "tests/test_ci_quality_scope.mjs",
   "tests/test_planner_concurrency_edges.mjs",
+  "tests/test_edge04_offline_retry.mjs",
   "tests/test_unicode_search_edges.mjs",
   "tests/test_repository_workflow_docs.mjs",
   "tests/test_request_observability.mjs",
