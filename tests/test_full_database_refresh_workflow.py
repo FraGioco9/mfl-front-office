@@ -114,6 +114,16 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
         self.assertIn("Transient Vercel upload failure", publisher)
         self.assertIn("verify-live-production-deployment.sh", publisher)
 
+    def test_checkpoint_publisher_verifies_manifest_before_deploy(self) -> None:
+        publisher = Path("scripts/workflows/full-database-refresh-publish-checkpoint.sh").read_text(encoding="utf-8")
+        verify = "python -m scripts.database.checkpoint_manifest verify"
+        install = "full-database-refresh-install-fresh-database-in-published-site-source.sh"
+        self.assertIn(verify, publisher)
+        self.assertLess(publisher.index(verify), publisher.index(install))
+        self.assertIn("DATABASE_SHA256", publisher)
+        self.assertIn("DATABASE_SCHEMA_SHA256", publisher)
+        self.assertIn("databaseArtifact:", publisher)
+
     def test_published_source_reconciled_after_build_not_before(self) -> None:
         publisher = Path(
             "scripts/workflows/full-database-refresh-publish-checkpoint.sh"
@@ -143,12 +153,18 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
         ):
             self.assertIn(
                 "name: mfl_database\n"
-                f"          path: builder/checkpoints/{checkpoint_path}/mfl_database.db\n"
+                "          path: |\n"
+                f"            builder/checkpoints/{checkpoint_path}/mfl_database.db\n"
+                f"            builder/checkpoints/{checkpoint_path}/checkpoint-manifest.json\n"
                 "          overwrite: true",
                 self.workflow,
             )
         self.assertIn(
             "name: full-database-refresh-baseline-${{ github.run_id }}",
+            self.workflow,
+        )
+        self.assertIn(
+            "builder/previous-database/checkpoint-manifest.json",
             self.workflow,
         )
         self.assertIn(
