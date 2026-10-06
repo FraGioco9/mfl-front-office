@@ -1,4 +1,4 @@
 {
-  "version": "1.128.4",
-  "description": "Add standalone Planner and harden operational reliability"
+  "version": "1.129.0",
+  "description": "Complete the #1034 audit roadmap and final release hardening"
 }
