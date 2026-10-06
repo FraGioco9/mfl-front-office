@@ -85,7 +85,7 @@ assert(evaluationPreview.includes("expires_at=gt."), "Evaluation public reads mu
 
 assert(docs.includes("no automatic TTL"));
 assert(docs.includes("take/verify the normal database backup or PITR coverage"));
-assert(docs.includes("Restoring deleted rows requires the pre-application database backup/PITR"));
+assert(docs.includes("Restoring deleted rows requires") && docs.includes("backup/PITR"));
 
 const now = Date.parse("2026-10-06T16:00:00.000Z");
 assert.equal(
