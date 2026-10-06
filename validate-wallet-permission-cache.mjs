@@ -19,6 +19,13 @@ const originalDateNow = Date.now;
 const module = { exports: {} };
 const localRequire = (specifier) => {
   if (specifier === "node:perf_hooks") return { performance };
+  if (specifier === "./_error-envelope") {
+    return {
+      normalizeApiErrorPayload(_response, _status, payload) {
+        return payload;
+      },
+    };
+  }
   if (specifier === "./_wallet-auth") {
     return {
       normalizeWalletAddress(value) {
