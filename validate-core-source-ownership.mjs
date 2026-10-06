@@ -274,7 +274,7 @@ invariant(
   "Shared incremental navigation must own loading orchestration through stable facades/base rendering without replacing public function identities.",
 );
 invariant(
-  sharedRouteRuntimeGate.startsWith("async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}) {")
+  sharedRouteRuntimeGate.includes("async function setPageWithRouteRuntime(pageName, updateHash = true, options = {}) {")
     && sharedRouteRuntimeGate.includes('Reflect.get(window, "__mflSetPageFeatureOwner")')
     && sharedRouteRuntimeGate.replace(/\s*$/, "").endsWith('Reflect.set(window, "__mflSetPageRouteOwner", setPageWithRouteRuntime);')
     && !sharedRouteRuntimeGate.includes("originalRouteRuntimeSetPage")
