@@ -6,6 +6,8 @@ import { verifyPrebuiltSecurityHeaders } from "./scripts/workflows/verify-prebui
 
 const source = readFileSync(new URL("./vercel.json", import.meta.url), "utf8");
 const config = JSON.parse(source);
+assert.equal(config.framework, "nextjs",
+  "Vercel must use the Next.js framework preset so prebuilt output contains SSR routes.");
 assert.equal(source, JSON.stringify(syncVercelSecurityHeaders(config), null, 2) + "\n",
   "vercel.json must remain deterministic and synchronized with its canonical CSP sources.");
 assert.deepEqual(config.headers, [expectedVercelSecurityHeaders()],
