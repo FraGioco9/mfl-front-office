@@ -38,6 +38,7 @@ const staged = ledger.migrations.filter((entry) => entry.status === "staged_rele
 assert.deepEqual(staged, [
   "20261001172000_restrict_application_grants.sql",
   "20261006183000_private_data_retention.sql",
+  "20261006183001_planner_plan_capacity_guard.sql",
 ]);
 
 const walletAuthAlias = ledger.migrations.find((entry) => entry.file === "20260914150000_wallet_auth_sessions.sql");
