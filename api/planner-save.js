@@ -102,7 +102,11 @@ module.exports = async function handler(request, response) {
 
       if (await savedPlanCount(wallet) >= MAX_SAVED_PLANS_PER_WALLET) {
         trace.warn("capacity_limit", { status: 429 });
-        response.status(429).json({ error: `You can save a maximum of ${MAX_SAVED_PLANS_PER_WALLET} plans.` });
+        response.status(429).json({
+          error: `You can save a maximum of ${MAX_SAVED_PLANS_PER_WALLET} plans.`,
+          code: "capacity_exceeded",
+          retryable: false,
+        });
         return;
       }
 
