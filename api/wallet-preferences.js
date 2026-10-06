@@ -1,3 +1,4 @@
+const { installApiErrorEnvelope } = require("./_error-envelope");
 const { signedWalletFromRequest, normalizeWalletAddress } = require("./_wallet-auth");
 const { requireSameOriginMutation } = require("./_request-origin");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
@@ -320,6 +321,7 @@ async function writePreferences(wallet, preferences) {
 }
 
 module.exports = async function handler(request, response) {
+  installApiErrorEnvelope(response);
   response.setHeader("Cache-Control", "no-store");
   if ((request.method === "PUT") && !requireSameOriginMutation(request, response)) return;
   const wallet = await signedWalletFromRequest(request);
