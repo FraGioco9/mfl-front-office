@@ -1,3 +1,4 @@
+const { installApiErrorEnvelope } = require("./_error-envelope");
 const crypto = require("node:crypto");
 const { readJsonBody, sendRequestBodyError } = require("./_request-body");
 const { signedWalletFromRequest } = require("./_wallet-auth");
@@ -79,6 +80,7 @@ async function verifiedWallet(request) {
 }
 
 module.exports = async function handler(request, response) {
+  installApiErrorEnvelope(response);
   response.setHeader("Cache-Control", "no-store");
 
   if (request.method !== "POST") {
