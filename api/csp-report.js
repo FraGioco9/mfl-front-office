@@ -1,3 +1,4 @@
+const { installApiErrorEnvelope } = require("./_error-envelope");
 const { readJsonBody, sendRequestBodyError } = require("./_request-body");
 
 const MAX_BODY_BYTES = 16 * 1024;
@@ -74,6 +75,7 @@ function logReport(report, now = Date.now(), logger = console.info) {
 }
 
 module.exports = async function handler(request, response) {
+  installApiErrorEnvelope(response);
   response.setHeader("Cache-Control", "no-store");
   if (request.method !== "POST") {
     response.setHeader("Allow", "POST");
