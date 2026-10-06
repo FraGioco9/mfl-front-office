@@ -1460,53 +1460,50 @@ async function performWalletPreferencesSave(options = {}) {
       body: JSON.stringify(body),
     });
 
-    if (!response.ok) {
-      if (notifyWatchlistFailure && saveSequence === state.walletPreferencesSaveSequence) {
-        showWatchlistCloudSyncFailure();
+    if (response.ok) {
+      const data = await response.json();
+      if (saveSequence !== state.walletPreferencesSaveSequence) {
+        return;
       }
-      return;
-    }
-
-    const data = await response.json();
-    if (saveSequence !== state.walletPreferencesSaveSequence) {
-      return;
-    }
-    if (includesDomain("watchlists")) {
-      clearSyncedWatchlistChanges(addedIds, removedIds);
-    }
-
-    let watchlistChanged = false;
-    if (includesDomain("watchlists") && Array.isArray(data.watchlists) && data.watchlists.length) {
-      applyWatchlists(data.watchlists, state.currentWatchlistId, []);
-      saveWalletWatchlistLocally();
-      watchlistChanged = true;
-    }
-
-    if (shouldSaveSettings) {
-      const savedSettings = data.settings || settingsPayload;
-      applySettingsPayload(savedSettings);
-      state.settingsReceiveEmailsFor = reconcileSettingsReceiveEmailsForWithCurrentWatchlists(savedSettings.receiveEmailsFor);
-      state.settingsSaveInFlight = false;
-      clearPendingSettingsLocally();
-    }
-
-    if (watchlistChanged) {
-      if (state.currentPage === "watchlist") {
-        applyFilters();
-      } else if (tablePageKey()) {
-        renderTable();
+      if (includesDomain("watchlists")) {
+        clearSyncedWatchlistChanges(addedIds, removedIds);
       }
-      if (state.currentPage === "player") {
-        renderPlayerPage(playerIdFromUrl());
-      }
-    }
 
-    if (options.refreshAfterSave) {
-      state.walletPreferencesLoaded = false;
-      await loadWalletPreferences({ force: true });
-    }
-    if (notifyWatchlistSuccess) {
-      showToast("Watchlist synced.");
+      let watchlistChanged = false;
+      if (includesDomain("watchlists") && Array.isArray(data.watchlists) && data.watchlists.length) {
+        applyWatchlists(data.watchlists, state.currentWatchlistId, []);
+        saveWalletWatchlistLocally();
+        watchlistChanged = true;
+      }
+
+      if (shouldSaveSettings) {
+        const savedSettings = data.settings || settingsPayload;
+        applySettingsPayload(savedSettings);
+        state.settingsReceiveEmailsFor = reconcileSettingsReceiveEmailsForWithCurrentWatchlists(savedSettings.receiveEmailsFor);
+        state.settingsSaveInFlight = false;
+        clearPendingSettingsLocally();
+      }
+
+      if (watchlistChanged) {
+        if (state.currentPage === "watchlist") {
+          applyFilters();
+        } else if (tablePageKey()) {
+          renderTable();
+        }
+        if (state.currentPage === "player") {
+          renderPlayerPage(playerIdFromUrl());
+        }
+      }
+
+      if (options.refreshAfterSave) {
+        state.walletPreferencesLoaded = false;
+        await loadWalletPreferences({ force: true });
+      }
+      if (notifyWatchlistSuccess) {
+        showToast("Watchlist synced.");
+      }
+    } else if (notifyWatchlistFailure && saveSequence === state.walletPreferencesSaveSequence) {
+      showWatchlistCloudSyncFailure();
     }
   } catch {
     if (shouldSaveSettings && saveSequence === state.walletPreferencesSaveSequence) {
