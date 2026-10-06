@@ -1,4 +1,4 @@
-import { resolveDueOccurrence } from "./schedule.mjs";
+import { existingRunForOccurrence, resolveDueOccurrence } from "./schedule.mjs";
 
 const DEFAULT_REPOSITORY = "FraGioco9/mfl-front-office";
 const DEFAULT_WORKFLOW = "full-database-refresh.yml";
@@ -187,13 +187,10 @@ Deno.serve(async (request: Request) => {
       });
     }
 
-    const existingRun = runs.find((run) => {
-      const sameOccurrence = String(run.display_title || "").includes(
-        `[${occurrence.occurrenceKey}]`,
-      );
-      if (!sameOccurrence) return false;
-      return run.status !== "completed" || run.conclusion === "success";
-    });
+    const existingRun = existingRunForOccurrence(
+      runs,
+      occurrence.occurrenceKey,
+    );
 
     if (existingRun) {
       return json(200, {

@@ -42,6 +42,17 @@ function pad(value) {
   return String(value).padStart(2, "0");
 }
 
+export function existingRunForOccurrence(runs, occurrenceKey) {
+  if (!Array.isArray(runs) || !occurrenceKey) return null;
+  return runs.find((run) => {
+    const sameOccurrence = String(run?.display_title || "").includes(
+      `[${occurrenceKey}]`,
+    );
+    if (!sameOccurrence) return false;
+    return run?.status !== "completed" || run?.conclusion === "success";
+  }) || null;
+}
+
 export function resolveDueOccurrence(now, target, options = {}) {
   if (!(now instanceof Date) || Number.isNaN(now.getTime())) {
     throw new TypeError("now must be a valid Date");
