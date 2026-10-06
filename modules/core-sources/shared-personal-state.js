@@ -1420,7 +1420,7 @@ function showWatchlistCloudSyncFailure() {
 
 async function performWalletPreferencesSave(options = {}) {
   if (!state.linkedWalletAddress || !hasWalletProof()) {
-    return false;
+    return;
   }
 
   saveWalletWatchlistLocally();
@@ -1464,12 +1464,12 @@ async function performWalletPreferencesSave(options = {}) {
       if (notifyWatchlistFailure && saveSequence === state.walletPreferencesSaveSequence) {
         showWatchlistCloudSyncFailure();
       }
-      return false;
+      return;
     }
 
     const data = await response.json();
     if (saveSequence !== state.walletPreferencesSaveSequence) {
-      return false;
+      return;
     }
     if (includesDomain("watchlists")) {
       clearSyncedWatchlistChanges(addedIds, removedIds);
@@ -1508,7 +1508,6 @@ async function performWalletPreferencesSave(options = {}) {
     if (notifyWatchlistSuccess) {
       showToast("Watchlist synced.");
     }
-    return true;
   } catch {
     if (shouldSaveSettings && saveSequence === state.walletPreferencesSaveSequence) {
       state.settingsSaveInFlight = false;
@@ -1517,7 +1516,6 @@ async function performWalletPreferencesSave(options = {}) {
       showWatchlistCloudSyncFailure();
     }
     // Local wallet watchlist and notes remain saved if cloud sync is unavailable.
-    return false;
   }
 }
 
