@@ -17,15 +17,17 @@ assert.throws(() => verifyPrebuiltNextRouting({
   functionDirs: ["api/data.func"],
 }), /framework=nextjs/);
 
-assert.throws(() => verifyPrebuiltNextRouting({
+const explicitPreset = verifyPrebuiltNextRouting({
   vercelConfig: { framework: "nextjs" },
   builds: { detectedFramework: { status: "skipped" } },
   functionDirs: ["api/data.func", "__next.func"],
-}), /skipped framework detection/);
+});
+assert.equal(explicitPreset.detectedStatus, "skipped");
+assert.deepEqual([...explicitPreset.frontendFunctions], ["__next.func"]);
 
 assert.throws(() => verifyPrebuiltNextRouting({
   vercelConfig: { framework: "nextjs" },
-  builds: { detectedFramework: { status: "detected" } },
+  builds: { detectedFramework: { status: "skipped" } },
   functionDirs: ["api/data.func"],
 }), /no non-API Vercel Function/);
 
