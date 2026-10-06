@@ -101,7 +101,11 @@ class ReliableDatabaseSchedulerTests(unittest.TestCase):
         self.assertIn("/actions/workflows/${workflow}/runs", self.function)
         self.assertIn('runsUrl.searchParams.set("event", "workflow_dispatch")', self.function)
         self.assertIn("occurrence_already_present", self.function)
-        self.assertIn('run.status !== "completed" || run.conclusion === "success"', self.function)
+        self.assertIn("existingRunForOccurrence", self.function)
+        self.assertIn(
+            'run?.status !== "completed" || run?.conclusion === "success"',
+            self.schedule,
+        )
         self.assertIn("github_recovery_check_failed", self.function)
 
     def test_supabase_cron_checks_dst_candidates_and_ten_minute_recovery(self) -> None:
