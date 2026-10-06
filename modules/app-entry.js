@@ -89,7 +89,7 @@ function retryDelayForResponse(response, method) {
 function shouldRetryFetchError(error, method, signal) {
   if (!idempotentRetryMethod(method) || signal.aborted) return false;
   if (typeof navigator !== "undefined" && navigator.onLine === false) return false;
-  const name = String(error?.name || "");
+  const name = error instanceof Error ? error.name : "";
   if (name === "AbortError" || name === "TimeoutError") return false;
   return true;
 }
@@ -101,7 +101,7 @@ function waitForRetry(delayMs, signal) {
   return new Promise((resolve, reject) => {
     const timer = window.setTimeout(() => {
       signal.removeEventListener("abort", onAbort);
-      resolve();
+      resolve(undefined);
     }, delayMs);
     const onAbort = () => {
       window.clearTimeout(timer);
@@ -132,6 +132,7 @@ function createDataClient({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
     const callerSignal = requestInit.signal || (input instanceof Request ? input.signal : null);
     const timeout = composeRequestSignal(callerSignal, Math.max(1, Number(timeoutMs) || DEFAULT_TIMEOUT_MS));
     requestInit.signal = timeout.signal;
+    const requestSignal = timeout.signal;
 
     const requestKey = String(options.key || canonicalRequestKey(input, requestInit, headers));
     const requestUrl = input instanceof Request ? input.url : String(input);
@@ -206,7 +207,7 @@ function createDataClient({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
                   reason: "http",
                 }),
               }));
-              await waitForRetry(retryDelay, requestInit.signal);
+              await waitForRetry(retryDelay, requestSignal);
               continue;
             }
 
@@ -260,7 +261,7 @@ function createDataClient({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
                 reason: "network",
               }),
             }));
-            await waitForRetry(DEFAULT_RETRY_DELAY_MS, requestInit.signal);
+            await waitForRetry(DEFAULT_RETRY_DELAY_MS, requestSignal);
           }
         }
       } finally {
