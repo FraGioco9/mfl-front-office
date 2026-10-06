@@ -189,13 +189,19 @@ for (const result of [true, false, new Error("Verifier unavailable")]) {
   const { proof } = harness(result);
   let writes = 0;
   const supabase = { supabaseConfig: () => ({ configured: true }) };
+  const errorEnvelope = {
+    installApiErrorEnvelope: (response) => response,
+    normalizeApiErrorPayload: (_response, _status, payload) => payload,
+  };
   const auth = load(authSource, {
     "node:perf_hooks": { performance }, "./_wallet-auth": proof, "./_supabase": supabase,
+    "./_error-envelope": errorEnvelope,
   });
   assert.equal(await auth.signedWalletFromRequest(request()), result === true ? wallet : "");
   const handler = load(optInSource, {
     "./_request-origin": { requireSameOriginMutation: () => true },
     "./_wallet-auth": proof, "./_supabase": supabase,
+    "./_error-envelope": errorEnvelope,
     "./_wallet-presence": { async touchWalletLastSeen(address) {
       assert.equal(address, wallet);
       writes += 1;
