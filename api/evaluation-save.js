@@ -74,7 +74,11 @@ module.exports = async function handler(request, response) {
       }
 
       if (await savedEvaluationCount(wallet) >= MAX_SAVED_EVALUATIONS_PER_WALLET) {
-        response.status(429).json({ error: `You can save a maximum of ${MAX_SAVED_EVALUATIONS_PER_WALLET} evaluations.` });
+        response.status(429).json({
+          error: `You can save a maximum of ${MAX_SAVED_EVALUATIONS_PER_WALLET} evaluations.`,
+          code: "capacity_exceeded",
+          retryable: false,
+        });
         return;
       }
 
