@@ -34,3 +34,5 @@ node --input-type=module -e 'const native = await import("typescript"); const le
 ```
 
 Generated runtime files, table-width runtime, migrations and active dependencies remain tracked. Next `public/` and `.next/` outputs are build products and are not tracked. These changes do not run a deployment.
+
+- `docs/account-sharing-help.md` owns the public account/opt-in/save/share FAQ linked from the footer. Its behavioral claims must stay synchronized with wallet/session, Evaluation, Planner and Watchlist server contracts through `validate-user-help-guide.mjs`.

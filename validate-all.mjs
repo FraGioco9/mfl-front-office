@@ -30,6 +30,7 @@ const validators = [
   "validate-site-date-picker.mjs",
   "validate-local-development.mjs",
   "validate-public-projection.mjs",
+  "validate-user-help-guide.mjs",
   "validate-pitch-background.mjs",
   "validate-planner-depth.mjs",
   "validate-ux05-planner-plan-state.mjs",
