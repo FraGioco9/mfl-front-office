@@ -20,7 +20,7 @@ const artifacts = readCanonicalCoreArtifacts(coreSource);
 const eagerCore = String(artifacts.core || "");
 
 const parserStart = eagerCore.indexOf("function pageTargetFromPath(path) {");
-const parserEnd = eagerCore.indexOf("\n}\n\nfunction pagePath", parserStart);
+const parserEnd = eagerCore.indexOf("function pagePath(pageName, options = {}) {", parserStart);
 invariant(parserStart >= 0 && parserEnd > parserStart, "Missing shared route parser.");
 const parserSource = eagerCore.slice(parserStart, parserEnd + 2);
 
