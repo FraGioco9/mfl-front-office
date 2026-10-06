@@ -209,7 +209,9 @@ function tableRenderTableOwner() {
         ageContent.className = "tableControlCellContent";
         const ageValue = document.createElement("span");
         ageValue.className = "playerAgeValue";
-        ageValue.textContent = formatCellValue(row, column);
+        if (!applyUnknownDataValue(ageValue, getValue(row, column))) {
+          ageValue.textContent = formatCellValue(row, column);
+        }
         ageContent.appendChild(ageValue);
         const retirement = retirementMarker(row);
         appendNameMarker(
@@ -222,10 +224,15 @@ function tableRenderTableOwner() {
         const joinedAgencyValue = formatCellValue(row, column);
         const fullValue = document.createElement("span");
         fullValue.className = "joinedAgencyFullValue";
-        fullValue.textContent = joinedAgencyValue;
+        const joinedMissing = applyUnknownDataValue(fullValue, getValue(row, column));
+        if (!joinedMissing) fullValue.textContent = joinedAgencyValue;
         const compactValue = document.createElement("span");
         compactValue.className = "joinedAgencyCompactValue";
-        compactValue.textContent = compactMobileJoinedAgency(joinedAgencyValue);
+        if (joinedMissing) {
+          applyUnknownDataValue(compactValue, getValue(row, column));
+        } else {
+          compactValue.textContent = compactMobileJoinedAgency(joinedAgencyValue);
+        }
         cell.replaceChildren(fullValue, compactValue);
       } else if (column === "active_contract_club_division") {
         const division = rowHasActiveContract(row) ? contractDivisionInfo(getValue(row, column)) : null;
@@ -235,6 +242,8 @@ function tableRenderTableOwner() {
           divisionLabel.style.color = division.color;
           divisionLabel.textContent = division.name;
           cell.appendChild(divisionLabel);
+        } else if (rowHasActiveContract(row)) {
+          applyUnknownDataValue(cell, getValue(row, column));
         } else {
           cell.textContent = "";
         }
@@ -279,7 +288,9 @@ function tableRenderTableOwner() {
       } else if (statColumnSet.has(column)) {
         appendStatValue(cell, row, column);
       } else {
-        cell.textContent = formatCellValue(row, column);
+        if (!applyUnknownDataValue(cell, getValue(row, column))) {
+          cell.textContent = formatCellValue(row, column);
+        }
       }
 
       tableRow.appendChild(tableCenterCellContents(cell));

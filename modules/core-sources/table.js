@@ -352,8 +352,7 @@ function appendNextOverallTableValue(cell, row, statColumn) {
     ? (precomputedOverall === null || precomputedOverall === undefined ? primaryPreciseOverall(row) : precomputedOverall)
     : getValue(row, statColumn);
 
-  if (value === null || value === undefined || value === "") {
-    cell.textContent = "NULL";
+  if (applyUnknownDataValue(cell, value)) {
     return;
   }
 
