@@ -6,6 +6,8 @@ function sendPlannerPlanCapacityExceeded(response, error, limit = 50) {
   if (!plannerPlanCapacityExceeded(error)) return false;
   response.status(429).json({
     error: `You can save a maximum of ${limit} plans.`,
+    code: "capacity_exceeded",
+    retryable: false,
   });
   return true;
 }
