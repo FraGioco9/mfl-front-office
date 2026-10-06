@@ -67,13 +67,18 @@ interface MflIncrementalPayload extends Record<string, unknown> {
   generatedAt?: string;
   columns?: string[];
   rows?: unknown[];
-  sourceRows?: unknown[];
+  sourceRows?: unknown[] | number;
   page?: number;
   pageSize?: number;
   totalPlayers?: number;
   totalRows?: number;
   club?: unknown;
   error?: unknown;
+}
+
+interface MflTableSortStateInput {
+  sortKey?: unknown;
+  sortDirection?: unknown;
 }
 
 interface MflTableSortState {
