@@ -1,3 +1,15 @@
+function plannerPlanCapacityExceeded(error) {
+  return /planner_plan_limit_exceeded/i.test(String(error?.message || error || ""));
+}
+
+function sendPlannerPlanCapacityExceeded(response, error, limit = 50) {
+  if (!plannerPlanCapacityExceeded(error)) return false;
+  response.status(429).json({
+    error: `You can save a maximum of ${limit} plans.`,
+  });
+  return true;
+}
+
 function plannerPersistenceUnavailable(error, relation) {
   const message = String(error?.message || error || "");
   const table = String(relation || "").trim();
@@ -14,6 +26,8 @@ function sendPlannerPersistenceUnavailable(response, error, relation) {
 }
 
 module.exports = {
+  plannerPlanCapacityExceeded,
   plannerPersistenceUnavailable,
+  sendPlannerPlanCapacityExceeded,
   sendPlannerPersistenceUnavailable,
 };
