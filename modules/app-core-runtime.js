@@ -4641,6 +4641,26 @@ async function loadWalletPreferences(options = {}) {
   }
 }
 
+function showWatchlistCloudSyncFailure() {
+  const content = document.createElement("span");
+  const retryButton = document.createElement("button");
+  content.className = "toastWatchlistSyncFailure";
+  content.append(document.createTextNode("Watchlist changes are saved on this device but not synced. "));
+  retryButton.type = "button";
+  retryButton.className = "toastLink";
+  retryButton.textContent = "Retry";
+  retryButton.addEventListener("click", () => {
+    hideToast();
+    void saveWalletPreferencesNow({
+      domains: ["watchlists"],
+      notifyWatchlistSyncFailure: true,
+      notifyWatchlistSyncSuccess: true,
+    });
+  });
+  content.appendChild(retryButton);
+  showToast(content, { urgent: true, sticky: true });
+}
+
 async function performWalletPreferencesSave(options = {}) {
   if (!state.linkedWalletAddress || !hasWalletProof()) {
     return;
@@ -4650,14 +4670,16 @@ async function performWalletPreferencesSave(options = {}) {
   saveWalletNotesLocally();
 
   const saveSequence = ++state.walletPreferencesSaveSequence;
+  const requestedDomains = Array.isArray(options.domains) ? new Set(options.domains) : null;
+  const includesDomain = (domain) => !requestedDomains || requestedDomains.has(domain);
+  const notifyWatchlistFailure = options.notifyWatchlistSyncFailure === true && includesDomain("watchlists");
+  const notifyWatchlistSuccess = options.notifyWatchlistSyncSuccess === true && includesDomain("watchlists");
   let shouldSaveSettings = false;
 
   try {
     const addedIds = Array.from(state.watchlistPlayerIdsAdded);
     const removedIds = Array.from(state.watchlistPlayerIdsRemoved);
     const pendingSettings = loadPendingSettingsLocally();
-    const requestedDomains = Array.isArray(options.domains) ? new Set(options.domains) : null;
-    const includesDomain = (domain) => !requestedDomains || requestedDomains.has(domain);
     shouldSaveSettings = includesDomain("settings") && (options.includeSettings === true || state.settingsSaveInFlight || Boolean(pendingSettings));
     const settingsPayload = currentSettingsPayloadForSave();
     state.settingsReceiveEmailsFor = [...settingsPayload.receiveEmailsFor];
@@ -4720,10 +4742,18 @@ async function performWalletPreferencesSave(options = {}) {
         state.walletPreferencesLoaded = false;
         await loadWalletPreferences({ force: true });
       }
+      if (notifyWatchlistSuccess) {
+        showToast("Watchlist synced.");
+      }
+    } else if (notifyWatchlistFailure && saveSequence === state.walletPreferencesSaveSequence) {
+      showWatchlistCloudSyncFailure();
     }
   } catch {
     if (shouldSaveSettings && saveSequence === state.walletPreferencesSaveSequence) {
       state.settingsSaveInFlight = false;
+    }
+    if (notifyWatchlistFailure && saveSequence === state.walletPreferencesSaveSequence) {
+      showWatchlistCloudSyncFailure();
     }
     // Local wallet watchlist and notes remain saved if cloud sync is unavailable.
   }
@@ -4752,7 +4782,7 @@ function saveWatchlistStateAfterAction() {
   if (state.linkedWalletAddress && hasWalletProof()) {
     window.clearTimeout(state.walletPreferencesSaveTimer);
     state.walletPreferencesSaveTimer = null;
-    void saveWalletPreferencesNow({ domains: ["watchlists", "tableState", "settings"] });
+    void saveWalletPreferencesNow({ domains: ["watchlists", "tableState", "settings"], notifyWatchlistSyncFailure: true });
   }
 }
 
