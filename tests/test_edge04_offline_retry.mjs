@@ -52,6 +52,7 @@ class Element {
 
 function nodeText(node) {
   if (!node) return "";
+  if (typeof node === "string") return node;
   const own = String(node.textContent || "");
   const children = Array.isArray(node.children) ? node.children.map(nodeText).join("") : "";
   return own + children;
