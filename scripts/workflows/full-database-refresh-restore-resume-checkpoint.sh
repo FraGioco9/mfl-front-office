@@ -80,6 +80,7 @@ case "$stage" in
     final_ready=true
     mkdir -p checkpoints/final
     cp "$DATABASE_PATH" checkpoints/final/mfl_database.db
+    cp "$MANIFEST_PATH" checkpoints/final/checkpoint-manifest.json
     ;;
 esac
 
