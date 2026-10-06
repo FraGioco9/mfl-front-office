@@ -276,6 +276,32 @@ function isBlankValue(value) {
   return value === null || value === undefined || value === "" || String(value).toUpperCase() === "NULL";
 }
 
+const unknownDataValueLabel = "Unknown";
+const unknownDataValueTooltip = "Not provided by MFL.";
+
+function applyUnknownDataValue(element, rawValue) {
+  if (!element || typeof element.setAttribute !== "function" || !isBlankValue(rawValue)) {
+    return false;
+  }
+
+  element.textContent = unknownDataValueLabel;
+  if (element.classList && typeof element.classList.add === "function") {
+    element.classList.add("unknownDataValue");
+  }
+  if (element.dataset) {
+    element.dataset.tooltip = unknownDataValueTooltip;
+  }
+  element.setAttribute("aria-label", `${unknownDataValueLabel}. ${unknownDataValueTooltip}`);
+  return true;
+}
+
+function unknownDataValueHtml(rawValue) {
+  if (!isBlankValue(rawValue)) {
+    return "";
+  }
+  return `<span class="unknownDataValue" data-tooltip="${unknownDataValueTooltip}" aria-label="${unknownDataValueLabel}. ${unknownDataValueTooltip}">${unknownDataValueLabel}</span>`;
+}
+
 function isDevelopmentCenterClubName(value) {
   return String(value || "").trim().toLowerCase() === "development center";
 }
