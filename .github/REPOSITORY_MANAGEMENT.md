@@ -20,7 +20,7 @@ Do not require signed commits or deployments unless the development workflow cha
 
 Use Issues for work that may outlive one edit or benefits from a durable problem statement. The repository provides forms for bugs, features, and maintenance/refactors. Small fixes that are immediately implemented can still start directly as a pull request.
 
-When an Issue is implemented by a pull request, link it with `Closes #<issue>` so GitHub closes the Issue automatically after merge.
+When one pull request fully implements an Issue, link it with `Closes #<issue>` so GitHub closes the Issue automatically after merge. For a multi-PR roadmap, intermediate PRs must use `Refs #<issue>`; reserve `Closes #<issue>` for the final PR that actually completes the Issue.
 
 ## Milestones
 
@@ -41,3 +41,8 @@ Dependabot Alerts and Dependabot Security Updates should also be enabled in **Se
 ## Workflow inventory
 
 The human-readable workflow index is [docs/github-actions-workflows.md](../docs/github-actions-workflows.md). The YAML under `.github/workflows/` remains authoritative for exact triggers, permissions and path filters. When workflows are added, removed, renamed or materially retargeted, update that inventory and the README summary in the same pull request.
+
+
+## Pull-request stack workflow
+
+See [CONTRIBUTING.md](../CONTRIBUTING.md) and [docs/pr-stack-runbook.md](../docs/pr-stack-runbook.md) for the exact-head CI gate, generated-artifact ownership, stack re-alignment, squash-merge approval, rollback, and release/changelog process.
