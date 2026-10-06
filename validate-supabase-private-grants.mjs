@@ -14,8 +14,10 @@ const tables = [
 ];
 
 assert.equal(tables.length, 12);
-assert.equal(canonical.endsWith(migration), true,
+assert.equal(canonical.includes(migration), true,
   "Canonical SQL schema must retain the exact versioned grant-hardening migration.");
+assert.equal(canonical.split(migration).length - 1, 1,
+  "Canonical SQL schema must contain the SEC-05 migration exactly once.");
 for (const name of tables) {
   const count = migration.match(new RegExp(`public\\.${name}(?=,|\\s|$)`, "g"))?.length || 0;
   assert.equal(count, 2, `Table ${name} must be included in revoke and service-role grant sections.`);

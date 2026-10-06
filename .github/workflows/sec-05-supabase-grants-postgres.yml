@@ -148,6 +148,7 @@ jobs:
           from pathlib import Path
           canonical = Path('supabase-schema.sql').read_text(encoding='utf-8')
           migration = Path('supabase/migrations/20261001172000_restrict_application_grants.sql').read_text(encoding='utf-8')
-          assert canonical.endswith(migration), 'Canonical schema must match versioned SEC-05 migration.'
-          print('SEC-05 canonical schema and migration parity passed.')
+          assert migration in canonical, 'Canonical schema must retain versioned SEC-05 migration.'
+          assert canonical.count(migration) == 1, 'Canonical schema must contain SEC-05 migration exactly once.'
+          print('SEC-05 canonical schema and migration parity passed; later migrations may follow.')
           PY

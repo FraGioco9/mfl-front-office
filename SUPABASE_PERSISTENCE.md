@@ -243,6 +243,62 @@ The endpoint accepts POST only, validates lengths and the allowed Area set, caps
 
 The GitHub issue URL remains in the footer as a no-JavaScript/modifier-click fallback. Normal in-site submissions are stored in Supabase first so reports can be triaged before any selected report is promoted to a GitHub issue.
 
+## DB-02 private-data retention
+
+Retention is intentionally limited to data whose application lifecycle is already
+expired or ephemeral. It must never be used as a generic age-based deletion
+mechanism for user-owned state.
+
+| Dataset | Retention rule | Preserved data |
+| --- | --- | --- |
+| `evaluation_shares` | delete once `expires_at <= clock_timestamp()` | every active share |
+| `planner_shares` | delete once `expires_at <= clock_timestamp()` | every active share; normal owner Revoke remains immediate |
+| `wallet_auth_consumed_challenges` | delete once the challenge expiry is reached | unexpired replay-protection rows |
+| `wallet_auth_sessions` | delete expired sessions; retain revoked sessions for one day before deletion | every unexpired/unrevoked session |
+| `wallet_auth_rate_limits` | delete buckets one hour after `window_ends_at` | current/recent throttling state |
+| `private_data_retention_audit` | retain aggregate hourly run counters for 90 days | no wallet, player, plan, report, token, nonce, IP, user-agent or payload data |
+
+There is deliberately **no automatic TTL** for `evaluation_saves`,
+`planner_plans`, `wallet_preferences`, `wallet_opt_ins`,
+`wallet_permissions`, or `bug_reports`. Saved Evaluations and Planner plans
+are user-owned durable state. Preferences/opt-in/permissions are account state.
+Bug reports currently lack a reliable resolved/closed timestamp, so deletion by
+`created_at` alone could remove unresolved reports.
+
+The database owner is
+`supabase/migrations/20261006183000_private_data_retention.sql`. It defines the
+`SECURITY INVOKER`, service-role-only `public.run_private_data_retention()`
+function and a private aggregate audit table. Repeating the function is safe:
+eligible rows are deleted once, active rows are preserved, and retries inside the
+same UTC hour accumulate only deletion counters into one audit row.
+
+The scheduler definition is `supabase/private-data-retention-scheduler.sql`.
+It replaces only the named `mfl-private-data-retention-hourly` job and runs at
+minute 41 of every hour. Expiry comparisons use `timestamptz` and
+`clock_timestamp()`, so retention does not depend on Europe/Rome DST changes.
+The scheduler SQL is **not** automatically applied by repository CI.
+
+### Deployment / backup gate
+
+Before applying DB-02 to a live project:
+
+1. capture aggregate row counts and the oldest/newest expiry timestamps for every
+   cleanup target;
+2. take/verify the normal database backup or PITR coverage required by the
+   release procedure;
+3. apply the migration without running manual DELETE statements;
+4. run the cleanup function once and compare its returned counts with the
+   preflight eligibility counts;
+5. verify active Evaluation/Planner share reads, Planner Revoke, wallet session
+   resolution, and rate limiting;
+6. only then install/replace the hourly scheduler;
+7. verify `private_data_retention_audit` contains counts only and
+   `cron.job_run_details` reports successful executions.
+
+Rollback disables the named cron job first. Restoring deleted rows requires the
+pre-application database backup/PITR; DB-02 intentionally does not duplicate
+private payloads into an audit/archive table.
+
 ### `mfl_season_ratios`
 
 Owner/reader: `api/mfl-season-ratios-v2.js`. Schema/seed owner: `supabase/migrations/20260730160100_create_mfl_season_ratios.sql`.
