@@ -30,7 +30,7 @@ returns table (
 language plpgsql
 security invoker
 set search_path = ''
-as $$
+as $db02$
 declare
   v_now timestamptz := clock_timestamp();
   v_run_bucket timestamptz := date_trunc('hour', v_now);
@@ -108,7 +108,7 @@ begin
     v_wallet_auth_consumed_challenges_deleted,
     v_wallet_auth_rate_limits_deleted;
 end;
-$$;
+$db02$;
 
 revoke all on function public.run_private_data_retention()
   from public, anon, authenticated;
