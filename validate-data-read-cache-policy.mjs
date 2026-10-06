@@ -120,10 +120,14 @@ invariant(
 invariant(
   dataAuth.includes("function serializeJson(data, timings = {}) {")
     && dataAuth.includes("timings.serialization = Math.max(0, performance.now() - serializationStartedAt);")
-    && dataAuth.includes("const body = serializeJson(data, timings);")
-    && dataAuth.indexOf("const body = serializeJson(data, timings);") < dataAuth.indexOf("applyJsonHeaders(response, startedAt, timings, options);")
+    && dataAuth.includes("const normalizedData = normalizeApiErrorPayload(response, status, data);")
+    && dataAuth.includes("const isErrorPayload = normalizedData !== data;")
+    && dataAuth.includes("if (isErrorPayload) timings.api_error = 0;")
+    && dataAuth.includes("const body = serializeJson(normalizedData, timings);")
+    && dataAuth.indexOf("const body = serializeJson(normalizedData, timings);") < dataAuth.indexOf("applyJsonHeaders(response, startedAt, timings, isErrorPayload")
+    && dataAuth.includes('? { ...options, cacheControl: "no-store" }')
     && dataAuth.includes("response.status(status).end(body);"),
-  "JSON serialization must be measured once before Server-Timing headers are finalized, then the pre-serialized body must be written directly.",
+  "JSON serialization must be measured once before Server-Timing headers are finalized; normalized errors must retain api_error timing and no-store before the pre-serialized body is written directly.",
 );
 invariant(
   !dataAuth.includes("response.status(status).json(data);"),

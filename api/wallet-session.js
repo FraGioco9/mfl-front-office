@@ -1,3 +1,4 @@
+const { installApiErrorEnvelope } = require("./_error-envelope");
 const { createWalletChallengeService } = require("./_wallet-challenge");
 const { verifyWalletProof } = require("./_wallet-proof");
 const { createWalletSessionStore, WALLET_SESSION_TTL_MS } = require("./_wallet-session");
@@ -47,6 +48,7 @@ function createWalletSessionHandler({
   rateLimiter = createWalletRateLimiter({ now }),
 } = {}) {
   return async function handler(request, response) {
+    installApiErrorEnvelope(response);
     response.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate, max-age=0");
     response.setHeader("Pragma", "no-cache");
     response.setHeader("Vary", "Cookie");

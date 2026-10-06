@@ -116,7 +116,7 @@ function rowForColumns(columns) {
 }
 
 let browserRegressionResult = null;
-let ux02TypedSearchFailedOnce = false;
+let ux02TypedSearchFailureCount = 0;
 let ux03DeleteRequests = 0;
 let ux03PlanDeleted = false;
 
@@ -3038,7 +3038,7 @@ const browserTestSource = String.raw`(() => {
       assert(!text("#playerSearchResults").includes("No players, clubs, or agents found"),
         "No results appeared before the current query settled.");
       await waitFor(() => text("#playerSearchResults").includes("Could not search."),
-        "A failed typed request must have distinct error copy.", 8500);
+        "A typed request that still fails after the bounded automatic retry must have distinct error copy.", 8500);
       assert(!text("#playerSearchResults").includes("No players, clubs, or agents found"),
         "A failed typed request must not look like zero matches.");
       buttonFor("#playerSearchResults .compactButton").click();
@@ -3559,8 +3559,8 @@ async function createRegressionServer() {
       }
       if (ux02Scenario === "ux02-search" && ux02Mode === "search" && url.searchParams.get("type") === "all") {
         const query = String(url.searchParams.get("q") || "").toLowerCase();
-        if (query === "recover" && !ux02TypedSearchFailedOnce) {
-          ux02TypedSearchFailedOnce = true;
+        if (query === "recover" && ux02TypedSearchFailureCount < 2) {
+          ux02TypedSearchFailureCount += 1;
           writeJson(response, { error: "Fixture typed search failed" }, 503);
           return;
         }

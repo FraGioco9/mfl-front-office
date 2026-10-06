@@ -1,3 +1,4 @@
+const { normalizeApiErrorPayload } = require("./_error-envelope");
 const { performance } = require("node:perf_hooks");
 const {
   normalizeWalletAddress,
@@ -102,8 +103,13 @@ function serializeJson(data, timings = {}) {
 }
 
 function sendJson(response, status, data, startedAt, timings = {}, options = {}) {
-  const body = serializeJson(data, timings);
-  applyJsonHeaders(response, startedAt, timings, options);
+  const normalizedData = normalizeApiErrorPayload(response, status, data);
+  const isErrorPayload = normalizedData !== data;
+  if (isErrorPayload) timings.api_error = 0;
+  const body = serializeJson(normalizedData, timings);
+  applyJsonHeaders(response, startedAt, timings, isErrorPayload
+    ? { ...options, cacheControl: "no-store" }
+    : options);
   response.status(status).end(body);
 }
 

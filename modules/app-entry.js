@@ -2,6 +2,10 @@
 
 const nativeFetch = window.fetch.bind(window);
 const DEFAULT_TIMEOUT_MS = 60_000;
+const MAX_IDEMPOTENT_RETRIES = 1;
+const DEFAULT_RETRY_DELAY_MS = 250;
+const MAX_AUTOMATIC_RETRY_DELAY_MS = 5_000;
+const RETRYABLE_HTTP_STATUS = new Set([408, 429, 502, 503, 504]);
 
 /** @param {string} phase @param {Record<string, unknown>} [detail] */
 function recordClientTiming(phase, detail = {}) {
@@ -56,6 +60,58 @@ function composeRequestSignal(callerSignal, timeoutMs) {
   });
 }
 
+/** @param {string} method */
+function idempotentRetryMethod(method) {
+  return method === "GET" || method === "HEAD";
+}
+
+/** @param {Response} response */
+function retryAfterDelayMs(response) {
+  const raw = String(response.headers.get("Retry-After") || "").trim();
+  if (!raw) return DEFAULT_RETRY_DELAY_MS;
+  const numeric = Number(raw);
+  let delay = Number.isFinite(numeric) ? Math.max(0, numeric * 1000) : NaN;
+  if (!Number.isFinite(delay)) {
+    const retryAt = Date.parse(raw);
+    if (Number.isFinite(retryAt)) delay = Math.max(0, retryAt - Date.now());
+  }
+  if (!Number.isFinite(delay) || delay > MAX_AUTOMATIC_RETRY_DELAY_MS) return null;
+  return Math.ceil(delay);
+}
+
+/** @param {Response} response @param {string} method */
+function retryDelayForResponse(response, method) {
+  if (!idempotentRetryMethod(method) || !RETRYABLE_HTTP_STATUS.has(response.status)) return null;
+  return retryAfterDelayMs(response);
+}
+
+/** @param {unknown} error @param {string} method @param {AbortSignal} signal */
+function shouldRetryFetchError(error, method, signal) {
+  if (!idempotentRetryMethod(method) || signal.aborted) return false;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return false;
+  const name = error instanceof Error ? error.name : "";
+  if (name === "AbortError" || name === "TimeoutError") return false;
+  return true;
+}
+
+/** @param {number} delayMs @param {AbortSignal} signal */
+function waitForRetry(delayMs, signal) {
+  if (signal.aborted) return Promise.reject(signal.reason || new DOMException("Request aborted.", "AbortError"));
+  if (!(delayMs > 0)) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve(undefined);
+    }, delayMs);
+    const onAbort = () => {
+      window.clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+      reject(signal.reason || new DOMException("Request aborted.", "AbortError"));
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
 /** @param {{timeoutMs?: number}} [configuration] */
 function createDataClient({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   const inFlight = new Map();
@@ -76,6 +132,7 @@ function createDataClient({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
     const callerSignal = requestInit.signal || (input instanceof Request ? input.signal : null);
     const timeout = composeRequestSignal(callerSignal, Math.max(1, Number(timeoutMs) || DEFAULT_TIMEOUT_MS));
     requestInit.signal = timeout.signal;
+    const requestSignal = timeout.signal;
 
     const requestKey = String(options.key || canonicalRequestKey(input, requestInit, headers));
     const requestUrl = input instanceof Request ? input.url : String(input);
@@ -120,32 +177,93 @@ function createDataClient({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
     }
 
     const pending = (async () => {
+      let retryCount = 0;
       try {
-        const response = await nativeFetch(input, requestInit);
-        if (cacheTtlMs > 0 && response.ok) {
-          responseCache.set(requestKey, {
-            expiresAt: Date.now() + cacheTtlMs,
-            response: response.clone(),
-          });
+        while (true) {
+          try {
+            const response = await nativeFetch(input, requestInit);
+            const retryDelay = retryCount < MAX_IDEMPOTENT_RETRIES
+              ? retryDelayForResponse(response, method)
+              : null;
+            if (retryDelay !== null) {
+              retryCount += 1;
+              recordClientTiming("data-retry", {
+                key: requestKey,
+                url: requestUrl,
+                method,
+                attempt: retryCount + 1,
+                delay: retryDelay,
+                status: response.status,
+                reason: "http",
+              });
+              window.dispatchEvent(new CustomEvent("mfl:data-client-retry", {
+                detail: Object.freeze({
+                  key: requestKey,
+                  url: requestUrl,
+                  method,
+                  attempt: retryCount + 1,
+                  delay: retryDelay,
+                  status: response.status,
+                  reason: "http",
+                }),
+              }));
+              await waitForRetry(retryDelay, requestSignal);
+              continue;
+            }
+
+            if (cacheTtlMs > 0 && response.ok) {
+              responseCache.set(requestKey, {
+                expiresAt: Date.now() + cacheTtlMs,
+                response: response.clone(),
+              });
+            }
+            const duration = Math.max(0, performance.now() - startedAt);
+            recordClientTiming("data-response", {
+              key: requestKey,
+              url: requestUrl,
+              method,
+              duration,
+              status: response.status,
+              source: "network",
+              attempts: retryCount + 1,
+            });
+            window.dispatchEvent(new CustomEvent("mfl:data-client-timing", {
+              detail: Object.freeze({
+                key: requestKey,
+                url: requestUrl,
+                duration,
+                status: response.status,
+                attempts: retryCount + 1,
+              }),
+            }));
+            return response;
+          } catch (error) {
+            if (retryCount >= MAX_IDEMPOTENT_RETRIES
+                || !shouldRetryFetchError(error, method, requestSignal)) {
+              throw error;
+            }
+            retryCount += 1;
+            recordClientTiming("data-retry", {
+              key: requestKey,
+              url: requestUrl,
+              method,
+              attempt: retryCount + 1,
+              delay: DEFAULT_RETRY_DELAY_MS,
+              reason: "network",
+            });
+            window.dispatchEvent(new CustomEvent("mfl:data-client-retry", {
+              detail: Object.freeze({
+                key: requestKey,
+                url: requestUrl,
+                method,
+                attempt: retryCount + 1,
+                delay: DEFAULT_RETRY_DELAY_MS,
+                reason: "network",
+              }),
+            }));
+            await waitForRetry(DEFAULT_RETRY_DELAY_MS, requestSignal);
+          }
         }
-        const duration = Math.max(0, performance.now() - startedAt);
-        recordClientTiming("data-response", {
-          key: requestKey,
-          url: requestUrl,
-          method,
-          duration,
-          status: response.status,
-          source: "network",
-        });
-        window.dispatchEvent(new CustomEvent("mfl:data-client-timing", {
-          detail: Object.freeze({
-            key: requestKey,
-            url: requestUrl,
-            duration,
-            status: response.status,
-          }),
-        }));
-        return response;
       } finally {
         timeout.release();
       }

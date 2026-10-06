@@ -16,6 +16,10 @@ for (const token of [
   "const cacheTtlMs = method === \"GET\" ? Math.max(0, Number(options.cacheTtlMs) || 0) : 0;",
   "const response = await nativeFetch(input, requestInit);",
   "window.dispatchEvent(new CustomEvent(\"mfl:data-client-timing\"",
+  "function idempotentRetryMethod(method) {",
+  "const RETRYABLE_HTTP_STATUS = new Set([408, 429, 502, 503, 504]);",
+  "recordClientTiming(\"data-retry\"",
+  "new CustomEvent(\"mfl:data-client-retry\"",
   "const dataClient = createDataClient();",
   "runtimeWindow.__mflDataClient = dataClient;",
 ]) {
@@ -46,4 +50,18 @@ for (const retiredBridgeToken of [
 excludes(appEntry, "function installApiFetchPolicy", "Legacy app-entry API transport ownership must remain removed after the canonical data client is introduced.");
 excludes(appEntry, "if (callerSignal) {\n      requestInit.signal = callerSignal;\n      return nativeFetch", "Caller-provided signals must not bypass the canonical request timeout.");
 
-console.log("Canonical frontend data client explicitly owns API request identity, deadlines, optional dedupe/cache hooks, timing, and transport without global fetch interception.");
+invariant(
+  appEntry.includes('return method === "GET" || method === "HEAD";')
+    && appEntry.includes("retryCount < MAX_IDEMPOTENT_RETRIES")
+    && appEntry.includes("shouldRetryFetchError(error, method, requestSignal)"),
+  "Automatic retries must remain bounded to idempotent GET/HEAD requests.",
+);
+
+invariant(
+  appEntry.includes('const name = error instanceof Error ? error.name : "";') && appEntry.includes('if (name === "AbortError" || name === "TimeoutError") return false;')
+    && appEntry.includes('navigator.onLine === false')
+    && appEntry.includes("delay > MAX_AUTOMATIC_RETRY_DELAY_MS"),
+  "Abort, timeout, known-offline and long Retry-After cases must remain fail-fast.",
+);
+
+console.log("Canonical frontend data client explicitly owns API request identity, deadlines, optional dedupe/cache hooks, timing, retries, and transport without global fetch interception.");

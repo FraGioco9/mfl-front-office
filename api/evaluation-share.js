@@ -1,3 +1,4 @@
+const { installApiErrorEnvelope } = require("./_error-envelope");
 const { signedWalletFromRequest } = require("./_wallet-auth");
 const { requireSameOriginMutation } = require("./_request-origin");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
@@ -49,6 +50,7 @@ async function snapshotPresentValue(payload) {
 }
 
 module.exports = async function handler(request, response) {
+  installApiErrorEnvelope(response);
   response.setHeader("Cache-Control", "no-store");
   if ((request.method === "POST") && !requireSameOriginMutation(request, response)) return;
 

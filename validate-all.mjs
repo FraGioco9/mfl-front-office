@@ -17,6 +17,7 @@ const validators = [
   "tests/test_db02_retention_policy.mjs",
   "tests/test_db03_schema_drift_inventory.mjs",
   "tests/test_db05_planner_capacity.mjs",
+  "tests/test_api02_error_retry.mjs",
   "tests/test_unicode_search_edges.mjs",
   "tests/test_repository_workflow_docs.mjs",
   "tests/test_request_observability.mjs",

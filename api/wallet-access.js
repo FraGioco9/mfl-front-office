@@ -1,6 +1,8 @@
+const { installApiErrorEnvelope } = require("./_error-envelope");
 const { signedWalletFromRequest, walletAllowed } = require("./_data-auth");
 
 module.exports = async function handler(request, response) {
+  installApiErrorEnvelope(response);
   response.setHeader("Cache-Control", "no-store");
 
   if (request.method !== "GET") {

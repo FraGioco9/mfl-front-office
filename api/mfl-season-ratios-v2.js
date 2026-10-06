@@ -1,3 +1,4 @@
+const { installApiErrorEnvelope } = require("./_error-envelope");
 const { version: VERSION } = require("../release.json");
 const { supabaseConfig } = require("./_supabase");
 
@@ -65,6 +66,7 @@ async function loadRatiosFromSupabase() {
 }
 
 async function handler(request, response) {
+  installApiErrorEnvelope(response);
   response.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
   response.setHeader("CDN-Cache-Control", "no-store, max-age=0");
   response.setHeader("Vercel-CDN-Cache-Control", "no-store, max-age=0");
@@ -89,11 +91,8 @@ async function handler(request, response) {
       requestNonce: String(request.query?.fresh || ""),
     });
   } catch (error) {
-    const message = error instanceof Error
-      ? error.message
-      : "Could not load MFL season ratios from Supabase.";
-    console.error(message);
-    response.status(500).json({ error: message });
+    console.error("Could not load MFL season ratios from Supabase.", error);
+    response.status(500).json({ error: "Could not load MFL season ratios." });
   }
 }
 

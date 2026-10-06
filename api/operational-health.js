@@ -1,7 +1,9 @@
+const { installApiErrorEnvelope } = require("./_error-envelope");
 const { getGeneratedAt } = require("./_database");
 const { loadOperationalHealth } = require("./_operational-health");
 
 module.exports = async function handler(request, response) {
+  installApiErrorEnvelope(response);
   response.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate, max-age=0");
 
   if (request.method && request.method !== "GET") {
