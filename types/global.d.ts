@@ -1,8 +1,14 @@
+interface MflDataClientRequestOptions {
+  dedupe?: boolean;
+  cacheTtlMs?: number;
+  key?: string;
+}
+
 interface MflDataClient {
   fetch(
     input: RequestInfo | URL,
     init?: RequestInit,
-    options?: { dedupe?: boolean; cacheTtlMs?: number; key?: string },
+    options?: MflDataClientRequestOptions,
   ): Promise<Response>;
   clearCache(): void;
   snapshot(): Readonly<{ inFlight: number; cached: number }>;
@@ -10,6 +16,69 @@ interface MflDataClient {
 
 interface MflFlowWalletModule {
   config(values?: Record<string, unknown>): unknown;
+}
+
+interface MflRouteOptions extends Record<string, unknown> {
+  path?: string;
+  replaceUrl?: string;
+  updateUrl?: boolean;
+  plain?: boolean;
+  view?: string;
+  clubId?: string | number;
+  planId?: string | number;
+  playerId?: string | number;
+  walletAddress?: string;
+  watchlistId?: string;
+  force?: boolean;
+  save?: boolean;
+  ignoreCurrentClubRoute?: boolean;
+  loadingMode?: unknown;
+  loadingReason?: unknown;
+  tableLoadingRequestToken?: number;
+  useCurrentLocation?: boolean;
+  __mflNavigationTransition?: unknown;
+  __mflRouteRuntimeReady?: boolean;
+  __mflPlayerFirstPaintContext?: MflPlayerFirstPaintContext | null;
+}
+
+interface MflIncrementalTableFilters {
+  hideRetired?: boolean;
+  hideRetiring?: boolean;
+  hideMflPlayers?: boolean;
+  mflPackable?: boolean;
+  newMints?: boolean;
+}
+
+interface MflIncrementalRoute {
+  pageName: string;
+  scope: string;
+  view: string;
+  access: string;
+  clubId?: string;
+  playerId?: string;
+  playerIds?: string[];
+  walletAddress?: string;
+  watchlistId?: string;
+  filterRules?: unknown[];
+  tableFilters?: MflIncrementalTableFilters | null;
+}
+
+interface MflIncrementalPayload extends Record<string, unknown> {
+  generatedAt?: string;
+  columns?: string[];
+  rows?: unknown[];
+  sourceRows?: unknown[];
+  page?: number;
+  pageSize?: number;
+  totalPlayers?: number;
+  totalRows?: number;
+  club?: unknown;
+  error?: unknown;
+}
+
+interface MflTableSortState {
+  sortKey: string;
+  sortDirection: "asc" | "desc";
 }
 
 interface MflClubRoute {
@@ -20,7 +89,7 @@ interface MflClubRoute {
 
 interface MflCanonicalRouteRequest {
   pageName: string;
-  options: Record<string, unknown>;
+  options: MflRouteOptions;
   canonicalPath: string;
 }
 
@@ -48,8 +117,8 @@ interface MflAppRouteConfig {
   canonicalRequest(pathname?: string): MflCanonicalRouteRequest;
   initialRequest(pathname?: string): MflCanonicalRouteRequest;
   normalizePageName(pageName: unknown): string;
-  routeDependencyPlan(pageName: unknown, options?: Record<string, unknown>): MflRouteDependencyPlan;
-  requestShellId(request: unknown, options?: Record<string, unknown>): string;
+  routeDependencyPlan(pageName: unknown, options?: MflRouteOptions): MflRouteDependencyPlan;
+  requestShellId(request: unknown, options?: MflRouteOptions): string;
   usesTableInfrastructure(pageName: unknown): boolean;
   tableViews: Readonly<Record<string, MflTableViewRouteConfig>>;
   mflWalletAddress: string;
@@ -202,8 +271,8 @@ interface Window {
   __mflCancelIncrementalRouteRequest?: () => number;
   __mflBuildPlayerFirstPaintContext?: (playerId: unknown) => MflPlayerFirstPaintContext;
   __mflPlayerFirstPaintPendingContext?: MflPlayerFirstPaintContext | null;
-  mflLoadIncrementalRoutePage?: (pageName: string, options?: Record<string, unknown>) => Promise<boolean>;
-  mflReloadIncrementalPage?: (page?: number, options?: Record<string, unknown>) => Promise<boolean>;
+  mflLoadIncrementalRoutePage?: (pageName: string, options?: MflRouteOptions) => Promise<boolean>;
+  mflReloadIncrementalPage?: (page?: number, options?: MflRouteOptions) => Promise<boolean>;
   __mflOpenClubPageRoute?: (clubId: string, view?: string) => unknown;
   mflOpenClubPage?: ((clubId: string, view?: string) => unknown) & { __mflRouteRuntimeGate?: boolean };
   __mflRenderPlayerPageOwner?: (playerId?: unknown) => unknown;
