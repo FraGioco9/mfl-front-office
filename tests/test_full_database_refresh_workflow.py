@@ -151,9 +151,11 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
         )
 
     def test_successful_checkpoints_preserve_canonical_database_artifact(self) -> None:
+        # read_workflow expands the baseline helper inline, so the count is
+        # four materialized checkpoints plus one immutable baseline manifest.
         self.assertEqual(
             self.workflow.count("python -m scripts.database.checkpoint_manifest create"),
-            4,
+            5,
         )
         for checkpoint_path in (
             "core",
