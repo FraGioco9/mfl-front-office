@@ -31,8 +31,10 @@ gh run download "$GITHUB_RUN_ID"   --repo "$GITHUB_REPOSITORY"   --name "$ARTIFA
 
 STATE_PATH="$RESUME_DIR/resume-state.json"
 DATABASE_PATH="$RESUME_DIR/mfl_database.db"
+MANIFEST_PATH="$RESUME_DIR/checkpoint-manifest.json"
 test -s "$STATE_PATH"
 test -s "$DATABASE_PATH"
+test -s "$MANIFEST_PATH"
 
 stage="$(jq -r '.stage // empty' "$STATE_PATH")"
 run_id="$(jq -r '.runId // empty' "$STATE_PATH")"
@@ -49,6 +51,11 @@ case "$stage" in
     ;;
 esac
 
+python -m scripts.database.checkpoint_manifest verify \
+  --database "$DATABASE_PATH" \
+  --manifest "$MANIFEST_PATH" \
+  --expected-stage "$stage" \
+  --expected-run-id "$GITHUB_RUN_ID"
 python -m scripts.database.prepare_runtime_database "$DATABASE_PATH" --validate-only
 cp "$DATABASE_PATH" mfl_database.db
 
