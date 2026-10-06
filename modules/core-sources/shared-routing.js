@@ -1,6 +1,14 @@
 function playerIdFromUrl() {
   const match = window.location.pathname.match(/^\/players\/([^/]+)$/);
-  return match ? decodeURIComponent(match[1]) : null;
+  return match ? decodeRoutePartSafely(match[1]) : null;
+}
+
+function decodeRoutePartSafely(value) {
+  try {
+    return decodeURIComponent(String(value || ""));
+  } catch {
+    return String(value || "");
+  }
 }
 
 function evaluationPlayerIdFromUrl() {

@@ -541,7 +541,7 @@ function updateSettingsDateFormat(format) {
   } else if (state.currentPage === "player") {
     const match = window.location.pathname.match(/^\/players\/([^/]+)$/);
     if (match) {
-      renderPlayerPage(decodeURIComponent(match[1]));
+      renderPlayerPage(decodeRoutePartSafely(match[1]));
     }
   }
 }
