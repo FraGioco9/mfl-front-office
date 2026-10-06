@@ -1,3 +1,4 @@
+const { installApiErrorEnvelope } = require("./_error-envelope");
 const { supabaseConfig, supabaseRequest } = require("./_supabase");
 
 async function supabasePermissionMetadata() {
@@ -19,6 +20,7 @@ async function walletPermissionMetadata() {
 }
 
 module.exports = async function handler(request, response) {
+  installApiErrorEnvelope(response);
   response.setHeader("Cache-Control", "no-store");
 
   if (request.method !== "GET") {
