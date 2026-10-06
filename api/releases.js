@@ -1,8 +1,10 @@
+const { installApiErrorEnvelope } = require("./_error-envelope");
 const release = require("../release.json");
 const historyOverrides = require("../release-history-overrides.json");
 const history = require("./_data/releases-history.json");
 
 module.exports = function handler(request, response) {
+  installApiErrorEnvelope(response);
   response.setHeader("Cache-Control", "no-store, max-age=0");
   if (request.method !== "GET") {
     response.setHeader("Allow", "GET");
