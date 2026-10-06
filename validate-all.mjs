@@ -15,6 +15,7 @@ const validators = [
   "tests/test_wallet_preferences_multidevice.mjs",
   "tests/test_data04_missing_value_semantics.mjs",
   "tests/test_db02_retention_policy.mjs",
+  "tests/test_db03_schema_drift_inventory.mjs",
   "tests/test_unicode_search_edges.mjs",
   "tests/test_repository_workflow_docs.mjs",
   "tests/test_request_observability.mjs",
