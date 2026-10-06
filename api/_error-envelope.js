@@ -47,6 +47,11 @@ function normalizeApiErrorPayload(response, status, payload) {
   const retryAfter = retryAfterSeconds(response);
   response?.setHeader?.("Cache-Control", "no-store");
   response?.setHeader?.("X-MFL-Error-Code", code);
+  const serverTiming = String(response?.getHeader?.("Server-Timing") || "").trim();
+  if (!serverTiming) response?.setHeader?.("Server-Timing", "api_error;dur=0");
+  else if (!/(?:^|,)\s*api_error(?:;|,|$)/i.test(serverTiming)) {
+    response?.setHeader?.("Server-Timing", `${serverTiming}, api_error;dur=0`);
+  }
   return {
     ...payload,
     error: legacyMessage,
