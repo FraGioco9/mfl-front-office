@@ -162,6 +162,13 @@ includes(
   "Checkpoint telemetry must retain site commit, application version and database generation together.",
 );
 invariant(
+  publisher.includes("scripts.database.checkpoint_manifest verify")
+    && publisher.indexOf("scripts.database.checkpoint_manifest verify")
+      < publisher.indexOf("full-database-refresh-install-fresh-database-in-published-site-source.sh")
+    && publisher.includes("databaseArtifact:{sha256:$databaseSha256,sizeBytes:($databaseSizeBytes|tonumber),schemaSha256:$databaseSchemaSha256}"),
+  "Every checkpoint must pass immutable manifest verification before it can enter the publication path, and telemetry must retain its content/schema fingerprints.",
+);
+invariant(
   identityRecorder.includes('"commitVerificationRequired": commit_verification_required')
     && identityRecorder.includes('"siteCommit": site_commit')
     && identityRecorder.includes('"generatedAt": generated_at'),
@@ -214,17 +221,22 @@ invariant(
   "The completed final database must be preserved before production publication can fail.",
 );
 invariant(
-  workflow.includes("name: mfl_database\n          path: builder/checkpoints/final/mfl_database.db\n          overwrite: true\n          if-no-files-found: error"),
+  workflow.includes("name: mfl_database\n          path: |\n            builder/checkpoints/final/mfl_database.db\n            builder/checkpoints/final/checkpoint-manifest.json\n          overwrite: true\n          if-no-files-found: error"),
   "Final database preservation must replace the canonical database artifact and fail closed if the checkpoint is missing.",
 );
 invariant(
   baselineRestore.includes('ARTIFACT_NAME="full-database-refresh-baseline-${GITHUB_RUN_ID}"')
-    && workflow.includes("name: full-database-refresh-baseline-${{ github.run_id }}"),
+    && baselineRestore.includes("scripts.database.checkpoint_manifest create")
+    && baselineRestore.includes("scripts.database.checkpoint_manifest verify")
+    && workflow.includes("name: full-database-refresh-baseline-${{ github.run_id }}")
+    && workflow.includes("builder/previous-database/checkpoint-manifest.json"),
   "Each refresh run must preserve one immutable previous-production baseline independently from resumable checkpoints.",
 );
 invariant(
   resumeRestore.includes('ARTIFACT_NAME="full-database-refresh-resume-${GITHUB_RUN_ID}"')
     && resumeRestore.includes('if [ "$run_id" != "$GITHUB_RUN_ID" ]; then')
+    && resumeRestore.includes("scripts.database.checkpoint_manifest verify")
+    && resumeRestore.includes('cp "$MANIFEST_PATH" checkpoints/final/checkpoint-manifest.json')
     && resumeRestore.includes('python -m scripts.database.prepare_runtime_database "$DATABASE_PATH" --validate-only'),
   "A rerun may resume only from a validated checkpoint created by the same workflow run.",
 );
@@ -237,6 +249,9 @@ invariant(
 );
 invariant(
   resumeWriter.includes("core|player_seasons|player_data|final")
+    && resumeWriter.includes("scripts.database.checkpoint_manifest create")
+    && workflow.split("scripts.database.checkpoint_manifest create").length - 1 === 5
+    && workflow.split("builder/resume-checkpoint/checkpoint-manifest.json").length - 1 === 4
     && workflow.indexOf("- name: Send progression emails")
       < workflow.indexOf("- name: Prepare player-data resume checkpoint")
     && workflow.indexOf("- name: Save final resume checkpoint")
@@ -244,4 +259,4 @@ invariant(
   "Resume checkpoints must advance only after stage side effects are safe to skip, while the final validated snapshot may resume directly at publication.",
 );
 
-console.log("Staged database checkpoints preserve the published runtime, record deployment identity, verify representative live routes, retain immutable comparison data, resume validated stages, and safely replace coherent SQLite snapshots.");
+console.log("Staged database checkpoints preserve the published runtime, bind SQLite content/schema fingerprints to immutable manifests, verify integrity before restore/publish, retain immutable comparison data, resume validated stages, and safely replace coherent snapshots.");

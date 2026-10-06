@@ -12,7 +12,14 @@ if [ -n "$artifact_id" ]; then
   rm -rf previous-database/*
   echo "Restoring immutable refresh baseline artifact ${artifact_id} for run ${GITHUB_RUN_ID}."
   gh run download "$GITHUB_RUN_ID"     --repo "$GITHUB_REPOSITORY"     --name "$ARTIFACT_NAME"     --dir previous-database
-  python -m scripts.database.prepare_runtime_database     previous-database/mfl_database.db     --validate-only
+  python -m scripts.database.checkpoint_manifest verify \
+    --database previous-database/mfl_database.db \
+    --manifest previous-database/checkpoint-manifest.json \
+    --expected-stage baseline \
+    --expected-run-id "$GITHUB_RUN_ID"
+  python -m scripts.database.prepare_runtime_database \
+    previous-database/mfl_database.db \
+    --validate-only
   echo "created=false" >> "$GITHUB_OUTPUT"
   echo "reused=true" >> "$GITHUB_OUTPUT"
   exit 0
@@ -21,7 +28,15 @@ fi
 bash "$GITHUB_WORKSPACE/builder/scripts/workflows/full-database-refresh-restore-previous-database-for-email-comparison.sh"
 
 if [ -s previous-database/mfl_database.db ]; then
-  python -m scripts.database.prepare_runtime_database     previous-database/mfl_database.db     --validate-only
+  python -m scripts.database.prepare_runtime_database \
+    previous-database/mfl_database.db \
+    --validate-only
+  python -m scripts.database.checkpoint_manifest create \
+    --database previous-database/mfl_database.db \
+    --manifest previous-database/checkpoint-manifest.json \
+    --stage baseline \
+    --run-id "$GITHUB_RUN_ID" \
+    --run-attempt "$GITHUB_RUN_ATTEMPT"
   echo "created=true" >> "$GITHUB_OUTPUT"
 else
   echo "created=false" >> "$GITHUB_OUTPUT"

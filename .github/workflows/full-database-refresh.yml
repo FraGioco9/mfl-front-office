@@ -220,7 +220,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: full-database-refresh-baseline-${{ github.run_id }}
-          path: builder/previous-database/mfl_database.db
+          path: |
+            builder/previous-database/mfl_database.db
+            builder/previous-database/checkpoint-manifest.json
           overwrite: true
           if-no-files-found: error
           retention-days: 90
@@ -275,6 +277,12 @@ jobs:
             --previous previous-database/mfl_database.db \
             --output checkpoints/core/mfl_database.db
           python -m scripts.database.prepare_runtime_database checkpoints/core/mfl_database.db
+          python -m scripts.database.checkpoint_manifest create \
+            --database checkpoints/core/mfl_database.db \
+            --manifest checkpoints/core/checkpoint-manifest.json \
+            --stage core \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT"
 
       - name: Publish core checkpoint
         if: ${{ steps.resume.outputs.core_done != 'true' && inputs.fetch_players && hashFiles('builder/previous-database/mfl_database.db') != '' }}
@@ -291,7 +299,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: mfl_database
-          path: builder/checkpoints/core/mfl_database.db
+          path: |
+            builder/checkpoints/core/mfl_database.db
+            builder/checkpoints/core/checkpoint-manifest.json
           overwrite: true
           if-no-files-found: error
 
@@ -307,6 +317,7 @@ jobs:
           name: full-database-refresh-resume-${{ github.run_id }}
           path: |
             builder/resume-checkpoint/mfl_database.db
+            builder/resume-checkpoint/checkpoint-manifest.json
             builder/resume-checkpoint/resume-state.json
           overwrite: true
           if-no-files-found: error
@@ -337,6 +348,12 @@ jobs:
             --previous previous-database/mfl_database.db \
             --output checkpoints/player-seasons/mfl_database.db
           python -m scripts.database.prepare_runtime_database checkpoints/player-seasons/mfl_database.db
+          python -m scripts.database.checkpoint_manifest create \
+            --database checkpoints/player-seasons/mfl_database.db \
+            --manifest checkpoints/player-seasons/checkpoint-manifest.json \
+            --stage player_seasons \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT"
 
       - name: Publish player-seasons checkpoint
         if: ${{ steps.resume.outputs.player_seasons_done != 'true' && inputs.fetch_player_seasons && hashFiles('builder/previous-database/mfl_database.db') != '' }}
@@ -353,7 +370,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: mfl_database
-          path: builder/checkpoints/player-seasons/mfl_database.db
+          path: |
+            builder/checkpoints/player-seasons/mfl_database.db
+            builder/checkpoints/player-seasons/checkpoint-manifest.json
           overwrite: true
           if-no-files-found: error
 
@@ -369,6 +388,7 @@ jobs:
           name: full-database-refresh-resume-${{ github.run_id }}
           path: |
             builder/resume-checkpoint/mfl_database.db
+            builder/resume-checkpoint/checkpoint-manifest.json
             builder/resume-checkpoint/resume-state.json
           overwrite: true
           if-no-files-found: error
@@ -399,6 +419,12 @@ jobs:
             --previous previous-database/mfl_database.db \
             --output checkpoints/player-data/mfl_database.db
           python -m scripts.database.prepare_runtime_database checkpoints/player-data/mfl_database.db
+          python -m scripts.database.checkpoint_manifest create \
+            --database checkpoints/player-data/mfl_database.db \
+            --manifest checkpoints/player-data/checkpoint-manifest.json \
+            --stage player_data \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT"
 
       - name: Publish player-data checkpoint
         if: ${{ steps.resume.outputs.player_data_done != 'true' && inputs.fetch_progressions && hashFiles('builder/previous-database/mfl_database.db') != '' }}
@@ -415,7 +441,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: mfl_database
-          path: builder/checkpoints/player-data/mfl_database.db
+          path: |
+            builder/checkpoints/player-data/mfl_database.db
+            builder/checkpoints/player-data/checkpoint-manifest.json
           overwrite: true
           if-no-files-found: error
 
@@ -446,6 +474,7 @@ jobs:
           name: full-database-refresh-resume-${{ github.run_id }}
           path: |
             builder/resume-checkpoint/mfl_database.db
+            builder/resume-checkpoint/checkpoint-manifest.json
             builder/resume-checkpoint/resume-state.json
           overwrite: true
           if-no-files-found: error
@@ -485,6 +514,12 @@ jobs:
             --source mfl_database.db \
             --output checkpoints/final/mfl_database.db
           python -m scripts.database.prepare_runtime_database checkpoints/final/mfl_database.db
+          python -m scripts.database.checkpoint_manifest create \
+            --database checkpoints/final/mfl_database.db \
+            --manifest checkpoints/final/checkpoint-manifest.json \
+            --stage final \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT"
 
       - name: Prepare final resume checkpoint
         if: ${{ steps.resume.outputs.final_ready != 'true' }}
@@ -498,6 +533,7 @@ jobs:
           name: full-database-refresh-resume-${{ github.run_id }}
           path: |
             builder/resume-checkpoint/mfl_database.db
+            builder/resume-checkpoint/checkpoint-manifest.json
             builder/resume-checkpoint/resume-state.json
           overwrite: true
           if-no-files-found: error
@@ -507,7 +543,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: mfl_database
-          path: builder/checkpoints/final/mfl_database.db
+          path: |
+            builder/checkpoints/final/mfl_database.db
+            builder/checkpoints/final/checkpoint-manifest.json
           overwrite: true
           if-no-files-found: error
 

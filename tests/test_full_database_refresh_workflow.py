@@ -31,6 +31,12 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
             "python -m scripts.database.prepare_runtime_database previous-database/mfl_database.db --validate-only",
             self.restore_script,
         )
+        self.assertIn(
+            "[ -s previous-database/checkpoint-manifest.json ]",
+            self.restore_script,
+        )
+        self.assertIn("scripts.database.checkpoint_manifest verify", self.restore_script)
+        self.assertIn("Backward-compatible path", self.restore_script)
 
     def test_manual_refresh_options_use_safe_defaults(self) -> None:
         defaults = {
@@ -114,6 +120,16 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
         self.assertIn("Transient Vercel upload failure", publisher)
         self.assertIn("verify-live-production-deployment.sh", publisher)
 
+    def test_checkpoint_publisher_verifies_manifest_before_deploy(self) -> None:
+        publisher = Path("scripts/workflows/full-database-refresh-publish-checkpoint.sh").read_text(encoding="utf-8")
+        verify = "python -m scripts.database.checkpoint_manifest verify"
+        install = "full-database-refresh-install-fresh-database-in-published-site-source.sh"
+        self.assertIn(verify, publisher)
+        self.assertLess(publisher.index(verify), publisher.index(install))
+        self.assertIn("DATABASE_SHA256", publisher)
+        self.assertIn("DATABASE_SCHEMA_SHA256", publisher)
+        self.assertIn("databaseArtifact:", publisher)
+
     def test_published_source_reconciled_after_build_not_before(self) -> None:
         publisher = Path(
             "scripts/workflows/full-database-refresh-publish-checkpoint.sh"
@@ -135,6 +151,12 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
         )
 
     def test_successful_checkpoints_preserve_canonical_database_artifact(self) -> None:
+        # read_workflow expands the baseline helper inline, so the count is
+        # four materialized checkpoints plus one immutable baseline manifest.
+        self.assertEqual(
+            self.workflow.count("python -m scripts.database.checkpoint_manifest create"),
+            5,
+        )
         for checkpoint_path in (
             "core",
             "player-seasons",
@@ -143,12 +165,18 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
         ):
             self.assertIn(
                 "name: mfl_database\n"
-                f"          path: builder/checkpoints/{checkpoint_path}/mfl_database.db\n"
+                "          path: |\n"
+                f"            builder/checkpoints/{checkpoint_path}/mfl_database.db\n"
+                f"            builder/checkpoints/{checkpoint_path}/checkpoint-manifest.json\n"
                 "          overwrite: true",
                 self.workflow,
             )
         self.assertIn(
             "name: full-database-refresh-baseline-${{ github.run_id }}",
+            self.workflow,
+        )
+        self.assertIn(
+            "builder/previous-database/checkpoint-manifest.json",
             self.workflow,
         )
         self.assertIn(
