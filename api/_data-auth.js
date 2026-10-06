@@ -1,3 +1,4 @@
+const { normalizeApiErrorPayload } = require("./_error-envelope");
 const { performance } = require("node:perf_hooks");
 const {
   normalizeWalletAddress,
@@ -102,7 +103,8 @@ function serializeJson(data, timings = {}) {
 }
 
 function sendJson(response, status, data, startedAt, timings = {}, options = {}) {
-  const body = serializeJson(data, timings);
+  const normalizedData = normalizeApiErrorPayload(response, status, data);
+  const body = serializeJson(normalizedData, timings);
   applyJsonHeaders(response, startedAt, timings, options);
   response.status(status).end(body);
 }
