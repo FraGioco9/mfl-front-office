@@ -129,7 +129,7 @@ function sortKeySupportedByView(
 }
 
 /**
- * @param {Partial<MflTableSortState> | null | undefined} sortState
+ * @param {MflTableSortStateInput | null | undefined} sortState
  * @returns {MflTableSortState}
  */
 function normalizedViewSortState(
