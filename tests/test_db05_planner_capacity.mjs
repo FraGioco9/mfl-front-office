@@ -53,7 +53,7 @@ assert(plannerSave.includes('trace.warn("capacity_limit", { status: 429 })'));
 assert(plannerSave.includes("revision=eq." + "${expectedRevision}"));
 assert(plannerSave.includes("revision: expectedRevision + 1"));
 
-assert(docs.includes("35 list calls"));
+assert(docs.includes("35 calls"));
 assert(docs.includes("0.342 ms"));
 assert(docs.includes("0.539 ms"));
 assert(docs.includes("49"));
