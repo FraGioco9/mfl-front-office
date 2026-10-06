@@ -239,7 +239,7 @@ function createDataClient({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
             return response;
           } catch (error) {
             if (retryCount >= MAX_IDEMPOTENT_RETRIES
-                || !shouldRetryFetchError(error, method, requestInit.signal)) {
+                || !shouldRetryFetchError(error, method, requestSignal)) {
               throw error;
             }
             retryCount += 1;
