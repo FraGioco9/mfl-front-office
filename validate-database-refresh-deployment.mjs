@@ -250,7 +250,7 @@ invariant(
 invariant(
   resumeWriter.includes("core|player_seasons|player_data|final")
     && resumeWriter.includes("scripts.database.checkpoint_manifest create")
-    && workflow.split("scripts.database.checkpoint_manifest create").length - 1 === 4
+    && workflow.split("scripts.database.checkpoint_manifest create").length - 1 === 5
     && workflow.split("builder/resume-checkpoint/checkpoint-manifest.json").length - 1 === 4
     && workflow.indexOf("- name: Send progression emails")
       < workflow.indexOf("- name: Prepare player-data resume checkpoint")
