@@ -2180,7 +2180,7 @@ function renderPlayerPageOwner(playerId) {
   const contractDivision = rowHasActiveContract(row) ? contractDivisionInfo(contractDivisionRaw) : null;
   const contractDivisionHtml = contractDivision
     ? `<span class="playerContractDivision" style="color: ${escapeHtml(accessibleDivisionLabelColor(contractDivision.color))}">${escapeHtml(contractDivision.name)}</span>`
-    : (rowHasActiveContract(row) ? unknownDataValueHtml(contractDivisionRaw) : "");
+    : (rowHasActiveContract(row) ? `<span class="playerContractDivision">${unknownDataValueHtml(contractDivisionRaw)}</span>` : "");
   const contractTeamName = formatContractClubName(row);
   const contractClubId = String(getValue(row, "active_contract_club_id") || "").trim();
   const contractTeamHtml = contractClubId
