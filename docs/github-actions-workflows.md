@@ -3,7 +3,7 @@
 This is the canonical human-readable inventory of the workflows currently tracked under `.github/workflows/`.
 The YAML files remain the source of truth for exact path filters, permissions, inputs and implementation.
 
-There are **26 workflows** on `main` as of 5 October 2026.
+There are **26 workflows** on `main` as of 6 October 2026.
 
 | Workflow file | Display name | Triggers | Responsibility |
 | --- | --- | --- | --- |
@@ -32,7 +32,7 @@ There are **26 workflows** on `main` as of 5 October 2026.
 | `site-quality.yml` | Site quality | Pull request; `main` push; manual dispatch | Canonical scope detection, generated-artifact ownership, regressions, build/lint/typecheck and the required `quality` check. |
 | `table-header-1374-regression.yml` | Table header 1374 regression | Pull request; manual dispatch | Browser regression for first-column/table-header layout at 1374px. |
 | `validate-sec-01-trigger-search-path.yml` | SEC-01 trigger search_path regression | Path-filtered pull request | Isolated PostgreSQL regression for pinned trigger `search_path`. |
-| `vercel-site-update.yml` | Vercel site update | Manual dispatch | Explicit production Vercel deployment using the latest valid database artifact. |
+| `vercel-site-update.yml` | Vercel site update | Manual dispatch from `main` with pinned SHA + explicit production approval | Production Vercel deployment using the latest valid database artifact. Preflight requires the requested SHA to equal current `main`, requires the exact-head `quality` check and no blocking/unsettled checks, records a release fingerprint, binds the deploy job to the `production` environment, and rechecks `main` immediately before publish. |
 
 ## Canonical local commands
 

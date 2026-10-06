@@ -122,13 +122,20 @@ invariant(
   "Site Quality must prove the explicit deployment commit survives a real Next build and runtime.",
 );
 invariant(
-  siteUpdateWorkflow.includes("Record expected production identity")
-    && siteUpdateWorkflow.includes("EXPECTED_SITE_SHA: ${{ github.sha }}")
-    && siteUpdateWorkflow.includes('write-deployment-commit.mjs "$GITHUB_SHA"')
-    && siteUpdateWorkflow.includes('verify-prebuilt-deployment-commit.mjs "$GITHUB_SHA"')
+  siteUpdateWorkflow.includes("Validate dispatch target and approval")
+    && siteUpdateWorkflow.includes('GITHUB_REF" != "refs/heads/main"')
+    && siteUpdateWorkflow.includes("production-release-preflight.mjs")
+    && siteUpdateWorkflow.includes("DEPLOY_PRODUCTION")
+    && siteUpdateWorkflow.includes("needs: preflight")
+    && siteUpdateWorkflow.includes("environment: production")
+    && siteUpdateWorkflow.includes("EXPECTED_SITE_SHA: ${{ needs.preflight.outputs.release_sha }}")
+    && siteUpdateWorkflow.includes('write-deployment-commit.mjs "$RELEASE_SHA"')
+    && siteUpdateWorkflow.includes('verify-prebuilt-deployment-commit.mjs "$RELEASE_SHA"')
+    && siteUpdateWorkflow.includes("Reconfirm release SHA still owns main")
     && siteUpdateWorkflow.includes("verify-live-production-deployment.sh")
+    && siteUpdateWorkflow.includes("mfl-production-preflight.json")
     && siteUpdateWorkflow.includes("production-deployment-identity-${{ github.run_id }}"),
-  "Normal site deployment must record, embed, verify and retain the source/version/database identity tuple.",
+  "Normal site deployment must require approved exact-head main, preserve a preflight fingerprint and retain the source/version/database identity tuple.",
 );
 invariant(
   checkpointPublisher.includes('DEPLOYMENT_ROOT=production-site EXPECTED_SITE_SHA="$EXPECTED_SHA"')
