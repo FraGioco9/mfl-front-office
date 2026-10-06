@@ -62,6 +62,7 @@ const validators = [
   "validate-arch04-runtime-dependency-map.mjs",
   "validate-arch05-shared-formatters.mjs",
   "validate-arch06-generated-ownership.mjs",
+  "validate-arch07-api-wrapper-contract.mjs",
   "validate-accessibility-navigation-lifecycle.mjs",
 ];
 
