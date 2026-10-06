@@ -51,3 +51,36 @@ body:
         - No duplicate runtime owner is introduced
     validations:
       required: true
+
+
+  - type: textarea
+    id: stack
+    attributes:
+      label: PR stack / dependencies
+      description: List expected PR slices, hard dependencies, and which item (if any) is intended to close the issue.
+      placeholder: |
+        - PR A: validator / no dependencies
+        - PR B: runtime fix / after A
+        - Final PR: docs + release, uses Closes #...
+    validations:
+      required: false
+
+  - type: input
+    id: release
+    attributes:
+      label: Milestone / release impact
+      description: Target milestone and whether release.json/changelog work is expected.
+      placeholder: v1.129.0 — no version bump until final release PR
+    validations:
+      required: false
+
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback / live-operation boundary
+      description: State the rollback unit and whether deploys, database refreshes, provider changes, or other live operations are explicitly out of scope.
+      placeholder: |
+        Rollback: revert the squash commit.
+        Live operations: none; no deploy or database refresh.
+    validations:
+      required: false
