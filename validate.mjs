@@ -342,7 +342,17 @@ invariant(
 );
 includes(vercelRootNormalizer, "project.settings.rootDirectory = null", "Vercel root normalization must explicitly select the repository root.");
 includes(siteDeploy, "vercel build --prod", "Vercel deployment must build the protected Next application.");
-includes(siteDeploy, "vercel deploy --prebuilt --prod --yes --force", "Site deployment must publish the exact prebuilt production release.");
+includes(siteDeploy, "vercel deploy --prebuilt --prod --skip-domain --yes --force", "Site deployment must stage the exact prebuilt production release without assigning domains.");
+includes(siteDeploy, "node scripts/workflows/verify-prebuilt-next-routing.mjs", "Vercel deployment must reject prebuilt output that omitted Next routes.");
+includes(siteDeploy, "bash scripts/workflows/verify-staged-vercel-deployment.sh", "Staged production output must be verified before promotion.");
+includes(siteDeploy, "vercel promote", "Only a verified staged deployment may be promoted to production.");
+invariant(
+  siteDeploy.indexOf("vercel deploy --prebuilt --prod --skip-domain --yes --force")
+    < siteDeploy.indexOf("bash scripts/workflows/verify-staged-vercel-deployment.sh")
+    && siteDeploy.indexOf("bash scripts/workflows/verify-staged-vercel-deployment.sh")
+      < siteDeploy.indexOf("vercel promote"),
+  "Vercel production release must follow stage -> verify -> promote ordering.",
+);
 excludes(siteDeploy, "vercel.production.json", "Production deployment must not use the retired static Vercel config.");
 
 const siteQuality = await readRepository(".github/workflows/site-quality.yml");

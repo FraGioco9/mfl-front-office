@@ -118,6 +118,7 @@ jobs:
     timeout-minutes: 45
     env:
       RELEASE_SHA: ${{ needs.preflight.outputs.release_sha }}
+      VERCEL_CLI_VERSION: "62.5.0"
 
     steps:
       - name: Download pinned repository release
@@ -254,7 +255,7 @@ jobs:
           PY
 
       - name: Install Vercel CLI
-        run: npm install --global vercel@latest
+        run: npm install --global "vercel@${VERCEL_CLI_VERSION}"
 
       - name: Connect Vercel project
         shell: bash
@@ -289,6 +290,9 @@ jobs:
       - name: Verify prebuilt Vercel security header routes
         run: node scripts/workflows/verify-prebuilt-security-headers.mjs
 
+      - name: Verify prebuilt Next.js routing package
+        run: node scripts/workflows/verify-prebuilt-next-routing.mjs
+
       - name: Verify prebuilt deployment identity
         run: node scripts/workflows/verify-prebuilt-deployment-commit.mjs "$RELEASE_SHA"
 
@@ -305,10 +309,50 @@ jobs:
             exit 1
           fi
 
-      - name: Deploy protected site to Vercel
+      - name: Stage protected production deployment without domains
+        id: stage
+        shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: vercel deploy --prebuilt --prod --yes --force --token "$VERCEL_TOKEN"
+        run: |
+          set -euo pipefail
+          DEPLOYMENT_URL="$(vercel deploy --prebuilt --prod --skip-domain --yes --force --token "$VERCEL_TOKEN")"
+          DEPLOYMENT_URL="$(printf '%s' "$DEPLOYMENT_URL" | tr -d '\r\n')"
+          node --input-type=module - "$DEPLOYMENT_URL" <<'NODE'
+          const value = process.argv[2];
+          const url = new URL(value);
+          if (url.protocol !== "https:" || url.origin !== value || !url.hostname.endsWith(".vercel.app")) {
+            throw new Error(`Unexpected staged deployment URL: ${value}`);
+          }
+          NODE
+          echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+          echo "Staged production deployment: $DEPLOYMENT_URL"
+
+      - name: Verify staged identity, database and SSR routes
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          STAGED_DEPLOYMENT_URL: ${{ steps.stage.outputs.deployment_url }}
+        run: bash scripts/workflows/verify-staged-vercel-deployment.sh
+
+      - name: Reconfirm release SHA before production promotion
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          CURRENT_MAIN="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          CURRENT_MAIN="${CURRENT_MAIN,,}"
+          if [ "$CURRENT_MAIN" != "$RELEASE_SHA" ]; then
+            echo "main advanced from approved release SHA $RELEASE_SHA to $CURRENT_MAIN; refusing promotion." >&2
+            exit 1
+          fi
+
+      - name: Promote verified deployment to production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          STAGED_DEPLOYMENT_URL: ${{ steps.stage.outputs.deployment_url }}
+        run: vercel promote "$STAGED_DEPLOYMENT_URL" --yes --token "$VERCEL_TOKEN"
 
       - name: Verify live production identity and routes
         shell: bash

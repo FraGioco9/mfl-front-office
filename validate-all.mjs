@@ -23,6 +23,7 @@ const validators = [
   "tests/test_repository_workflow_docs.mjs",
   "tests/test_request_observability.mjs",
   "tests/test_ops03_release_preflight.mjs",
+  "tests/test_ops03_vercel_next_routing.mjs",
   "validate-domain-api-persistence.mjs",
   "validate-domain-shared-ui.mjs",
   "validate-domain-responsive-ui.mjs",
