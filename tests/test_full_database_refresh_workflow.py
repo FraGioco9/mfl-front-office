@@ -31,6 +31,12 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
             "python -m scripts.database.prepare_runtime_database previous-database/mfl_database.db --validate-only",
             self.restore_script,
         )
+        self.assertIn(
+            "[ -s previous-database/checkpoint-manifest.json ]",
+            self.restore_script,
+        )
+        self.assertIn("scripts.database.checkpoint_manifest verify", self.restore_script)
+        self.assertIn("Backward-compatible path", self.restore_script)
 
     def test_manual_refresh_options_use_safe_defaults(self) -> None:
         defaults = {
@@ -145,6 +151,10 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
         )
 
     def test_successful_checkpoints_preserve_canonical_database_artifact(self) -> None:
+        self.assertEqual(
+            self.workflow.count("python -m scripts.database.checkpoint_manifest create"),
+            4,
+        )
         for checkpoint_path in (
             "core",
             "player-seasons",
