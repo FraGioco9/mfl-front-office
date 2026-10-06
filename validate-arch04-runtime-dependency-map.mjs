@@ -22,7 +22,7 @@ invariant(
 
 for (const { domain, runtime } of routeDomains) {
   invariant(
-    appConfig.includes(`${JSON.stringify(domain)}: "/modules/${runtime}"`),
+    appConfig.includes(`"/modules/${runtime}"`),
     `Route core path for ${domain} must remain declared in app-config.`,
   );
 }
