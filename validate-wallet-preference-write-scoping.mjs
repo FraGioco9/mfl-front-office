@@ -48,8 +48,8 @@ invariant(
   "Empty-cloud Watchlist recovery must persist only the watchlists domain.",
 );
 invariant(
-  combinedApplicationSource.includes('saveWalletPreferencesNow({ domains: ["watchlists", "tableState", "settings"] });'),
-  "Intentional Watchlist mutations must persist Watchlists, their table state, and pending notification-target cleanup only.",
+  combinedApplicationSource.includes('saveWalletPreferencesNow({ domains: ["watchlists", "tableState", "settings"], notifyWatchlistSyncFailure: true });'),
+  "Intentional Watchlist mutations must persist Watchlists, their table state, and pending notification-target cleanup only, while surfacing explicit sync failures.",
 );
 invariant(
   (combinedApplicationSource.match(/saveWalletPreferencesNow\(\{ domains: \["tableState"\] \}\);/g) || []).length >= 4,
