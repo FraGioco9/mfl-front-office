@@ -17,7 +17,7 @@ const [packageSource, documentSource, pageSource, homeSource, nextConfig, eslint
 const packageJson = JSON.parse(packageSource);
 invariant(
   packageJson.scripts?.build?.endsWith("next build --webpack"),
-  "Production builds must opt out of Turbopack so native node:sqlite and the reviewed Webpack parser alias use the supported Webpack path.",
+  "Production builds must use the supported Webpack path for native node:sqlite and bundled Pages Router SSR dependencies.",
 );
 invariant(
   packageJson.dependencies?.["html-react-parser"] === "6.1.8",
@@ -53,16 +53,17 @@ invariant(
   "Pages Router SSR dependencies must be bundled so Vercel functions cannot externalize html-react-parser into an incompatible CommonJS-to-ESM runtime boundary.",
 );
 invariant(
-  nextConfig.includes('"html-react-parser": "./node_modules/html-react-parser/dist/html-react-parser.js"'),
-  "Turbopack compatibility must retain the reviewed html-react-parser UMD alias.",
+  !nextConfig.includes('turbopack: {') && !nextConfig.includes('"html-react-parser": "./node_modules/html-react-parser/dist/html-react-parser.js"'),
+  "Production SSR must not use the browser-oriented html-react-parser UMD alias.",
 );
 invariant(
-  nextConfig.includes('"html-react-parser$": resolve(root, "node_modules/html-react-parser/dist/html-react-parser.js")'),
-  "Webpack development must resolve html-react-parser to the same self-contained UMD bundle.",
+  nextConfig.includes("if (dev) {")
+    && nextConfig.includes('"html-react-parser$": resolve(root, "node_modules/html-react-parser/dist/html-react-parser.js")'),
+  "Webpack development must keep the reviewed self-contained html-react-parser UMD alias inside the dev-only branch.",
 );
 invariant(
   nextConfig.includes("webpack: configureWebpack"),
-  "Next must retain one shared Webpack hook for parser aliasing and the development legacy bridge.",
+  "Next must retain the Webpack hook for the development-only parser alias and legacy bridge.",
 );
 invariant(
   !nextConfig.includes('esmExternals: "loose"') && !nextConfig.includes("transpilePackages:"),
