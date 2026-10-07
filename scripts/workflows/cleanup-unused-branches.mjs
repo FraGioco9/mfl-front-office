@@ -82,7 +82,6 @@ export function parseOpenPulls(raw, repository) {
   }
   const numbers = new Set();
   const protectedRefs = new Map([["main", new Set(["DEFAULT_BRANCH"])]]);
-  let count = 0;
   const add = (ref, reason) => {
     if (!protectedRefs.has(ref)) protectedRefs.set(ref, new Set());
     protectedRefs.get(ref).add(reason);
@@ -99,7 +98,6 @@ export function parseOpenPulls(raw, repository) {
       }
       if (numbers.has(pr.number)) throw new Error("Duplicated pull request across pages.");
       numbers.add(pr.number);
-      count++;
       const base = requireRef(pr.base.ref, "base.ref");
       add(base, "PR_BASE#" + pr.number);
       if (pr.head.repo !== null) {
