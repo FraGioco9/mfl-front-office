@@ -30,7 +30,7 @@ const [
   readSite("validation/browser-routing-regression.mjs"),
   readSite("package.json"),
   readRepository(".github/workflows/site-quality.yml"),
-  readRepository("docs/performance-923.md"),
+  readRepository("docs/performance.md"),
   readRepository("docs/architecture-guardrails.md"),
   readSite("ci-quality-scope.mjs"),
 ]);
@@ -109,9 +109,8 @@ invariant(
   "Architecture guardrails must preserve the deterministic-vs-timing performance boundary.",
 );
 invariant(
-  qualityScope.includes('file === "docs/foundations-audit-923.md"')
-    && qualityScope.includes('file === "docs/performance-923.md"'),
-  "Final foundations/performance documentation changes must trigger Site Quality validation.",
+  qualityScope.includes('file === "docs/performance.md"'),
+  "Canonical performance documentation changes must trigger Site Quality validation.",
 );
 
 console.log("Stable performance foundations and opt-in timing enforcement validation passed.");
