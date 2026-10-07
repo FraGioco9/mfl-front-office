@@ -162,9 +162,14 @@ function tableRenderTableOwner() {
         fullNameValue.textContent = fullPlayerName;
         const compactNameValue = document.createElement("span");
         compactNameValue.className = "playerNameCompactValue";
-        compactNameValue.textContent = compactMobilePlayerName(fullPlayerName);
+        const compactPlayerName = compactMobilePlayerName(fullPlayerName);
+        compactNameValue.textContent = compactPlayerName;
         nameLink.replaceChildren(fullNameValue, compactNameValue);
-        if (fullPlayerName) nameLink.setAttribute("aria-label", fullPlayerName);
+        if (fullPlayerName) {
+          nameLink.setAttribute("aria-label", compactPlayerName && compactPlayerName !== fullPlayerName
+            ? `${compactPlayerName}, ${fullPlayerName}`
+            : fullPlayerName);
+        }
         nameLink.dataset.playerId = playerIdText;
         nameWrap.appendChild(nameLink);
         const markerWrap = document.createElement("span");
