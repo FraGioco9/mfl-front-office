@@ -491,7 +491,7 @@
             `${routeSelector} #progressionPage .views > .viewButton:not(:hover) { border-color: var(--mfl-control-border-color); background: var(--mfl-control-background); color: var(--mfl-control-text-color); }`,
             `${tableConfig.order.map(buttonSelector).join(",\n")} { display: inline-flex; }`,
             ...tableConfig.order.map((viewName, index) => `${buttonSelector(viewName)} { order: ${index + 1}; }`),
-            `${buttonSelector(activeView)} { border-color: var(--primary); background: var(--primary); color: #ffffff; }`,
+            `${buttonSelector(activeView)} { border-color: var(--mfl-filled-primary-border-color); background: var(--mfl-filled-primary-background); color: var(--mfl-filled-primary-text-color); }`,
           ];
           if (tablePage === "club") {
             rules.push(
