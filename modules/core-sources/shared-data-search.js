@@ -251,14 +251,6 @@ const contractDivisionColors = {
   10: "#757061",
 };
 
-// Preserve each division accent with a legible foreground across light and dark surfaces.
-function accessibleDivisionLabelColor(rawColor) {
-  const accent = String(rawColor || "").trim();
-  return /^#[0-9a-f]{6}$/i.test(accent)
-    ? "color-mix(in srgb, var(--text) 65%, " + accent + " 35%)"
-    : "var(--text)";
-}
-
 function contractDivisionInfo(value) {
   const division = Number(value);
 
