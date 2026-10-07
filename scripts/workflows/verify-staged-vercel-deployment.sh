@@ -22,7 +22,10 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 vercel_get() {
   local path="$1"
   local output="$2"
-  vercel curl "$path"     --deployment "$STAGED_DEPLOYMENT_URL"     --token "$VERCEL_TOKEN"     > "$output"
+  # Vercel CLI authenticates from VERCEL_TOKEN in the environment. Use the
+  # exact staged deployment URL so native curl flags are not confused with
+  # Vercel global flags and no request can drift to the linked production URL.
+  vercel curl "${STAGED_DEPLOYMENT_URL}${path}" > "$output"
 }
 
 vercel_get "/api/identity" "$WORK_DIR/identity.json"
