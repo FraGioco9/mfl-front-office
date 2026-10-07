@@ -60,5 +60,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           CLEANUP_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
           CLEANUP_MIN_AGE_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.min_age_days || '14' }}
-          CLEANUP_BRANCH_ALLOWLIST: audit-*,wip-*,wip/*,keep-*,keep/*,release-*,release/*
+          CLEANUP_BRANCH_ALLOWLIST: wip-*,wip/*,keep-*,keep/*,release-*,release/*
         run: node scripts/workflows/cleanup-unused-branches.mjs
