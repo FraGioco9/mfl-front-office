@@ -31,7 +31,9 @@ for (const required of [
   'sortButton.type = "button";',
   'sortButton.className = "tableSortButton";',
   'const sortLabel = fullLabel || (column === "listing_price" ? "Listing" : column);',
-  'sortButton.setAttribute("aria-label", `Sort by ${sortLabel}`);',
+  'const visibleSortLabel = String(label.textContent || "").trim();',
+  'const accessibleSortLabel = visibleSortLabel && visibleSortLabel !== sortLabel',
+  'sortButton.setAttribute("aria-label", accessibleSortLabel);',
   'sortButton.setAttribute("aria-description", nextAction);',
   "sortButton.title = nextAction;",
   "if (restoreSortFocus) {",
@@ -41,6 +43,7 @@ for (const required of [
   assert.ok(table.includes(required), `Canonical table sorting is missing accessibility contract: ${required}`);
 }
 assert.ok(!table.includes('cell.addEventListener("click", () => {'), "Sortable table semantics must no longer depend on clicking the th element itself.");
+assert.ok(table.includes('button.setAttribute("aria-label", `${label}, click to copy`);'), "Copyable player IDs must retain their visible label in the accessible name.");
 
 for (const required of [
   "const modalReturnFocus = new WeakMap();",
