@@ -58,10 +58,32 @@ export async function auditContrast(cdp, url, baseline) {
           background: getComputedStyle(element).backgroundColor,
           color: getComputedStyle(element).color,
         }));
-      const isLegacyDarkPrimaryButtonNode = node => {
+      const approvedPrimaryControlSelectors = [
+        "#sidebar .navButton.active",
+        ".viewButton.active",
+        ".filtersViewButton.active",
+        ".mflStatsFilterButton.active",
+        ".mflStatsDistributionModeButton.active",
+        ".playerAttributeViewButton.active",
+        ".settingsToggleButton.active",
+        ".settingsEmailActionButton.primary",
+        ".playerEvaluateButton",
+        ".playerExternalButton",
+      ];
+      const approvedPrimaryControlSelector = approvedPrimaryControlSelectors.join(",");
+      const isApprovedDarkPrimaryControlNode = node => {
         if (theme !== "dark") return false;
-        const html = String(node.html || "").trim().toLowerCase();
-        if (!(html.startsWith("<button") || html.startsWith("<a "))) return false;
+        const targetSelector = node.target.map(part => String(part)).join(" ");
+        let target = null;
+        try {
+          target = document.querySelector(targetSelector);
+        } catch {
+          return false;
+        }
+        const control = target?.closest?.(approvedPrimaryControlSelector);
+        if (!(control instanceof HTMLElement)) return false;
+        const controlStyle = getComputedStyle(control);
+        if (controlStyle.backgroundColor !== primaryBackground || controlStyle.color !== "rgb(255, 255, 255)") return false;
         return node.any.some(check => {
           const data = check.data || {};
           return String(data.fgColor || "").toLowerCase() === "#ffffff"
@@ -71,7 +93,7 @@ export async function auditContrast(cdp, url, baseline) {
       const filteredViolations = results.violations
         .map(violation => ({
           ...violation,
-          nodes: violation.nodes.filter(node => !isLegacyDivisionNode(node) && !isLegacyDarkPrimaryButtonNode(node)),
+          nodes: violation.nodes.filter(node => !isLegacyDivisionNode(node) && !isApprovedDarkPrimaryControlNode(node)),
         }))
         .filter(violation => violation.nodes.length > 0);
       const sample = violation => ({
