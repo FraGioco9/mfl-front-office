@@ -11,7 +11,7 @@
 | Planner assigned lineup | `html-sources/planner.html` creates a lazy WebP `img` per occupied position; pitch gradient remains behind photo. | Existing `loading=lazy` avoids eager loading on offscreen surfaces. No change without Chromium/real-mobile first-paint evidence. |
 | Planner selection popup | `html-sources/planner.html` creates each portrait as `img loading=lazy` and hides failed images. | Keep lazy loading and error state; no speculative `fetchpriority=high` on lists. |
 | Flags and retirement icons | SVG from Twemoji CDN and local icon assets, small retirement markers. | No proven cost; preserve accessibility and current breakpoint sizes. |
-| Evaluation social previews | `api/evaluation-preview-image.js` renders a PNG via `api/_evaluation-preview-card.js` and PureImage/fonts/bitmap code; OG metadata defines a **2400×1260** graphic. | Server-side social media request, not the interactive Player-page LCP. Existing `Cache-Control: no-store` preserves share privacy/revocation semantics; no change until isolated server cold/warm render, image-byte comparison and cache security tests exist. |
+| Evaluation social previews | `api/_handler-evaluation-preview-image.js` renders a PNG via `api/_evaluation-preview-card.js` and PureImage/fonts/bitmap code; OG metadata defines a **2400×1260** graphic. | Server-side social media request, not the interactive Player-page LCP. Existing `Cache-Control: no-store` preserves share privacy/revocation semantics; no change until isolated server cold/warm render, image-byte comparison and cache security tests exist. |
 
 ## Existing measured route baseline (not an image-specific measurement)
 

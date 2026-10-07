@@ -24,15 +24,15 @@ const [
   walletSessionAmbiguityMigration,
 ] = await Promise.all([
   read("./api/_wallet-auth.js"),
-  read("./api/wallet-session.js"),
+  read("./api/_handler-wallet-session.js"),
   read("./modules/core-sources/wallet.js"),
   read("./modules/app-core-wallet-runtime.js"),
   read("./api/_data-auth.js"),
-  read("./api/wallet-opt-ins.js"),
-  read("./api/wallet-preferences.js"),
-  read("./api/evaluation-save.js"),
-  read("./api/evaluation-share.js"),
-  read("./api/bug-reports.js"),
+  read("./api/_handler-wallet-opt-ins.js"),
+  read("./api/_handler-wallet-preferences.js"),
+  read("./api/_handler-evaluation-save.js"),
+  read("./api/_handler-evaluation-share.js"),
+  read("./api/_handler-bug-reports.js"),
   read("./modules/core-sources/shared-session.js"),
   read("./modules/core-sources/shared-personal-state.js"),
   read("./bootstrap-core.js"),
@@ -114,7 +114,7 @@ assert.ok(!authSource.includes("signedWalletFromLegacyProof"), "Legacy proof hea
 const {
   createWalletSessionHandler,
   requestOrigin,
-} = require("./api/wallet-session.js");
+} = require("./api/_handler-wallet-session.js");
 
 assert.equal(
   requestOrigin({ headers: { host: "127.0.0.1:4000", "x-forwarded-proto": "http" } }, "", ""),

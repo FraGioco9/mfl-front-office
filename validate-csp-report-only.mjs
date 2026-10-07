@@ -4,7 +4,7 @@ import { Readable } from "node:stream";
 import { securityHeaders, cspReportOnly, cspReportOnlyHeaders, createNextHeaders } from "./next.config.mjs";
 
 const require = createRequire(import.meta.url);
-const handler = require("./api/csp-report.js");
+const handler = require("./api/_handler-csp-report.js");
 
 const enforced = securityHeaders.find(item => item.key === "Content-Security-Policy")?.value;
 assert.equal(enforced, "frame-ancestors 'none'; base-uri 'self'; object-src 'none'");

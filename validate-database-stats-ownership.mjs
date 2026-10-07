@@ -4,7 +4,7 @@ const read = async (path) => String(await readFile(new URL(path, import.meta.url
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
 
 const [dataHandler, databaseStats, dataViews] = await Promise.all([
-  read("./api/data.js"),
+  read("./api/_handler-data.js"),
   read("./api/_database-stats.js"),
   read("./api/_data-views.js"),
 ]);

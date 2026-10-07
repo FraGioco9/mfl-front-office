@@ -31,7 +31,7 @@ const [
   read("./route-core-loader-runtime.js"),
   read("./modules/app-entry.js"),
   read("./build-app-core.mjs"),
-  read("./api/data.js"),
+  read("./api/_handler-data.js"),
   read("./api/_data-page.js"),
   read("./api/_data-query.js"),
   read("./api/_clubs.js"),

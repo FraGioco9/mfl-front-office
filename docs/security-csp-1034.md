@@ -246,8 +246,8 @@ on the strength of source scans alone.
 ## Phase 2c (01 October 2026): wire the CSP receiver into production
 
 **Deployment verification found a routing gap.** The phase-1 report
-receiver existed at `api/csp-report.js`, but the Next Pages Router did
-not have a matching `pages/api/csp-report.js` adapter. Unlike other
+receiver existed at `api/_handler-csp-report.js`, but the Next Pages Router did
+not have a matching `pages/api/_handler-csp-report.js` adapter. Unlike other
 production API routes, CSP browsers therefore had no direct Next endpoint
 with the intended 405/204 response contract. Without this route, a
 successful build or source-only unit test cannot establish that violations
