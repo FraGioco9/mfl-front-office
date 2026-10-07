@@ -68,8 +68,9 @@ A single `warning` remains visible through the endpoint but does not open an inc
 because the scheduler recovery path is expected to handle one failed occurrence.
 
 Alerting is deduplicated by a fixed repository issue title. While an incident is open,
-subsequent unhealthy checks do not create or comment repeatedly. A later non-degraded,
-non-unknown check posts one recovery comment and closes the incident automatically.
+subsequent unhealthy checks do not create or comment repeatedly. If the overall status improves only
+to `warning`, the existing incident stays open because recovery is not complete. Only a later
+`healthy` check posts one recovery comment and closes the incident automatically.
 The issue body includes only normalized status, failure counts and attempt timestamps
 already exposed by `GET /api/operational-health`; raw Storage objects, wallet data,
 URLs containing credentials and secrets are never copied into the alert.
