@@ -83,12 +83,12 @@ The check path regenerates canonical HTML/application-core/style artifacts, prep
 
 ## GitHub Actions
 
-The repository currently tracks **26 workflows** under `.github/workflows/`. The exact file-by-file trigger and ownership inventory is maintained in [GitHub Actions workflow inventory](docs/github-actions-workflows.md).
+The repository currently tracks **20 workflows** under `.github/workflows/`. The exact file-by-file trigger and ownership inventory is maintained in [GitHub Actions workflow inventory](docs/github-actions-workflows.md).
 
 At a high level:
 
-- **Site quality** owns the required `quality` check and is the sole writer of tracked generated application artifacts.
-- **A11Y, mobile, table, LOAD and focused security workflows** provide pull-request regressions, with path filters where appropriate.
+- **Site quality** owns the required `quality` check, all always-on accessibility/mobile/table browser regressions, and is the sole writer of tracked generated application artifacts.
+- **LOAD, database and focused security workflows** remain separate only where isolated fixtures/services or narrow path filters materially reduce risk.
 - **Full database refresh** and the production **Marketplace snapshot** cadence are scheduled by Supabase Cron and reach GitHub through `workflow_dispatch`; they are not GitHub-scheduled production clocks.
 - **Operational health monitor** is the production monitor that does use a GitHub `schedule:` trigger, every hour at minutes 07 and 37.
 - **Performance baseline, progression-email preview/test and Vercel site update** are explicit/manual operational tools.
