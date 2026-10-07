@@ -23,7 +23,7 @@ usage and unexpected external destinations without blocking FCL/Dapper or
 ordinary navigation. The first-party `/api/csp-report` endpoint accepts
 both reporting formats, bounds payloads, and logs only sanitized origins
 and coarse route categories. See [the staged CSP rollout and origin
-inventory](security-csp-1034.md) before proposing enforcement.
+inventory](security-csp.md) before proposing enforcement.
 
 `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` are intentionally not set by the application because the current Dapper/Flow authentication path can use popup/RPC and third-party resources. Those policies require dedicated wallet-flow verification before adoption.
 
