@@ -37,7 +37,7 @@ const [
   read("./api/_handler-operational-health.js"),
   read("./api/_handler-identity.js"),
   read("./api/_data-auth.js"),
-  read("./docs/security-boundaries-969.md"),
+  read("./docs/security-boundaries.md"),
   read("./docs/api03-cache-privacy-contract.md"),
 ]);
 
