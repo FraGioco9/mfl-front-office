@@ -10,7 +10,8 @@ const walletB = "0xwallet-b";
 const planId = "bbbbbbbbbbbbbbbb";
 const shareId = "aaaaaaaaaaaaaaaa";
 const expiredId = "cccccccccccccccc";
-const evalId = "12345678";
+const evalLegacyId = "12345678";
+const evalId = "abcdef0123456789abcdef0123456789";
 
 const plans = [{ id: planId, wallet_address: walletA }];
 const shares = new Map([
@@ -26,6 +27,7 @@ const shares = new Map([
   }],
 ]);
 const evaluationShares = new Map([
+  [evalLegacyId, { id: evalLegacyId, playerId: "98", payload: { playerId: "98", overallValues: [87] }, expiresAt: FUTURE }],
   [evalId, { id: evalId, playerId: "99", payload: { playerId: "99", overallValues: [88] }, expiresAt: FUTURE }],
   ["87654321", { id: "87654321", playerId: "42", payload: { playerId: "42" }, expiresAt: PAST }],
 ]);
@@ -163,12 +165,17 @@ assert.equal((await call(planner, "DELETE", "/api/planner-share?id=" + shareId, 
 assert.equal((await call(planner, "GET", "/api/planner-share?id=" + shareId)).status, 404,
   "A revoked share must immediately be unavailable without public caching.");
 
+assert.equal((await call(evaluation, "GET", "/api/evaluation-share?id=" + evalLegacyId, walletB)).status, 200,
+  "Existing 8-character Evaluation bearer links must remain readable until expiry.");
 assert.equal((await call(evaluation, "GET", "/api/evaluation-share?id=" + evalId, walletB)).status, 200);
 const publicEval = await call(evaluation, "GET", "/api/evaluation-share?id=" + evalId);
 assert.equal(publicEval.body.playerId, "99");
 assert.equal(JSON.stringify(publicEval.body).includes("wallet"), false);
 assert.equal((await call(evaluation, "GET", "/api/evaluation-share?id=87654321")).status, 404);
-assert.equal((await call(evaluation, "GET", "/api/evaluation-share?id=" + evalId + "suffix")).status, 400);
+assert.equal((await call(evaluation, "GET", "/api/evaluation-share?id=" + evalLegacyId + "suffix")).status, 400);
+assert.equal((await call(evaluation, "GET", "/api/evaluation-share?id=" + "a".repeat(31))).status, 400);
+assert.equal((await call(evaluation, "GET", "/api/evaluation-share?id=" + "a".repeat(33))).status, 400);
+assert.equal((await call(evaluation, "GET", "/api/evaluation-share?id=" + "A".repeat(32))).status, 400);
 assert.equal((await call(evaluation, "GET", "/api/evaluation-share?id=" + evalId + "&player=42")).status, 404);
 assert.equal((await call(evaluation, "GET", "/api/evaluation-share?id=00000000")).status, 404);
 assert.equal((await call(evaluation, "POST", "/api/evaluation-share")).status, 401);
