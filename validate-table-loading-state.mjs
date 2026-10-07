@@ -384,8 +384,8 @@ invariant(
 invariant(
   appCoreSource.includes("function updateTablePlayerCount(options = {}) {")
     && appCoreSource.includes("const authoritativeRender = options.authoritative === true;")
-    && appCoreSource.includes("const visible = tablePages.has(state.currentPage) && (authoritativeRender || !tableLoadingActive);"),
-  "Player-count metadata must allow the authoritative table render to reveal Showing x/y players before request-token cleanup.",
+    && appCoreSource.includes("const visible = tablePages.has(state.currentPage) && (authoritativeRender || (state.dataLoaded && !tableLoadingActive));"),
+  "Player-count metadata must stay hidden before initial data readiness while allowing authoritative empty/populated renders before request-token cleanup.",
 );
 
 const loadingSyncStart = runtime.indexOf("function sync(snapshot = loadingSnapshot()) {");
