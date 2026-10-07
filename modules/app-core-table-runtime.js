@@ -438,7 +438,7 @@ function createCopyPlayerIdButton(playerId, label = String(playerId)) {
   button.textContent = label;
   button.dataset.playerId = String(playerId);
   button.dataset.tooltip = "Click to copy";
-  button.setAttribute("aria-label", "Click to copy");
+  button.setAttribute("aria-label", `${label}, click to copy`);
   markTableInteractiveHover(button, "id", playerId);
   return button;
 }
@@ -1018,7 +1018,11 @@ function tableBuildHeaderOwner() {
       const nextAction = nextSortDirection
         ? `Sort ${sortLabel} ${nextSortDirection === "asc" ? "ascending" : "descending"}`
         : "Reset sorting to Overall descending";
-      sortButton.setAttribute("aria-label", `Sort by ${sortLabel}`);
+      const visibleSortLabel = String(label.textContent || "").trim();
+      const accessibleSortLabel = visibleSortLabel && visibleSortLabel !== sortLabel
+        ? `${visibleSortLabel}, Sort by ${sortLabel}`
+        : `Sort by ${sortLabel}`;
+      sortButton.setAttribute("aria-label", accessibleSortLabel);
       sortButton.setAttribute("aria-description", nextAction);
       sortButton.title = nextAction;
       sortButton.appendChild(label);
@@ -3073,9 +3077,14 @@ function tableRenderTableOwner() {
         fullNameValue.textContent = fullPlayerName;
         const compactNameValue = document.createElement("span");
         compactNameValue.className = "playerNameCompactValue";
-        compactNameValue.textContent = compactMobilePlayerName(fullPlayerName);
+        const compactPlayerName = compactMobilePlayerName(fullPlayerName);
+        compactNameValue.textContent = compactPlayerName;
         nameLink.replaceChildren(fullNameValue, compactNameValue);
-        if (fullPlayerName) nameLink.setAttribute("aria-label", fullPlayerName);
+        if (fullPlayerName) {
+          nameLink.setAttribute("aria-label", compactPlayerName && compactPlayerName !== fullPlayerName
+            ? `${compactPlayerName}, ${fullPlayerName}`
+            : fullPlayerName);
+        }
         nameLink.dataset.playerId = playerIdText;
         nameWrap.appendChild(nameLink);
         const markerWrap = document.createElement("span");

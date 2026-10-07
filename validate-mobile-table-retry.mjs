@@ -60,7 +60,8 @@ for (const label of ["OVR", "PAC", "SHO", "PAS", "DRI", "DEF", "PHY", "GK"]) {
 includes(tableSource, "function compactMobilePlayerName(value)", "Canonical Table source must own N. Surname formatting.");
 includes(tableSource, 'fullNameValue.className = "playerNameFullValue";', "Table rows must retain the full player name in stable DOM.");
 includes(tableSource, 'compactNameValue.className = "playerNameCompactValue";', "Table rows must retain N. Surname in stable DOM.");
-includes(tableSource, 'nameLink.setAttribute("aria-label", fullPlayerName);', "Compact names must retain the full accessible name.");
+includes(tableSource, 'const compactPlayerName = compactMobilePlayerName(fullPlayerName);', "Canonical Table rows must retain the compact visible player name.");
+includes(tableSource, '? `${compactPlayerName}, ${fullPlayerName}`', "Compact names must keep both the visible compact label and full name in the accessible name.");
 includes(tableSource, 'const compactTableHeader = window.matchMedia("(max-width: 1366px)").matches;', "Canonical Table headers must use the fixed compact-label breakpoint.");
 includes(tableSource, 'mobileTable && column === "listing_price"', "Listing header blanking must remain inside true mobile behavior.");
 includes(tableSource, 'host.className = "listingCellTableHost";', "Listing rows must retain the skeleton-shared structural host at every breakpoint.");

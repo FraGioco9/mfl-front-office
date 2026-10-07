@@ -4,9 +4,9 @@
 
 `npm ci && npm run build && npm run test:a11y` (Node.js 22) executes the existing isolated Chromium browser fixture with deterministic public player/club data and simulated opt-in/wallet state. No external login, real wallet, Supabase access or production data is used.
 
-The audit covers the **hydrated visible page** on Home, Database/Attributes, Player, Planner and Settings at desktop width, plus Database and Planner at 390 × 844. The app's existing route assertions must complete before any audit begins. It uses pinned `axe-core@4.10.3` via CDP, not injected application source or a remote script.
+The audit covers the **hydrated visible page** on Home, Database/Attributes, Player, Planner and Settings at desktop width, plus Database and Planner at 390 × 844. The app's existing route assertions must complete before any audit begins. It uses pinned `axe-core@4.14.0` via CDP, not injected application source or a remote script.
 
-- Axe WCAG 2.0 A/AA and 2.1 A/AA violations are reported with rule, impact, count and target selectors. **Critical violations fail CI**. Serious/moderate findings are reported rather than silently waived. Incomplete/manual checks are counted.
+- Axe WCAG 2.0 A/AA and 2.1 A/AA violations are reported with rule, impact, count and target selectors. The 4.14.0 baseline may legitimately change findings because the engine enables new rules and adjusts existing checks; exact-head CI is authoritative for this repository. **Critical violations fail CI**. Serious/moderate findings are reported rather than silently waived. Incomplete/manual checks are counted.
 - Real Chrome keyboard events validate forward and reverse Tab order on each route; Planner also checks Enter and Space activation, Escape dismissal and restored focus for a selectable position.
 - No blanket axe rule exclusions or ignored-element baselines are applied.
 
