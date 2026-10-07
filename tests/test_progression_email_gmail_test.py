@@ -132,8 +132,6 @@ class ProgressionEmailGmailTestWorkflowTests(unittest.TestCase):
         self.assertIn("github.actor == github.repository_owner", workflow)
         self.assertNotIn("PROGRESSION_EMAIL_TEST_RECIPIENT", workflow)
         self.assertIn("fixture:", workflow)
-        self.assertIn("fixture=(database|showcase)", workflow)
-        self.assertIn('player_ids = "374512,265327,185140,250483"', workflow)
         self.assertNotIn("PROGRESSION_EMAIL_TEST_PLAYER_IDS", workflow)
         self.assertIn("recipient:", workflow)
         self.assertIn("required: true", workflow)
@@ -146,6 +144,14 @@ class ProgressionEmailGmailTestWorkflowTests(unittest.TestCase):
         self.assertNotIn("SUPABASE_URL", workflow)
         self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", workflow)
         self.assertNotIn("vercel deploy", workflow.lower())
+
+        resolver = Path(
+            "scripts/workflows/progression-email-gmail-test-resolve-test-configuration.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn('fixture not in {"database", "showcase"}', resolver)
+        self.assertIn('player_ids = "374512,265327,185140,250483"', resolver)
+        self.assertNotIn("GMAIL_TEST_COMMIT_MESSAGE", resolver)
+        self.assertNotIn("GITHUB_EVENT_NAME", resolver)
 
         sender = Path("scripts/email/progression_email_gmail_test.py").read_text(encoding="utf-8")
         self.assertIn("SHOWCASE_PLAYER_IDS", sender)
