@@ -28,7 +28,7 @@ export function classifyChangedFiles(files, workflowDiffForFile = () => "") {
   let workflow = false;
 
   for (const file of files) {
-    const rootApplicationFile = !file.includes("/") && !["DATABASE_REFRESH_SCHEDULER.md", "MARKETPLACE_SCHEDULER.md"].includes(file);
+    const rootApplicationFile = !file.includes("/");
     if (
       rootApplicationFile
       || file.startsWith("api/")
