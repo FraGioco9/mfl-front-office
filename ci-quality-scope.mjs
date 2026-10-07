@@ -40,8 +40,7 @@ export function classifyChangedFiles(files, workflowDiffForFile = () => "") {
       || file.startsWith("validation/")
       || file === "docs/ownership.md"
       || file === "docs/architecture-guardrails.md"
-      || file === "docs/foundations-audit-923.md"
-      || file === "docs/performance-923.md"
+      || file === "docs/performance.md"
     ) site = true;
     if (/^(?:.*\/)?[^/]+\.py$/.test(file) || /(?:^|\/)requirements[^/]*\.txt$/.test(file) || /(?:^|\/)pyproject\.toml$/.test(file)) builder = true;
     if (file === ".vercelignore" || file.startsWith("scripts/workflows/") || file.startsWith("tests/")) workflow = true;
