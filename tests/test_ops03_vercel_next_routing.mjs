@@ -32,6 +32,7 @@ assert.throws(() => verifyPrebuiltNextRouting({
 }), /no non-API Vercel Function/);
 
 const workflow = readFileSync(new URL("../.github/workflows/vercel-site-update.yml", import.meta.url), "utf8");
+const stagedVerifier = readFileSync(new URL("../scripts/workflows/verify-staged-vercel-deployment.sh", import.meta.url), "utf8");
 const stagedIndex = workflow.indexOf("vercel deploy --prebuilt --prod --skip-domain");
 const verifyIndex = workflow.indexOf("verify-staged-vercel-deployment.sh");
 const promoteIndex = workflow.indexOf("vercel promote");
@@ -42,5 +43,11 @@ assert.ok(workflow.includes("verify-prebuilt-next-routing.mjs"),
   "Release workflow must validate actual prebuilt Next packaging.");
 assert.ok(!workflow.includes("npm install --global vercel@latest"),
   "Release workflow must pin the Vercel CLI version.");
+assert.ok(stagedVerifier.includes('vercel curl "${STAGED_DEPLOYMENT_URL}${path}"'),
+  "Staged verification must address the exact staged deployment URL.");
+assert.ok(!stagedVerifier.includes("--deployment"),
+  "Staged verification must not use the obsolete vercel curl --deployment form.");
+assert.ok(!stagedVerifier.includes('--token "$VERCEL_TOKEN"'),
+  "Staged verification must authenticate through the VERCEL_TOKEN environment instead of forwarding --token to curl.");
 
 console.log("OPS-03 Vercel Next packaging and stage/verify/promote release contract passed.");
