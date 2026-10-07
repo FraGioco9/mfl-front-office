@@ -158,6 +158,25 @@ const coreSource = [
   await readSite("modules/core-sources/watchlist.js"),
 ].join("\n");
 invariant(canonicalSharedCore.length > 300_000, "Canonical shared core source is unexpectedly small.");
+const historicalDivisionPalette = `const contractDivisionColors = {
+  1: "#3be9f8",
+  2: "#13d389",
+  3: "#ffd23e",
+  4: "#dbe4eb",
+  5: "#fd7a00",
+  6: "#865e3f",
+  7: "#b7b09c",
+  8: "#b0cce1",
+  9: "#ffb136",
+  10: "#757061",
+};`;
+includes(canonicalSharedCore, historicalDivisionPalette, "The historical MFL division palette must remain exact.");
+excludes(canonicalSharedCore, "function accessibleDivisionLabelColor(", "Division accents must not be theme-blended away from their historical colors.");
+includes(coreSource, "if (divisionInfo?.color) division.style.color = divisionInfo.color;", "Player first-paint division labels must use the historical accent directly.");
+includes(coreSource, 'style="color: ${escapeHtml(contractDivision.color)}"', "Player contract division labels must use the historical accent directly.");
+includes(coreSource, 'teamDivision.style.color=divisionInfo?.color||"";', "Planner club division labels must use the historical accent directly.");
+includes(coreSource, "division.style.color=divisionInfo.color;division.textContent=divisionInfo.name;", "Planner search division labels must use the historical accent directly.");
+excludes(coreSource, "accessibleDivisionLabelColor(", "No canonical division surface may reintroduce theme blending.");
 includes(canonicalSharedCore, "const shellFirstTablePages = new Set();", "The shared core must keep destination shell-first rendering disabled.");
 includes(canonicalSharedCore, 'window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName)', "The shared core must delegate Club view URLs to canonical route configuration.");
 excludes(canonicalSharedCore, 'viewName === "attributes" ? "squad" : viewSlug(viewName)', "The shared core must not duplicate the Club view-to-slug mapping.");
