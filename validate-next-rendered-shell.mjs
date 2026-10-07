@@ -20,8 +20,8 @@ invariant(
   "Production builds must use the supported Webpack path for native node:sqlite and bundled Pages Router SSR dependencies.",
 );
 invariant(
-  packageJson.dependencies?.["html-react-parser"] === "6.1.8",
-  "Next-rendered shell must pin the reviewed html-react-parser 6.1.8 release.",
+  packageJson.dependencies?.["html-react-parser"] === "5.2.17",
+  "Next-rendered shell must pin html-react-parser 5.2.17, the last release before the domhandler v6 ESM boundary.",
 );
 invariant(
   documentSource.includes('readFileSync(INDEX_PATH, "utf8")')
@@ -49,21 +49,14 @@ invariant(
   "Required deep-route Next page must remain an empty framework mount while legacy UI ownership is migrated incrementally.",
 );
 invariant(
-  nextConfig.includes("bundlePagesRouterDependencies: true"),
-  "Pages Router SSR dependencies must be bundled so Vercel functions cannot externalize html-react-parser into an incompatible CommonJS-to-ESM runtime boundary.",
-);
-invariant(
-  !nextConfig.includes('turbopack: {') && !nextConfig.includes('"html-react-parser": "./node_modules/html-react-parser/dist/html-react-parser.js"'),
-  "Production SSR must not use the browser-oriented html-react-parser UMD alias.",
-);
-invariant(
-  nextConfig.includes("if (dev) {")
-    && nextConfig.includes('"html-react-parser$": resolve(root, "node_modules/html-react-parser/dist/html-react-parser.js")'),
-  "Webpack development must keep the reviewed self-contained html-react-parser UMD alias inside the dev-only branch.",
+  !nextConfig.includes("bundlePagesRouterDependencies:")
+    && !nextConfig.includes('"html-react-parser$"')
+    && !nextConfig.includes('"html-react-parser": "./node_modules/html-react-parser/dist/html-react-parser.js"'),
+  "Parser compatibility must come from the pinned server-compatible dependency graph, not bundler aliases or forced Pages Router dependency bundling.",
 );
 invariant(
   nextConfig.includes("webpack: configureWebpack"),
-  "Next must retain the Webpack hook for the development-only parser alias and legacy bridge.",
+  "Next must retain the Webpack development hook for the legacy asset bridge.",
 );
 invariant(
   !nextConfig.includes('esmExternals: "loose"') && !nextConfig.includes("transpilePackages:"),
