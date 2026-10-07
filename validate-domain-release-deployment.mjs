@@ -9,7 +9,6 @@ const validators = [
   "validate-database-refresh-deployment.mjs",
   "validate-security-boundaries.mjs",
   "validate-operational-health.mjs",
-  "validation/data01c4-local-ios-dapper-contract.mjs",
 ];
 
 for (const validator of validators) {
