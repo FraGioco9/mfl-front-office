@@ -2635,10 +2635,10 @@ body:not(.pinnedSidebarVisible) .toastMessage {
   align-items: center;
   justify-content: center;
   height: 40px;
-  border: 1px solid var(--primary);
+  border: 1px solid var(--mfl-filled-primary-border-color);
   border-radius: 6px;
-  background: var(--primary);
-  color: #ffffff;
+  background: var(--mfl-filled-primary-background);
+  color: var(--mfl-filled-primary-text-color);
   padding: 0 14px;
   text-decoration: none;
   cursor: pointer;
@@ -2646,9 +2646,9 @@ body:not(.pinnedSidebarVisible) .toastMessage {
 
 .playerEvaluateButton:hover,
 .playerExternalButton:hover {
-  border-color: var(--primary-hover);
-  background: var(--primary-hover);
-  color: #ffffff;
+  border-color: var(--mfl-filled-primary-hover-border-color);
+  background: var(--mfl-filled-primary-hover-background);
+  color: var(--mfl-filled-primary-text-color);
   text-decoration: none;
 }
 
@@ -4470,9 +4470,9 @@ button.playerIdText:active {
 }
 
 .settingsToggleButton.active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
+  border-color: var(--mfl-filled-primary-border-color);
+  background: var(--mfl-filled-primary-background);
+  color: var(--mfl-filled-primary-text-color);
 }
 
 .settingsEmailAddressRow {
@@ -4534,20 +4534,9 @@ button.playerIdText:active {
 }
 
 .settingsEmailActionButton.primary {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
-}
-
-:root[data-theme="dark"] :is(
-  .settingsToggleButton.active,
-  .settingsEmailActionButton.primary,
-  .playerEvaluateButton,
-  .playerExternalButton,
-  .playerEvaluateButton:hover,
-  .playerExternalButton:hover
-) {
-  color: var(--page-bg);
+  border-color: var(--mfl-filled-primary-border-color);
+  background: var(--mfl-filled-primary-background);
+  color: var(--mfl-filled-primary-text-color);
 }
 
 .settingsEmailActionButton:disabled {
