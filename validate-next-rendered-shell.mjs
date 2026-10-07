@@ -16,8 +16,8 @@ const [packageSource, documentSource, pageSource, homeSource, nextConfig, eslint
 
 const packageJson = JSON.parse(packageSource);
 invariant(
-  packageJson.dependencies?.["html-react-parser"] === "6.1.7",
-  "Next-rendered shell must pin html-react-parser 6.1.7.",
+  packageJson.dependencies?.["html-react-parser"] === "6.1.8",
+  "Next-rendered shell must pin the reviewed html-react-parser 6.1.8 release.",
 );
 invariant(
   documentSource.includes('readFileSync(INDEX_PATH, "utf8")')
@@ -43,6 +43,10 @@ invariant(
   pageSource.includes("export default function MflLegacyShellRoutePage()")
     && pageSource.includes("return null;"),
   "Required deep-route Next page must remain an empty framework mount while legacy UI ownership is migrated incrementally.",
+);
+invariant(
+  nextConfig.includes('transpilePackages: ["html-react-parser"]'),
+  "Next-rendered shell must bundle html-react-parser so Vercel SSR cannot native-require its ESM domhandler dependency.",
 );
 invariant(
   nextConfig.includes('devIndicators: { position: "bottom-left" }'),
