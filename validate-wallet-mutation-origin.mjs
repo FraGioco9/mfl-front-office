@@ -54,7 +54,7 @@ try {
     ["wallet-opt-ins", ["POST"]],
   ];
   for (const [name, methods] of boundaries) {
-    const source = await readFile(new URL(`./api/${name}.js`, import.meta.url), "utf8");
+    const source = await readFile(new URL(`./api/_handler-${name}.js`, import.meta.url), "utf8");
     assert.match(source, /require\("\.\/_request-origin"\)/, `${name} must import the shared guard`);
     const module = { exports: {} };
     let authenticated = 0;
@@ -75,7 +75,7 @@ try {
         };
         return {};
       },
-    }, { filename: `api/${name}.js` });
+    }, { filename: `api/_handler-${name}.js` });
     for (const method of methods) {
       for (const origin of [undefined, "https://attacker.example"]) {
         const response = reply();

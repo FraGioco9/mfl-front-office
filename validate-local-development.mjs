@@ -78,7 +78,7 @@ invariant(documentSource.includes("legacyDevWatchToken") && documentSource.inclu
 
 for (const route of ["data", "wallet-session", "evaluation-preview", "wallet-preferences"]) {
   const wrapper = await read(`pages/api/${route}.js`);
-  invariant(wrapper.includes(`../../api/${route}.js`), `Next API wrapper missing canonical ${route} handler.`);
+  invariant(wrapper.includes(`../../api/_handler-${route}.js`), `Next API wrapper missing canonical ${route} handler.`);
   invariant(wrapper.includes("export default handler;"), `Next API wrapper must expose the canonical ${route} handler as a Pages API default export.`);
   invariant(wrapper.includes("bodyParser: false"), `Next API wrapper must preserve the canonical raw request-body contract for ${route}.`);
 }

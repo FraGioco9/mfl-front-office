@@ -186,7 +186,7 @@ try {
   assert.equal(competitions[1].stage, "Quarter-final",
     "Cup stage must resolve from the club's current scheduled round.");
 
-  const dataHandler = require("./api/data");
+  const dataHandler = require("./api/_handler-data");
   const headers = {};
   let statusCode = 0;
   let responseBody = "";
