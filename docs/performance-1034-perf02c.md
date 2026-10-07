@@ -37,6 +37,6 @@ The new script only adds **test code** and is called by the existing Mobile firs
 
 ## Test evidence / CI
 
-The existing workflow `.github/workflows/mobile-first-paint-regression.yml` runs the new theme/scroll probe immediately after the 100-row RESP-02 case; the browser fixture remains local and synthetic. All test results must be linked to the final PR head. If an assertion fails, investigate instead of weakening the sticky Name/opaque/fade contract.
+`Site quality` runs the theme/scroll probe together with the consolidated mobile/responsive regression suite; the browser fixture remains local and synthetic. All test results must be linked to the final PR head. If an assertion fails, investigate instead of weakening the sticky Name/opaque/fade contract.
 
 No Vercel deploy, preview deployment, or production Supabase data writes for PERF-02C.
