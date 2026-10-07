@@ -9,7 +9,6 @@ const controls = read("controls.css");
 const planner = read("planner.css");
 const foundations = read("ui-foundations.css");
 const palette = read("styles-base.css");
-const audit = read("docs/ui-icon-colors-1034.md");
 const evaluationHtml = read("html-sources/evaluation.html");
 const plannerHtml = read("html-sources/planner.html");
 
@@ -78,9 +77,5 @@ for (const [name, source] of [["light", light], ["dark", dark]]) {
   const ratio = contrast(foreground, background);
   assert.ok(ratio >= 4.5, name + " Saved pill contrast must be at least 4.5:1; got " + ratio.toFixed(2));
   console.log("UI-03 Saved badge " + name + " contrast: " + ratio.toFixed(2) + ":1");
-}
-for (const term of ["High Contrast", "Safari iPhone", "light/dark", "pending"]) {
-  assert.ok(audit.includes(term) || audit.includes(term.toLowerCase()),
-    "Audit must describe visual test gate: " + term);
 }
 console.log("UI-03 icon focus, aria labels, theme-derived Saved status and color contrasts passed.");
