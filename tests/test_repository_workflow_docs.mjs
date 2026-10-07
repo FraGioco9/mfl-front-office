@@ -1,14 +1,16 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
-const [contributing, prTemplate, maintenance, runbook, ownership] = await Promise.all([
+const [contributing, prTemplate, maintenance, runbook, ownership, workflowInventory, workflowFiles] = await Promise.all([
   read("../CONTRIBUTING.md"),
   read("../.github/PULL_REQUEST_TEMPLATE.md"),
   read("../.github/ISSUE_TEMPLATE/maintenance.yml"),
   read("../docs/pr-stack-runbook.md"),
   read("../docs/ownership.md"),
+  read("../docs/github-actions-workflows.md"),
+  readdir(new URL("../.github/workflows/", import.meta.url)),
 ]);
 
 for (const source of [contributing, prTemplate, runbook]) {
@@ -44,5 +46,14 @@ assert.match(runbook, /release.json/);
 assert.match(runbook, /do not mark a waived\/deferred test as PASS/i);
 
 assert.match(ownership, /Generated tracked artifacts still have one writer: Site Quality/);
+
+const trackedWorkflows = workflowFiles.filter((name) => name.endsWith(".yml")).sort();
+const declaredCount = workflowInventory.match(/There are \*\*(\d+) workflows\*\*/);
+assert.ok(declaredCount, "Workflow inventory must declare the tracked workflow count.");
+assert.equal(Number(declaredCount[1]), trackedWorkflows.length, "Workflow inventory count must match .github/workflows.");
+const documentedWorkflows = [...workflowInventory.matchAll(/\| `([^`]+\.yml)` \|/g)]
+  .map((match) => match[1])
+  .sort();
+assert.deepEqual(documentedWorkflows, trackedWorkflows, "Workflow inventory must list every workflow exactly once.");
 
 console.log("DOC-03 repository workflow documentation contracts verified.");
