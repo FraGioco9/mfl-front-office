@@ -9,7 +9,7 @@ Audit date: 2026-10-07.
 - Node: `22.x`
 - Next: `16.3.8`
 - React / React DOM: `19.3.0`
-- ESLint: `10.11.0`
+- ESLint: `10.12.0`
 - transitive `brace-expansion`: `5.0.12`
 
 The committed `package-lock.json` resolves these versions with integrity hashes and license metadata. React DOM's peer range accepts the installed React version.
