@@ -22,7 +22,7 @@ invariant(
 invariant(
   packageJson.includes('"build:styles": "node build-styles.mjs"')
     && packageJson.includes('"build:legacy": "npm run build:html && npm run build:responsive && npm run build:core && npm run build:styles"')
-    && packageJson.includes('"build": "npm run build:legacy && npm run build:public && next build"')
+    && packageJson.includes('"build": "npm run build:legacy && npm run build:public && next build --webpack"')
     && packageJson.includes("styles-runtime.css table-width-runtime.js"),
   "The normal build and generated verification paths must own styles-runtime.css.",
 );

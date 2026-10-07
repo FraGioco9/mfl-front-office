@@ -11,7 +11,7 @@
     "build:responsive": "node build-responsive.mjs",
     "build:legacy": "npm run build:html && npm run build:responsive && npm run build:core && npm run build:styles",
     "build:public": "node prepare-next-runtime.mjs",
-    "build": "npm run build:legacy && npm run build:public && next build",
+    "build": "npm run build:legacy && npm run build:public && next build --webpack",
     "start": "next start -p 4000",
     "lint": "eslint bootstrap.js bootstrap-core.js prepare-next-runtime.mjs next-dev-legacy-bridge.mjs next.config.mjs deployment-commit.mjs scripts/workflows/write-deployment-commit.mjs scripts/workflows/verify-prebuilt-deployment-commit.mjs scripts/workflows/verify-next-build-deployment-commit.mjs build-*.mjs style-bundle.mjs validation-text.mjs ci-quality-scope.mjs sync-release-projections.mjs modules api pages *-runtime.js validate*.mjs validation/*.mjs",
     "typecheck": "tsc -p jsconfig.json --noEmit && node check-core-types.mjs",
