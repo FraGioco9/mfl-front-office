@@ -10,6 +10,7 @@ const valid = verifyPrebuiltNextRouting({
 });
 assert.equal(valid.detectedStatus, "detected");
 assert.deepEqual([...valid.frontendFunctions], ["__next.func"]);
+assert.deepEqual([...valid.standaloneApiBuilds], []);
 
 assert.throws(() => verifyPrebuiltNextRouting({
   vercelConfig: { framework: null },
@@ -30,6 +31,15 @@ assert.throws(() => verifyPrebuiltNextRouting({
   builds: { detectedFramework: { status: "skipped" } },
   functionDirs: ["api/data.func"],
 }), /no non-API Vercel Function/);
+
+assert.throws(() => verifyPrebuiltNextRouting({
+  vercelConfig: { framework: "nextjs" },
+  builds: {
+    detectedFramework: { status: "skipped" },
+    builds: [{ use: "@vercel/node", src: "api/identity.js" }],
+  },
+  functionDirs: ["[...path].func"],
+}), /standalone top-level api\/\*/);
 
 const workflow = readFileSync(new URL("../.github/workflows/vercel-site-update.yml", import.meta.url), "utf8");
 const stagedVerifier = readFileSync(new URL("../scripts/workflows/verify-staged-vercel-deployment.sh", import.meta.url), "utf8");
