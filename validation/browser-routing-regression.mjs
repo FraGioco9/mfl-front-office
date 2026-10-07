@@ -2922,8 +2922,8 @@ const browserTestSource = String.raw`(() => {
         assert(text("#filterSummary") === "1", "UX-04 linked advanced rule badge changed after hydration.");
         assert(/^Filters: 1 advanced rule, [0-9]+ active quick filters?$/.test(filters.getAttribute("aria-label") || ""),
           "UX-04 linked filter trigger did not retain advanced vs quick accessible counts.");
-        assert(filters.title === filters.getAttribute("aria-label"),
-          "UX-04 filter tooltip differs from its accessible description.");
+        assert(!filters.hasAttribute("title"),
+          "UX-04 filter trigger must not expose a native title tooltip.");
         assert(selectedHeader?.getAttribute("aria-sort") === "ascending",
           "UX-04 linked ascending Age sort was not retained on the hydrated route.");
         const ageSort = selectedHeader?.querySelector(".tableSortButton");
