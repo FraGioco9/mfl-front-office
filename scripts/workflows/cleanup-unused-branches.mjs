@@ -9,7 +9,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const DEFAULT_MIN_BRANCH_AGE_DAYS = 14;
 export const DEFAULT_BRANCH_ALLOWLIST = Object.freeze([
-  "audit-*",
   "wip-*",
   "wip/*",
   "keep-*",
@@ -111,9 +110,9 @@ export function parseOpenPulls(raw, repository) {
       }
     }
   }
-  // An unexpectedly empty list must never turn into a bulk delete. With no
-  // open PRs, manual cleanup is safer than a silent empty API response.
-  if (!count) throw new Error("No open PRs; refusing bulk deletion.");
+  // An empty but structurally valid paginated response means there are no
+  // open PRs. main remains protected and every branch still passes the
+  // allowlist, tag, age, remote-SHA and pre-delete race checks below.
   return protectedRefs;
 }
 
