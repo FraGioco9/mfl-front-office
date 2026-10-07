@@ -18,10 +18,9 @@ class WorkflowHelperTests(unittest.TestCase):
     def resolve_configuration(self, **values):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "github-env"
-            env = {**os.environ, "GITHUB_EVENT_NAME": "workflow_dispatch",
+            env = {**os.environ,
                    "CONFIGURED_FIXTURE": "", "CONFIGURED_PLAYER_IDS": "",
-                   "CONFIGURED_THEME": "", "GMAIL_TEST_COMMIT_MESSAGE": "",
-                   "GITHUB_ENV": str(output), **values}
+                   "CONFIGURED_THEME": "", "GITHUB_ENV": str(output), **values}
             result = subprocess.run(
                 ["bash", str(HELPERS / "progression-email-gmail-test-resolve-test-configuration.sh")],
                 env=env, capture_output=True, text=True,
@@ -33,18 +32,25 @@ class WorkflowHelperTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(output, "TEST_FIXTURE=showcase\nINPUT_PLAYER_IDS=374512,265327,185140,250483\nTEST_THEME=light\n")
 
-    def test_push_database_requires_explicit_players(self):
-        result, output = self.resolve_configuration(GITHUB_EVENT_NAME="push")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("require explicit players", result.stderr)
-        self.assertEqual(output, "")
-
-    def test_push_commit_selection_preserves_theme(self):
+    def test_manual_database_preserves_explicit_players_and_theme(self):
         result, output = self.resolve_configuration(
-            GITHUB_EVENT_NAME="push", GMAIL_TEST_COMMIT_MESSAGE="[gmail-test] players=42,43 theme=light")
+            CONFIGURED_FIXTURE="database",
+            CONFIGURED_PLAYER_IDS="42,43",
+            CONFIGURED_THEME="light",
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("INPUT_PLAYER_IDS=42,43\n", output)
-        self.assertIn("TEST_THEME=light\n", output)
+        self.assertEqual(
+            output,
+            "TEST_FIXTURE=database\nINPUT_PLAYER_IDS=42,43\nTEST_THEME=light\n",
+        )
+
+    def test_manual_defaults_are_database_and_dark(self):
+        result, output = self.resolve_configuration()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            output,
+            "TEST_FIXTURE=database\nINPUT_PLAYER_IDS=\nTEST_THEME=dark\n",
+        )
 
     def test_invalid_theme_fails_before_environment_write(self):
         result, output = self.resolve_configuration(CONFIGURED_THEME="invalid")
