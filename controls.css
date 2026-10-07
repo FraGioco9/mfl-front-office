@@ -45,21 +45,10 @@
   .mflStatsDistributionModeButton,
   .playerAttributeViewButton
 ).active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
+  border-color: var(--mfl-filled-primary-border-color);
+  background: var(--mfl-filled-primary-background);
+  color: var(--mfl-filled-primary-text-color);
   cursor: default;
-}
-
-:root[data-theme="dark"] :is(
-  #sidebar .navButton.active,
-  .viewButton.active,
-  .filtersViewButton.active,
-  .mflStatsFilterButton.active,
-  .mflStatsDistributionModeButton.active,
-  .playerAttributeViewButton.active
-) {
-  color: var(--page-bg);
 }
 
 #sidebar .navButton.active {
