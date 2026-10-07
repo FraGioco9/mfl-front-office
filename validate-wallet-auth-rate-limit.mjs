@@ -8,7 +8,7 @@ const {
   requestAddress,
   RATE_LIMITS,
 } = require("./api/_wallet-rate-limit.js");
-const { createWalletSessionHandler } = require("./api/wallet-session.js");
+const { createWalletSessionHandler } = require("./api/_handler-wallet-session.js");
 
 const source = await readFile(new URL("./supabase/migrations/20261001155224_wallet_auth_distributed_rate_limit.sql", import.meta.url), "utf8");
 const schema = await readFile(new URL("./supabase-schema.sql", import.meta.url), "utf8");

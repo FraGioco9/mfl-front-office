@@ -3,7 +3,7 @@ name: DB-05 Planner saved-plan capacity
 on:
   pull_request:
     paths:
-      - "api/planner-save.js"
+      - "api/_handler-planner-save.js"
       - "api/_planner-persistence.js"
       - "supabase-schema.sql"
       - "supabase/migrations/20261006183001_planner_plan_capacity_guard.sql"

@@ -7,7 +7,7 @@ const invariant = (condition, message) => { if (!condition) throw new Error(mess
 const [appCore, settingsCore, walletPreferencesApi] = await Promise.all([
   Promise.resolve(readCombinedCanonicalCoreSource()),
   read("./modules/core-sources/settings.js"),
-  read("./api/wallet-preferences.js"),
+  read("./api/_handler-wallet-preferences.js"),
 ]);
 
 invariant(

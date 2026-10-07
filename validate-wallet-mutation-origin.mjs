@@ -86,7 +86,7 @@ try {
       }
     }
   }
-  const sessionSource = await readFile(new URL("./api/wallet-session.js", import.meta.url), "utf8");
+  const sessionSource = await readFile(new URL("./api/_handler-wallet-session.js", import.meta.url), "utf8");
   assert.match(sessionSource, /require\("\.\/_request-origin"\)/, "Wallet challenge and mutations must share trusted-origin rules");
   assert.match(sessionSource, /sameOriginRequest\(request, origin\)/, "Wallet session must retain its same-origin check");
   console.log("Wallet mutation Origin tests passed across six API handlers and authentication.");

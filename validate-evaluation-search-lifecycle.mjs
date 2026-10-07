@@ -7,7 +7,7 @@ const [searchRuntime, layoutRuntime, appEntry, walletPreferences, loadingStyles,
   read("./evaluation-search-state-runtime.js"),
   read("./evaluation-layout-runtime.js"),
   read("./modules/app-entry.js"),
-  read("./api/wallet-preferences.js"),
+  read("./api/_handler-wallet-preferences.js"),
   read("./loading.css"),
   read("./html-sources/evaluation.html"),
 ]);

@@ -5,7 +5,7 @@ import { performance } from "node:perf_hooks";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const [proofSource, authSource, optInSource] = await Promise.all([
-  read("./api/_wallet-proof.js"), read("./api/_data-auth.js"), read("./api/wallet-opt-ins.js"),
+  read("./api/_wallet-proof.js"), read("./api/_data-auth.js"), read("./api/_handler-wallet-opt-ins.js"),
 ]);
 const wallet = "0x1111111111111111";
 const otherWallet = "0x2222222222222222";

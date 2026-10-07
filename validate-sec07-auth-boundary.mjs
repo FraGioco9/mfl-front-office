@@ -9,7 +9,7 @@ const read = path => readFileSync(new URL("./" + path, import.meta.url), "utf8")
 // SEC-07: MFL web clients use a first-party wallet session, not Supabase Auth
 // passwords. Do not silently introduce a second user authentication path.
 const auth = read("api/_wallet-auth.js");
-const session = read("api/wallet-session.js");
+const session = read("api/_handler-wallet-session.js");
 const supabase = read("api/_supabase.js");
 
 assert.match(auth, /signedWalletFromRequest/);

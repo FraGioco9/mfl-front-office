@@ -8,7 +8,7 @@ on:
       - "scripts/supabase/db03-live-readonly-inventory.sql"
       - "docs/db03-schema-drift-ledger.json"
       - "docs/db03-schema-drift.md"
-      - "api/planner-save.js"
+      - "api/_handler-planner-save.js"
       - "tests/test_db03_schema_drift_inventory.mjs"
       - "tests/verify-db03-isolated-restore.sql"
       - ".github/workflows/db-03-schema-drift.yml"

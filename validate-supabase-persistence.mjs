@@ -233,7 +233,7 @@ includes(
 );
 includes(
   documentation,
-  "`api/wallet-session.js` issues and exchanges the",
+  "`api/_handler-wallet-session.js` issues and exchanges the",
   "Supabase documentation must reference the active challenge/session endpoint.",
 );
 includes(
