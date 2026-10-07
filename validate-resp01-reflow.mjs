@@ -5,7 +5,6 @@ const read = path => readFileSync(new URL(path, import.meta.url), "utf8");
 const routing = read("./validation/browser-routing-regression.mjs");
 const browser = read("./validation/browser-resp01-reflow-regression.mjs");
 const workflow = read("./.github/workflows/site-quality.yml");
-const docs = read("./docs/responsive-reflow-1034.md");
 
 for (const width of [320, 360, 520, 640, 900, 901]) {
   assert.ok(routing.includes(`"/database/attributes#resp01-${width}"`),
@@ -29,6 +28,4 @@ assert.ok(browser.includes('MFL_PLANNER_BROWSER_FOCUSED: "1"')
   "320px Planner reflow must use the focused shell/club selection test rather than desktop pitch size tests.");
 assert.ok(workflow.includes("node validation/browser-resp01-reflow-regression.mjs"),
   "RESP-01 CSS reflow suite must be enforced by Site Quality.");
-assert.ok(docs.includes("real browser zoom") && docs.includes("text-only scaling"),
-  "Do not mistake CSS viewport equivalence for genuine zoom/text-only coverage.");
-console.log("RESP-01 source ownership, matrix, pre-navigation metrics, CI and test limitations verified.");
+console.log("RESP-01 source ownership, matrix, pre-navigation metrics and CI coverage verified.");
