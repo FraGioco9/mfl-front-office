@@ -25,6 +25,11 @@
   --mfl-control-hover-border-color: var(--primary-hover);
   --mfl-control-hover-background: var(--row-hover);
   --mfl-control-hover-text-color: var(--text);
+  --mfl-filled-primary-border-color: #1d5f8a;
+  --mfl-filled-primary-background: #1d5f8a;
+  --mfl-filled-primary-text-color: #ffffff;
+  --mfl-filled-primary-hover-border-color: #174d70;
+  --mfl-filled-primary-hover-background: #174d70;
   --mfl-radius-control: 6px;
   --mfl-checkbox-size: 16px;
   --mfl-radius-checkbox: 4px;
