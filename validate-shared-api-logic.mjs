@@ -9,18 +9,18 @@ const paths = [
   "./api/_wallet-proof.js",
   "./api/_wallet-auth.js",
   "./api/_wallet-session.js",
-  "./api/wallet-session.js",
+  "./api/_handler-wallet-session.js",
   "./api/_supabase.js",
   "./api/_request-body.js",
   "./api/_evaluation-payload.js",
   "./api/_data-auth.js",
-  "./api/wallet-access.js",
-  "./api/wallet-opt-ins.js",
-  "./api/wallet-preferences.js",
-  "./api/evaluation-save.js",
-  "./api/evaluation-share.js",
-  "./api/wallet-permissions-version.js",
-  "./api/mfl-season-ratios-v2.js",
+  "./api/_handler-wallet-access.js",
+  "./api/_handler-wallet-opt-ins.js",
+  "./api/_handler-wallet-preferences.js",
+  "./api/_handler-evaluation-save.js",
+  "./api/_handler-evaluation-share.js",
+  "./api/_handler-wallet-permissions-version.js",
+  "./api/_handler-mfl-season-ratios-v2.js",
 ];
 const sources = Object.fromEntries(await Promise.all(paths.map(async (path) => [path, await read(path)])));
 const source = (path) => sources[path];
@@ -29,18 +29,18 @@ const combined = Object.values(sources).join("\n");
 const walletProof = source("./api/_wallet-proof.js");
 const walletAuth = source("./api/_wallet-auth.js");
 const walletSessionStore = source("./api/_wallet-session.js");
-const walletSessionEndpoint = source("./api/wallet-session.js");
+const walletSessionEndpoint = source("./api/_handler-wallet-session.js");
 const supabase = source("./api/_supabase.js");
 const requestBody = source("./api/_request-body.js");
 const evaluationPayload = source("./api/_evaluation-payload.js");
 const dataAuth = source("./api/_data-auth.js");
-const walletAccess = source("./api/wallet-access.js");
-const walletOptIns = source("./api/wallet-opt-ins.js");
-const walletPreferences = source("./api/wallet-preferences.js");
-const evaluationSave = source("./api/evaluation-save.js");
-const evaluationShare = source("./api/evaluation-share.js");
-const permissionsVersion = source("./api/wallet-permissions-version.js");
-const seasonRatios = source("./api/mfl-season-ratios-v2.js");
+const walletAccess = source("./api/_handler-wallet-access.js");
+const walletOptIns = source("./api/_handler-wallet-opt-ins.js");
+const walletPreferences = source("./api/_handler-wallet-preferences.js");
+const evaluationSave = source("./api/_handler-evaluation-save.js");
+const evaluationShare = source("./api/_handler-evaluation-share.js");
+const permissionsVersion = source("./api/_handler-wallet-permissions-version.js");
+const seasonRatios = source("./api/_handler-mfl-season-ratios-v2.js");
 
 includes(walletProof, "async function verifyWalletProof(proof = {}, options = {})", "Wallet proof verification must expose one canonical challenge-aware owner.");
 includes(walletProof, "async function signedWalletFromRequest(request, options = {})", "Legacy wallet-proof header parsing must remain centralized.");

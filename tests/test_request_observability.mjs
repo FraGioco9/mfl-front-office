@@ -95,8 +95,8 @@ test("correlation keys are digest-only and malformed metadata fails closed", () 
 });
 
 test("OPS-06 boundaries cover 401/409/429/500 and dataset generation without raw Error logging", () => {
-  const planner = readFileSync(resolve(root, "api/planner-save.js"), "utf8");
-  const data = readFileSync(resolve(root, "api/data.js"), "utf8");
+  const planner = readFileSync(resolve(root, "api/_handler-planner-save.js"), "utf8");
+  const data = readFileSync(resolve(root, "api/_handler-data.js"), "utf8");
   const helper = readFileSync(resolve(root, "api/_request-log.js"), "utf8");
 
   assert.match(planner, /createRequestLog\(response, \{ category: "planner-save" \}\)/);

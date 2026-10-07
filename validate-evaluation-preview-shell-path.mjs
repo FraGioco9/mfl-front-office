@@ -6,7 +6,7 @@ import { createNextRewrites, outputFileTracingIncludes } from "./next.config.mjs
 
 const siteRoot = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
-const evaluationPreviewHandler = require("./api/evaluation-preview.js");
+const evaluationPreviewHandler = require("./api/_handler-evaluation-preview.js");
 const {
   evaluationShellPath,
   browserTitleForMetadata,
@@ -69,7 +69,7 @@ assert(
 );
 assert(publicEvaluationPlayerName("missing-player") === "", "Invalid Player IDs must not trigger public title lookup.");
 
-const previewSource = readText("api/evaluation-preview.js");
+const previewSource = readText("api/_handler-evaluation-preview.js");
 assert(
   previewSource.includes('path.resolve(__dirname, "..", "index.html")'),
   "Evaluation preview must derive index.html from its deployed module directory.",

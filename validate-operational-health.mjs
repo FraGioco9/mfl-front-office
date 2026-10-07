@@ -117,11 +117,11 @@ const [databaseWorkflow, marketplaceWorkflow, marketplaceState, docs, nextApiRou
   readFile(new URL("./.github/workflows/mfl-marketplace-snapshot.yml", import.meta.url), "utf8"),
   readFile(new URL("./api/_marketplace-state.js", import.meta.url), "utf8"),
   readFile(new URL("./docs/operational-health-969.md", import.meta.url), "utf8"),
-  readFile(new URL("./pages/api/operational-health.js", import.meta.url), "utf8"),
+  readFile(new URL("./pages/api/_handler-operational-health.js", import.meta.url), "utf8"),
 ]);
 
 invariant(
-  nextApiRoute.includes('require("../../api/operational-health.js")')
+  nextApiRoute.includes('require("../../api/_handler-operational-health.js")')
     && nextApiRoute.includes("export default handler"),
   "Operational health domain handler must be exposed through the canonical Next Pages API adapter.",
 );

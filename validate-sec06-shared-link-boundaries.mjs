@@ -25,10 +25,10 @@ assert.equal(normalizePlannerId(" ABCDEF0123456789 "), "abcdef0123456789");
 
 // Regression inventory of scope and cache contracts; future changes must
 // preserve these even if the handler/query structure is refactored.
-const plannerSave = read("./api/planner-save.js");
-const evalSave = read("./api/evaluation-save.js");
-const plannerShare = read("./api/planner-share.js");
-const evalShare = read("./api/evaluation-share.js");
+const plannerSave = read("./api/_handler-planner-save.js");
+const evalSave = read("./api/_handler-evaluation-save.js");
+const plannerShare = read("./api/_handler-planner-share.js");
+const evalShare = read("./api/_handler-evaluation-share.js");
 const preview = read("./api/_evaluation-share-preview.js");
 for (const [name, src] of [["Planner save", plannerSave], ["Evaluation save", evalSave],
   ["Planner share", plannerShare], ["Evaluation share", evalShare]]) {
