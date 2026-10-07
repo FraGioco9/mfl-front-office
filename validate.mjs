@@ -175,6 +175,9 @@ const historicalDivisionPalette = `const contractDivisionColors = {
 includes(canonicalSharedCore, historicalDivisionPalette, "The historical MFL division palette must remain exact.");
 excludes(canonicalSharedCore, "function accessibleDivisionLabelColor(", "Division accents must not be theme-blended away from their historical colors.");
 includes(coreSource, "if (divisionInfo?.color) division.style.color = divisionInfo.color;", "Player first-paint division labels must use the historical accent directly.");
+includes(canonicalSharedCore, 'style="color:${escapeHtml(division.color)}"', "Global Search division labels must use the historical accent directly.");
+includes(canonicalTableCore, "divisionLabel.style.color = division.color;", "Table division labels must use the historical accent directly.");
+includes(coreSource, "if (identity.division.color) divisionLabel.style.color = identity.division.color;", "Club title division labels must use the historical accent directly.");
 includes(coreSource, 'style="color: ${escapeHtml(contractDivision.color)}"', "Player contract division labels must use the historical accent directly.");
 includes(plannerCore, 'teamDivision.style.color=divisionInfo?.color||"";', "Planner club division labels must use the historical accent directly.");
 includes(plannerCore, "division.style.color=divisionInfo.color;division.textContent=divisionInfo.name;", "Planner search division labels must use the historical accent directly.");
