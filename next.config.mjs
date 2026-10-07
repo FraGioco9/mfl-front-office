@@ -94,6 +94,7 @@ function configureWebpack(config, { dev } = {}) {
 }
 
 const nextConfig = {
+  bundlePagesRouterDependencies: true,
   // The package's standard entrypoint mixes CommonJS with ESM domhandler in
   // html-react-parser v6. Use its published self-contained UMD build instead.
   // Keep the alias identical across Turbopack production builds and Webpack dev.
