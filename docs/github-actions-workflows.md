@@ -19,7 +19,7 @@ There are **20 workflows** on `main` after the October 2026 repository cleanup.
 | `next-rendered-shell.yml` | Next rendered shell | Path-filtered pull request; manual dispatch | Real Next shell, CSP and rendered-route browser checks. |
 | `operational-health-monitor.yml` | Operational health monitor | GitHub schedule at minute 07/37; manual dispatch | Read-only production-health monitoring and one deduplicated incident issue. |
 | `performance-baseline.yml` | Performance baseline | Manual dispatch | Opt-in browser performance capture against the latest validated database artifact. |
-| `progression-email-gmail-test.yml` | Progression email Gmail test | Manual dispatch; retained maintenance-branch push trigger | Explicit real Gmail delivery test owned by the repository owner. |
+| `progression-email-gmail-test.yml` | Progression email Gmail test | Manual dispatch | Explicit owner-only real Gmail delivery test. |
 | `progression-email-preview.yml` | Progression email preview | Manual dispatch | Renders a progression-email preview without deployment or SMTP. |
 | `sec-03-auth-rate-limit-postgres.yml` | SEC-03 distributed auth rate limit | Path-filtered pull request | Isolated PostgreSQL regression for the distributed wallet-auth quota. |
 | `sec-05-supabase-grants-postgres.yml` | SEC-05 Supabase grants and RLS | Path-filtered pull request; manual dispatch | Isolated PostgreSQL grants/RLS regression. |
