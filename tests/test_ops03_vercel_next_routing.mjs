@@ -59,6 +59,10 @@ assert.ok(!stagedVerifier.includes("--deployment"),
   "Staged verification must not use the obsolete vercel curl --deployment form.");
 assert.ok(!stagedVerifier.includes('--token "$VERCEL_TOKEN"'),
   "Staged verification must authenticate through the VERCEL_TOKEN environment instead of forwarding --token to curl.");
+assert.ok(stagedVerifier.includes(String.raw`r"<title\b[^>]*>`),
+  "Staged verification must match SSR title tags with a regex word boundary.");
+assert.ok(!stagedVerifier.includes(String.raw`r"<title\\b[^>]*>`),
+  "Staged verification must not look for a literal backslash before the title word boundary.");
 
 const topLevelApiEntrypoints = readdirSync(new URL("../api/", import.meta.url), { withFileTypes: true })
   .filter(entry => entry.isFile() && /\\.(?:[cm]?js|ts)$/.test(entry.name) && !entry.name.startsWith("_"))

@@ -90,7 +90,7 @@ expected_titles = {
 if 'id="appShell"' not in body:
     raise SystemExit(f"{path} did not return the canonical application shell")
 head = re.split(r"</head>", body, maxsplit=1, flags=re.IGNORECASE)[0]
-titles = re.findall(r"<title\\b[^>]*>([^<]*)</title>", head, flags=re.IGNORECASE)
+titles = re.findall(r"<title\b[^>]*>([^<]*)</title>", head, flags=re.IGNORECASE)
 if titles != [expected_titles[path]]:
     raise SystemExit(
         f"{path} staged title mismatch: expected {expected_titles[path]!r}, observed {titles!r}"
