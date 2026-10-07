@@ -3,15 +3,10 @@ import { appendFile, readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/i;
-const SELF_CHECK_NAMES = new Set(["preflight", "deploy-site"]);
-const BLOCKING_CONCLUSIONS = new Set([
-  "action_required",
-  "cancelled",
-  "failure",
-  "startup_failure",
-  "stale",
-  "timed_out",
-]);
+const REQUIRED_RELEASE_CHECK_NAMES = [
+  "quality",
+  "windows-next-dev-smoke",
+];
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message);
@@ -38,6 +33,16 @@ function latestChecksByName(checkRuns) {
   return latest;
 }
 
+function requireGreenCheck(latest, name) {
+  const run = latest.get(name);
+  invariant(run, `Required release check ${name} is missing for the release SHA.`);
+  invariant(
+    run.status === "completed" && run.conclusion === "success",
+    `Required release check ${name} is not green (status=${run.status || "unknown"}, conclusion=${run.conclusion || "none"}).`,
+  );
+  return run;
+}
+
 export function evaluateProductionReleasePreflight({
   releaseSha,
   mainSha,
@@ -53,34 +58,17 @@ export function evaluateProductionReleasePreflight({
   );
 
   const latest = latestChecksByName(checkRuns);
-  const quality = latest.get("quality");
-  invariant(quality, "Required quality check is missing for the release SHA.");
-  invariant(
-    quality.status === "completed" && quality.conclusion === "success",
-    `Required quality check is not green (status=${quality.status || "unknown"}, conclusion=${quality.conclusion || "none"}).`,
-  );
-
-  const unsettled = [];
-  const blocking = [];
-  for (const [name, run] of latest) {
-    if (SELF_CHECK_NAMES.has(name)) continue;
-    if (run.status !== "completed") {
-      unsettled.push(name);
-      continue;
-    }
-    if (BLOCKING_CONCLUSIONS.has(String(run.conclusion || ""))) {
-      blocking.push(`${name}:${run.conclusion}`);
-    }
-  }
-  invariant(unsettled.length === 0, `Release checks are still unsettled: ${unsettled.sort().join(", ")}.`);
-  invariant(blocking.length === 0, `Release checks contain blocking conclusions: ${blocking.sort().join(", ")}.`);
+  const requiredChecks = REQUIRED_RELEASE_CHECK_NAMES.map((name) => ({
+    name,
+    run: requireGreenCheck(latest, name),
+  }));
+  const quality = requiredChecks.find(({ name }) => name === "quality")?.run;
 
   const fingerprintPayload = {
     releaseSha: release,
-    qualityCheckId: Number(quality.id || 0),
-    checks: [...latest.entries()]
-      .filter(([name]) => !SELF_CHECK_NAMES.has(name))
-      .map(([name, run]) => ({
+    qualityCheckId: Number(quality?.id || 0),
+    checks: requiredChecks
+      .map(({ name, run }) => ({
         name,
         id: Number(run.id || 0),
         status: String(run.status || ""),

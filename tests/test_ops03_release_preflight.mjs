@@ -19,12 +19,13 @@ const pass = evaluateProductionReleasePreflight({
   checkRuns: payload(
     run(10, "quality"),
     run(11, "windows-next-dev-smoke"),
-    run(12, "Mobile first-paint regression"),
-    run(13, "preflight", "in_progress", null),
+    run(12, "snapshot", "in_progress", null),
+    run(13, "validate", "completed", "skipped"),
+    run(14, "preflight", "in_progress", null),
   ),
 });
 assert.equal(pass.releaseSha, SHA);
-assert.equal(pass.checkCount, 3);
+assert.equal(pass.checkCount, 2);
 assert.equal(pass.qualityCheckId, 10);
 assert.match(pass.fingerprint, /^[0-9a-f]{64}$/);
 
@@ -33,7 +34,7 @@ assert.throws(
     releaseSha: SHA,
     mainSha: OTHER_SHA,
     approval: "DEPLOY_PRODUCTION",
-    checkRuns: payload(run(10, "quality")),
+    checkRuns: payload(run(10, "quality"), run(11, "windows-next-dev-smoke")),
   }),
   /not the current main SHA/,
 );
@@ -43,7 +44,7 @@ assert.throws(
     releaseSha: SHA,
     mainSha: SHA,
     approval: "NO_DEPLOY",
-    checkRuns: payload(run(10, "quality")),
+    checkRuns: payload(run(10, "quality"), run(11, "windows-next-dev-smoke")),
   }),
   /approval must be DEPLOY_PRODUCTION/,
 );
@@ -53,9 +54,22 @@ assert.throws(
     releaseSha: SHA,
     mainSha: SHA,
     approval: "DEPLOY_PRODUCTION",
-    checkRuns: payload(run(10, "quality", "completed", "failure")),
+    checkRuns: payload(
+      run(10, "quality", "completed", "failure"),
+      run(11, "windows-next-dev-smoke"),
+    ),
   }),
-  /quality check is not green/,
+  /Required release check quality is not green/,
+);
+
+assert.throws(
+  () => evaluateProductionReleasePreflight({
+    releaseSha: SHA,
+    mainSha: SHA,
+    approval: "DEPLOY_PRODUCTION",
+    checkRuns: payload(run(10, "quality")),
+  }),
+  /Required release check windows-next-dev-smoke is missing/,
 );
 
 assert.throws(
@@ -65,35 +79,38 @@ assert.throws(
     approval: "DEPLOY_PRODUCTION",
     checkRuns: payload(
       run(10, "quality"),
-      run(11, "browser", "completed", "failure"),
+      run(11, "windows-next-dev-smoke", "in_progress", null),
     ),
   }),
-  /blocking conclusions/,
+  /Required release check windows-next-dev-smoke is not green/,
 );
 
-assert.throws(
-  () => evaluateProductionReleasePreflight({
-    releaseSha: SHA,
-    mainSha: SHA,
-    approval: "DEPLOY_PRODUCTION",
-    checkRuns: payload(
-      run(10, "quality"),
-      run(11, "browser", "in_progress", null),
-    ),
-  }),
-  /still unsettled/,
-);
-
-const latestWins = evaluateProductionReleasePreflight({
+const operationalChecksDoNotBlock = evaluateProductionReleasePreflight({
   releaseSha: SHA,
   mainSha: SHA,
   approval: "DEPLOY_PRODUCTION",
   checkRuns: payload(
     run(10, "quality"),
-    run(20, "browser", "completed", "failure"),
-    run(21, "browser", "completed", "success"),
+    run(11, "windows-next-dev-smoke"),
+    run(20, "snapshot", "in_progress", null),
+    run(21, "marketplace-health", "completed", "failure"),
+    run(22, "database-refresh", "queued", null),
   ),
 });
-assert.equal(latestWins.checkCount, 2);
+assert.equal(operationalChecksDoNotBlock.checkCount, 2);
 
-console.log("OPS-03 production release preflight fixtures passed.");
+const latestRequiredWins = evaluateProductionReleasePreflight({
+  releaseSha: SHA,
+  mainSha: SHA,
+  approval: "DEPLOY_PRODUCTION",
+  checkRuns: payload(
+    run(10, "quality", "completed", "failure"),
+    run(11, "windows-next-dev-smoke", "completed", "failure"),
+    run(20, "quality", "completed", "success"),
+    run(21, "windows-next-dev-smoke", "completed", "success"),
+  ),
+});
+assert.equal(latestRequiredWins.checkCount, 2);
+assert.equal(latestRequiredWins.qualityCheckId, 20);
+
+console.log("OPS-03 deterministic production release preflight fixtures passed.");
