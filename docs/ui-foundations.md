@@ -165,6 +165,9 @@ Cross-site semantic values live in `ui-foundations.css`:
 - Ordinary control hover border: `var(--primary-hover)` (`--mfl-control-hover-border-color`)
 - Ordinary control hover background: `var(--row-hover)` (`--mfl-control-hover-background`)
 - Ordinary control hover text: `var(--text)` (`--mfl-control-hover-text-color`)
+- Filled-primary border/background: `#1d5f8a` (`--mfl-filled-primary-border-color`, `--mfl-filled-primary-background`)
+- Filled-primary text: `#ffffff` (`--mfl-filled-primary-text-color`), identical in light and dark themes
+- Filled-primary hover border/background: `#174d70` (`--mfl-filled-primary-hover-border-color`, `--mfl-filled-primary-hover-background`)
 - Standard control radius: `6px` (`--mfl-radius-control`)
 - Checkbox size: `16px` (`--mfl-checkbox-size`)
 - Checkbox radius: `4px` (`--mfl-radius-checkbox`)
