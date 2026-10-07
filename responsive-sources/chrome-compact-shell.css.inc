@@ -306,9 +306,9 @@
 
   .menuRail .navButton.active,
   .menuRail .navButton.active:hover {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: #ffffff;
+    border-color: var(--mfl-filled-primary-border-color);
+    background: var(--mfl-filled-primary-background);
+    color: var(--mfl-filled-primary-text-color);
     box-shadow: none;
   }
 
@@ -320,9 +320,9 @@
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"],
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #sidebar .navButton[data-page="club"],
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"] {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: #ffffff;
+    border-color: var(--mfl-filled-primary-border-color);
+    background: var(--mfl-filled-primary-background);
+    color: var(--mfl-filled-primary-text-color);
     box-shadow: none;
   }
 
@@ -334,9 +334,9 @@
   }
 
   .menuRail #sidebar .navButton:not(.active):active {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: #ffffff;
+    border-color: var(--mfl-filled-primary-border-color);
+    background: var(--mfl-filled-primary-background);
+    color: var(--mfl-filled-primary-text-color);
     filter: brightness(0.9);
   }
 
