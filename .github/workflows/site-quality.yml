@@ -211,6 +211,29 @@ jobs:
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-planner-regression.mjs
 
+      - name: Consolidated accessibility and responsive regressions
+        if: steps.changes.outputs.site == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run test:a11y
+          npm run test:a11y:controls
+          npm run test:a11y:contrast
+          npm run test:a11y:announcements
+          npm run test:a11y:motion
+          npm run test:a11y:landmarks
+          node validate-mobile-summary-first-paint.mjs
+          node validation/browser-mobile-first-paint-regression.mjs
+          node validation/browser-listing-width-regression.mjs
+          node validation/browser-mobile-table-responsive-resize.mjs
+          node validation/browser-resp02-long-mobile-table.mjs
+          node validation/browser-perf02c-sticky-theme-regression.mjs
+          node validation/browser-resp03-orientation-regression.mjs
+          node validation/browser-responsive-shell-breakpoint.mjs
+          node validation/browser-intermediate-responsive-extension.mjs
+          node validation/browser-mobile-route-coverage.mjs
+          node validation/browser-table-header-1374-regression.mjs
+
       - name: Commit generated site artifacts
         id: generated
         if: >-
