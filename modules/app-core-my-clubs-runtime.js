@@ -371,7 +371,6 @@
     division.className = "myClubDivision";
     division.textContent = divisionInfo?.name || "Division -";
     if (divisionInfo?.color) division.style.color = divisionInfo.color;
-    if (divisionInfo?.contrastBackground) division.style.backgroundColor = divisionInfo.contrastBackground;
     meta.appendChild(division);
     if (location) {
       const locationNode = document.createElement("span");

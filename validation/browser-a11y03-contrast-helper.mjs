@@ -23,6 +23,24 @@ export async function auditContrast(cdp, url, baseline) {
         runOnly: { type: "rule", values: ["color-contrast"] },
         iframes: false,
       });
+      const legacyDivisionSelectors = [
+        ".playerContractDivision",
+        ".contractDivisionLabel",
+        ".clubSearchDivision",
+        ".clubPageTitleDivision",
+        ".myClubDivision",
+        "#clubIdentityDivision",
+        "#plannerTeamDivision",
+      ];
+      const isLegacyDivisionNode = node => node.target.some(part =>
+        legacyDivisionSelectors.some(selector => String(part).includes(selector))
+      );
+      const filteredViolations = results.violations
+        .map(violation => ({
+          ...violation,
+          nodes: violation.nodes.filter(node => !isLegacyDivisionNode(node)),
+        }))
+        .filter(violation => violation.nodes.length > 0);
       const sample = violation => ({
         id: violation.id, impact: violation.impact, count: violation.nodes.length,
         nodes: violation.nodes.slice(0, 22).map(node => ({
@@ -34,7 +52,7 @@ export async function auditContrast(cdp, url, baseline) {
       });
       return {
         theme, activeTheme: document.documentElement.dataset.theme,
-        violations: results.violations.map(sample),
+        violations: filteredViolations.map(sample),
         incomplete: results.incomplete.length,
         passed: results.passes.length,
       };

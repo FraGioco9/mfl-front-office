@@ -213,7 +213,7 @@ function renderSearchResultsNow() {
       const entry = result.entry;
       const division = contractDivisionInfo(entry.division);
       const divisionHtml = division
-        ? ` &middot; <span class="clubSearchDivision" style="color:${escapeHtml(division.color)};background-color:${escapeHtml(division.contrastBackground)}">${escapeHtml(division.name)}</span>`
+        ? ` &middot; <span class="clubSearchDivision" style="color:${escapeHtml(division.color)}">${escapeHtml(division.name)}</span>`
         : "";
       button.classList.add("clubSearchResult");
       button.dataset.clubId = entry.clubId;

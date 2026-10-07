@@ -20,12 +20,9 @@
 
   function clubDivisionInfo(value) {
     if (value && typeof value === "object" && String(value.name || "").trim()) {
-      const color = String(value.color || "").trim();
       return {
         name: String(value.name || "").trim(),
-        color,
-        contrastBackground: String(value.contrastBackground || "").trim()
-          || (typeof divisionAccentContrastBackground === "function" ? divisionAccentContrastBackground(color) : ""),
+        color: String(value.color || "").trim(),
       };
     }
     const numeric = Number(value);
@@ -290,7 +287,6 @@
     const divisionLabel = document.createElement("span");
     divisionLabel.className = "clubPageTitleDivision";
     if (identity.division.color) divisionLabel.style.color = identity.division.color;
-    if (identity.division.contrastBackground) divisionLabel.style.backgroundColor = identity.division.contrastBackground;
     divisionLabel.textContent = identity.division.name;
     tablePageTitle.replaceChildren(
       document.createTextNode(`${identity.name} - `),
