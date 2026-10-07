@@ -130,6 +130,17 @@ class FullDatabaseRefreshWorkflowTests(unittest.TestCase):
         self.assertIn("DATABASE_SCHEMA_SHA256", publisher)
         self.assertIn("databaseArtifact:", publisher)
 
+    def test_checkpoint_publisher_resolves_builder_python_modules_from_workspace_root(self) -> None:
+        publisher = Path(
+            "scripts/workflows/full-database-refresh-publish-checkpoint.sh"
+        ).read_text(encoding="utf-8")
+        module_path = (
+            'PYTHONPATH="${GITHUB_WORKSPACE:?GITHUB_WORKSPACE is required}/builder'
+            '${PYTHONPATH:+:$PYTHONPATH}" \\\n'
+            '  python -m scripts.database.checkpoint_manifest verify'
+        )
+        self.assertIn(module_path, publisher)
+
     def test_published_source_reconciled_after_build_not_before(self) -> None:
         publisher = Path(
             "scripts/workflows/full-database-refresh-publish-checkpoint.sh"
