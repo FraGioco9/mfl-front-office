@@ -16,6 +16,10 @@ const [packageSource, documentSource, pageSource, homeSource, nextConfig, eslint
 
 const packageJson = JSON.parse(packageSource);
 invariant(
+  packageJson.scripts?.build?.endsWith("next build --webpack"),
+  "Production builds must opt out of Turbopack so native node:sqlite and the reviewed Webpack parser alias use the supported Webpack path.",
+);
+invariant(
   packageJson.dependencies?.["html-react-parser"] === "6.1.8",
   "Next-rendered shell must pin the reviewed html-react-parser 6.1.8 release.",
 );
