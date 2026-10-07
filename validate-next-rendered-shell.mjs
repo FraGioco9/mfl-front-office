@@ -16,8 +16,8 @@ const [packageSource, documentSource, pageSource, homeSource, nextConfig, eslint
 
 const packageJson = JSON.parse(packageSource);
 invariant(
-  packageJson.dependencies?.["html-react-parser"] === "6.1.7",
-  "Next-rendered shell must pin html-react-parser 6.1.7.",
+  packageJson.dependencies?.["html-react-parser"] === "6.1.8",
+  "Next-rendered shell must pin the reviewed html-react-parser 6.1.8 release.",
 );
 invariant(
   documentSource.includes('readFileSync(INDEX_PATH, "utf8")')
@@ -43,6 +43,22 @@ invariant(
   pageSource.includes("export default function MflLegacyShellRoutePage()")
     && pageSource.includes("return null;"),
   "Required deep-route Next page must remain an empty framework mount while legacy UI ownership is migrated incrementally.",
+);
+invariant(
+  nextConfig.includes('"html-react-parser": "./node_modules/html-react-parser/dist/html-react-parser.js"'),
+  "Turbopack production builds must resolve html-react-parser to its self-contained UMD bundle.",
+);
+invariant(
+  nextConfig.includes('"html-react-parser$": resolve(root, "node_modules/html-react-parser/dist/html-react-parser.js")'),
+  "Webpack development must resolve html-react-parser to the same self-contained UMD bundle.",
+);
+invariant(
+  nextConfig.includes("webpack: configureWebpack"),
+  "Next must retain one shared Webpack hook for parser aliasing and the development legacy bridge.",
+);
+invariant(
+  !nextConfig.includes('esmExternals: "loose"') && !nextConfig.includes("transpilePackages:"),
+  "Parser compatibility must not depend on loose ESM interop or package-transpile workarounds.",
 );
 invariant(
   nextConfig.includes('devIndicators: { position: "bottom-left" }'),

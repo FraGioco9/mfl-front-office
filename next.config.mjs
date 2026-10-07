@@ -78,25 +78,35 @@ export function createNextRewrites() {
   };
 }
 
-const developmentWebpack = process.env.NODE_ENV !== "production"
-  ? {
-      webpack(config) {
-        config.module.rules.push({
-          test: /legacy-dev-watch-token\.js$/,
-          use: [{ loader: resolve(root, "dev-legacy-watch-loader.cjs") }],
-        });
-        config.plugins.push(new MflLegacyDevBridgePlugin({ root }));
-        return config;
-      },
-    }
-  : {};
+function configureWebpack(config, { dev } = {}) {
+  config.resolve.alias = {
+    ...(config.resolve.alias || {}),
+    "html-react-parser$": resolve(root, "node_modules/html-react-parser/dist/html-react-parser.js"),
+  };
+  if (dev) {
+    config.module.rules.push({
+      test: /legacy-dev-watch-token\.js$/,
+      use: [{ loader: resolve(root, "dev-legacy-watch-loader.cjs") }],
+    });
+    config.plugins.push(new MflLegacyDevBridgePlugin({ root }));
+  }
+  return config;
+}
 
 const nextConfig = {
+  // The package's standard entrypoint mixes CommonJS with ESM domhandler in
+  // html-react-parser v6. Use its published self-contained UMD build instead.
+  // Keep the alias identical across Turbopack production builds and Webpack dev.
+  turbopack: {
+    resolveAlias: {
+      "html-react-parser": "./node_modules/html-react-parser/dist/html-react-parser.js",
+    },
+  },
   devIndicators: { position: "bottom-left" },
   env: {
     MFL_DEPLOY_COMMIT: deploymentCommit,
   },
-  ...developmentWebpack,
+  webpack: configureWebpack,
   outputFileTracingIncludes,
   headers() {
     return createNextHeaders();
