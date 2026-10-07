@@ -4,7 +4,7 @@ import { readValidationText } from "./validation-text.mjs";
 const [packageText, lockText, docs] = await Promise.all([
   readValidationText("./package.json", import.meta.url),
   readValidationText("./package-lock.json", import.meta.url),
-  readValidationText("./docs/dep01-dependency-audit.md", import.meta.url),
+  readValidationText("./docs/dependency-security.md", import.meta.url),
 ]);
 const pkg = JSON.parse(packageText);
 const lock = JSON.parse(lockText);
