@@ -5,11 +5,16 @@ const DEFAULT_EVALUATION_LATE_SEASON_REWARD_RATES = Object.freeze([80, 80, 60]);
 
 function normalizeEvaluationId(value) {
   const id = String(value || "").trim();
-  return /^[a-zA-Z0-9]{1,8}$/.test(id) ? id : "";
+  if (/^[a-zA-Z0-9]{1,8}$/.test(id)) return id;
+  return /^[a-f0-9]{32}$/.test(id) ? id : "";
 }
 
 function generateEvaluationId() {
   return crypto.randomBytes(4).toString("hex");
+}
+
+function generateEvaluationShareId() {
+  return crypto.randomBytes(16).toString("hex");
 }
 
 function parseEvaluationRewardRate(value) {
@@ -71,6 +76,7 @@ function normalizeEvaluationPayload(payload, options = {}) {
 module.exports = {
   normalizeEvaluationId,
   generateEvaluationId,
+  generateEvaluationShareId,
   normalizeLateSeasonRewardRates,
   normalizeEvaluationPayload,
 };

@@ -5,7 +5,7 @@ const { supabaseConfig, supabaseRequest } = require("./_supabase");
 const { readJsonBody, sendRequestBodyError } = require("./_request-body");
 const {
   normalizeEvaluationId,
-  generateEvaluationId,
+  generateEvaluationShareId,
   normalizeEvaluationPayload,
 } = require("./_evaluation-payload");
 const { evaluationPresentValueTotalFromSharePayload } = require("./_evaluation-preview-value");
@@ -77,7 +77,7 @@ module.exports = async function handler(request, response) {
 
       await snapshotPresentValue(payload);
 
-      const id = generateEvaluationId();
+      const id = generateEvaluationShareId();
       const expiresAt = evaluationShareExpiresAt();
       const rows = await supabaseRequest("evaluation_shares", {
         method: "POST",
