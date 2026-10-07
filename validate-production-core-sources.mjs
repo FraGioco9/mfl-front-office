@@ -80,8 +80,8 @@ for (const runtimePath of [
   await access(new URL(`./${runtimePath}`, import.meta.url));
 }
 
-if (!String(packageJson.scripts?.build || "").endsWith("next build")) {
-  throw new Error("Production build must finish with next build.");
+if (!String(packageJson.scripts?.build || "").endsWith("next build --webpack")) {
+  throw new Error("Production build must finish with next build --webpack.");
 }
 if (!prepareSource.includes("listLegacyPublicAssetPaths(root)")
     || !legacyPublicAssetsSource.includes('name.endsWith("-runtime.js")')
