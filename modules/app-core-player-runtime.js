@@ -1229,7 +1229,8 @@ function animateReadyControls(container = document) {
     const divisionRaw = knownRawValue(context, "active_contract_club_division");
     const divisionInfo = divisionRaw !== "" ? contractDivisionInfo(divisionRaw) : null;
     division.textContent = divisionInfo?.name || knownDisplayValue(context, "active_contract_club_division") || loadingBlank();
-    if (divisionInfo?.color) division.style.color = accessibleDivisionLabelColor(divisionInfo.color);
+    if (divisionInfo?.color) division.style.color = divisionInfo.color;
+    if (divisionInfo?.contrastBackground) division.style.backgroundColor = divisionInfo.contrastBackground;
     line.append(team, division);
     value.replaceChildren(line);
   }
@@ -2180,7 +2181,7 @@ function renderPlayerPageOwner(playerId) {
   const contractDivisionRaw = getValue(row, "active_contract_club_division");
   const contractDivision = rowHasActiveContract(row) ? contractDivisionInfo(contractDivisionRaw) : null;
   const contractDivisionHtml = contractDivision
-    ? `<span class="playerContractDivision" style="color: ${escapeHtml(accessibleDivisionLabelColor(contractDivision.color))}">${escapeHtml(contractDivision.name)}</span>`
+    ? `<span class="playerContractDivision" style="color: ${escapeHtml(contractDivision.color)}; background-color: ${escapeHtml(contractDivision.contrastBackground)}">${escapeHtml(contractDivision.name)}</span>`
     : (rowHasActiveContract(row) ? `<span class="playerContractDivision">${unknownDataValueHtml(contractDivisionRaw)}</span>` : "");
   const contractTeamName = formatContractClubName(row);
   const contractClubId = String(getValue(row, "active_contract_club_id") || "").trim();

@@ -157,7 +157,58 @@ const coreSource = [
   await readSite("modules/core-sources/wallet.js"),
   await readSite("modules/core-sources/watchlist.js"),
 ].join("\n");
+const plannerCore = await readSite("modules/core-sources/planner.js");
+const myClubsCore = await readSite("modules/core-sources/my-clubs.js");
 invariant(canonicalSharedCore.length > 300_000, "Canonical shared core source is unexpectedly small.");
+const historicalDivisionPalette = `const contractDivisionColors = {
+  1: "#3be9f8",
+  2: "#13d389",
+  3: "#ffd23e",
+  4: "#dbe4eb",
+  5: "#fd7a00",
+  6: "#865e3f",
+  7: "#b7b09c",
+  8: "#b0cce1",
+  9: "#ffb136",
+  10: "#757061",
+};`;
+includes(canonicalSharedCore, historicalDivisionPalette, "The historical MFL division palette must remain exact.");
+excludes(canonicalSharedCore, "function accessibleDivisionLabelColor(", "Division accents must not be theme-blended away from their historical colors.");
+includes(canonicalSharedCore, "function divisionAccentContrastBackground(rawColor)", "Division accents must have one shared contrast-background owner.");
+includes(canonicalSharedCore, 'return blackContrast >= whiteContrast ? "#000000" : "#ffffff";', "Division contrast backing must choose the higher-contrast neutral surface.");
+includes(canonicalSharedCore, "contrastBackground: divisionAccentContrastBackground(color)", "Canonical division metadata must expose its contrast backing.");
+
+const historicalDivisionColors = ["#3be9f8", "#13d389", "#ffd23e", "#dbe4eb", "#fd7a00", "#865e3f", "#b7b09c", "#b0cce1", "#ffb136", "#757061"];
+const relativeLuminance = (hex) => {
+  const channels = [1, 3, 5].map((offset) => {
+    const value = Number.parseInt(hex.slice(offset, offset + 2), 16) / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return (0.2126 * channels[0]) + (0.7152 * channels[1]) + (0.0722 * channels[2]);
+};
+for (const accent of historicalDivisionColors) {
+  const luminance = relativeLuminance(accent);
+  const blackContrast = (luminance + 0.05) / 0.05;
+  const whiteContrast = 1.05 / (luminance + 0.05);
+  invariant(Math.max(blackContrast, whiteContrast) >= 4.5, `Historical division accent ${accent} must have a WCAG AA contrast backing.`);
+}
+
+includes(coreSource, "if (divisionInfo?.color) division.style.color = divisionInfo.color;", "Player first-paint division labels must use the historical accent directly.");
+includes(coreSource, "if (divisionInfo?.contrastBackground) division.style.backgroundColor = divisionInfo.contrastBackground;", "Player first-paint division labels must apply the shared contrast backing.");
+includes(canonicalSharedCore, 'style="color:${escapeHtml(division.color)};background-color:${escapeHtml(division.contrastBackground)}"', "Global Search division labels must keep the historical accent with contrast backing.");
+includes(canonicalTableCore, "divisionLabel.style.color = division.color;", "Table division labels must use the historical accent directly.");
+includes(canonicalTableCore, "divisionLabel.style.backgroundColor = division.contrastBackground;", "Table division labels must apply the shared contrast backing.");
+includes(coreSource, "if (identity.division.color) divisionLabel.style.color = identity.division.color;", "Club title division labels must use the historical accent directly.");
+includes(coreSource, "if (identity.division.contrastBackground) divisionLabel.style.backgroundColor = identity.division.contrastBackground;", "Club title division labels must apply the shared contrast backing.");
+includes(coreSource, 'background-color: ${escapeHtml(contractDivision.contrastBackground)}', "Player contract division labels must keep the historical accent with contrast backing.");
+includes(plannerCore, 'teamDivision.style.color=divisionInfo?.color||"";', "Planner club division labels must use the historical accent directly.");
+includes(plannerCore, 'teamDivision.style.backgroundColor=divisionInfo?.contrastBackground||"";', "Planner club division labels must apply the shared contrast backing.");
+includes(plannerCore, "division.style.color=divisionInfo.color;division.style.backgroundColor=divisionInfo.contrastBackground||\"\";", "Planner search division labels must keep the historical accent with contrast backing.");
+includes(myClubsCore, "if (divisionInfo?.color) division.style.color = divisionInfo.color;", "My Clubs division labels must use the historical accent directly.");
+includes(myClubsCore, "if (divisionInfo?.contrastBackground) division.style.backgroundColor = divisionInfo.contrastBackground;", "My Clubs division labels must apply the shared contrast backing.");
+excludes(coreSource, "accessibleDivisionLabelColor(", "Shared, Player and Table division surfaces may not reintroduce theme blending.");
+excludes(plannerCore, "accessibleDivisionLabelColor(", "Planner division surfaces may not reintroduce theme blending.");
+excludes(myClubsCore, "accessibleDivisionLabelColor(", "My Clubs division surfaces may not reintroduce theme blending.");
 includes(canonicalSharedCore, "const shellFirstTablePages = new Set();", "The shared core must keep destination shell-first rendering disabled.");
 includes(canonicalSharedCore, 'window.__mflAppConfig?.routes?.clubPath?.(clubTarget.clubId, viewName)', "The shared core must delegate Club view URLs to canonical route configuration.");
 excludes(canonicalSharedCore, 'viewName === "attributes" ? "squad" : viewSlug(viewName)', "The shared core must not duplicate the Club view-to-slug mapping.");
