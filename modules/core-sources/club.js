@@ -287,6 +287,7 @@
     const divisionLabel = document.createElement("span");
     divisionLabel.className = "clubPageTitleDivision";
     if (identity.division.color) divisionLabel.style.color = identity.division.color;
+    if (identity.division.contrastBackground) divisionLabel.style.backgroundColor = identity.division.contrastBackground;
     divisionLabel.textContent = identity.division.name;
     tablePageTitle.replaceChildren(
       document.createTextNode(`${identity.name} - `),
