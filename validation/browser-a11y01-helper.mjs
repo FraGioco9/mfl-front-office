@@ -81,7 +81,7 @@ export async function auditAccessibility(cdp, url, baseline) {
       passes: result.passes.length
     };
   })()`);
-  assert.equal(report?.version, "4.10.3", "A11Y-01 axe version drifted.");
+  assert.equal(report?.version, "4.14.0", "A11Y-01 axe version drifted.");
   const critical = report.violations.filter(item => item.impact === "critical");
   const serious = report.violations.filter(item => item.impact === "serious");
   console.log("A11Y-01 " + route + " WCAG report: " + JSON.stringify({
