@@ -84,12 +84,15 @@ export async function auditAccessibility(cdp, url, baseline) {
   assert.equal(report?.version, "4.14.0", "A11Y-01 axe version drifted.");
   const critical = report.violations.filter(item => item.impact === "critical");
   const serious = report.violations.filter(item => item.impact === "serious");
+  const labelNameMismatches = report.violations.filter(item => item.id === "label-content-name-mismatch");
   console.log("A11Y-01 " + route + " WCAG report: " + JSON.stringify({
     page: state.path, axe: report.version, passes: report.passes,
-    critical: critical.length, serious: serious.length, other: report.violations.length - critical.length - serious.length,
+    critical: critical.length, serious: serious.length, labelNameMismatches: labelNameMismatches.length,
+    other: report.violations.length - critical.length - serious.length,
     incomplete: report.incomplete.length, violations: report.violations
   }));
   assert.deepEqual(critical, [], "A11Y-01 critical WCAG violations on " + route + ": " + JSON.stringify(critical));
+  assert.deepEqual(labelNameMismatches, [], "A11Y-01 visible labels must remain within accessible names on " + route + ": " + JSON.stringify(labelNameMismatches));
 
   const keyboardState = () => evaluate(`(() => {
     const el = document.activeElement;
