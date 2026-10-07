@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 import { verifyPrebuiltNextRouting } from "../scripts/workflows/verify-prebuilt-next-routing.mjs";
 
@@ -49,5 +49,12 @@ assert.ok(!stagedVerifier.includes("--deployment"),
   "Staged verification must not use the obsolete vercel curl --deployment form.");
 assert.ok(!stagedVerifier.includes('--token "$VERCEL_TOKEN"'),
   "Staged verification must authenticate through the VERCEL_TOKEN environment instead of forwarding --token to curl.");
+
+const topLevelApiEntrypoints = readdirSync(new URL("../api/", import.meta.url), { withFileTypes: true })
+  .filter(entry => entry.isFile() && /\\.(?:[cm]?js|ts)$/.test(entry.name) && !entry.name.startsWith("_"))
+  .map(entry => entry.name)
+  .sort();
+assert.deepEqual(topLevelApiEntrypoints, [],
+  "Next owns all public API routes; top-level api/ must contain only internal underscore-prefixed JavaScript helpers.");
 
 console.log("OPS-03 Vercel Next packaging and stage/verify/promote release contract passed.");
