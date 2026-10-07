@@ -43,7 +43,12 @@ async function mustNotExist(path, message) {
 
 const release = JSON.parse(await readSite("release.json"));
 invariant(/^\d+\.\d+\.\d+$/.test(release.version), "release.json must contain a Semantic Version.");
-invariant(String(release.description || "").trim().length > 20, "release.json must contain a useful description.");
+const releaseDescription = String(release.description || "").trim();
+invariant(releaseDescription.length > 20, "release.json must contain a useful description.");
+invariant(
+  !/(?:#\d+|\b(?:audit|issue|hardening|gate|infrastructure|operational|roadmap)\b)/i.test(releaseDescription),
+  "release.json description must stay user-facing and avoid internal project terminology.",
+);
 
 const packageManifest = JSON.parse(await readSite("package.json"));
 invariant(String(packageManifest.dependencies?.["@onflow/fcl"] || "").trim(), "package.json must keep @onflow/fcl.");
