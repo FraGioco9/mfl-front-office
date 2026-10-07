@@ -91,6 +91,48 @@ for (const required of [
   );
 }
 
+invariant(
+  !controls.includes(':root[data-theme="dark"] #sidebar .navButton.active {\n  color: var(--page-bg);\n}'),
+  "Primary-filled sidebar navigation must not regain a dark-theme text override.",
+);
+invariant(
+  !controls.includes(':root[data-theme="dark"] :is(\n  #sidebar .navButton.active,\n  .viewButton.active,'),
+  "Primary-filled shared controls must not regain a dark-theme text override.",
+);
+invariant(
+  !stylesBase.includes(':root[data-theme="dark"] :is(\n  .settingsToggleButton.active,'),
+  "Primary-filled Settings and Player actions must not regain a dark-theme text override.",
+);
+for (const selector of [
+  ".settingsToggleButton.active",
+  ".settingsEmailActionButton.primary",
+  ".playerEvaluateButton",
+  ".playerExternalButton",
+]) {
+  invariant(
+    !stylesBase.includes(selector + ",\n  .") || !stylesBase.includes("color: var(--page-bg);"),
+    `Primary-filled control ${selector} must keep its canonical white foreground in every theme.`,
+  );
+}
+
+const activeHoverSelector = `:is(
+  .navButton,
+  .viewButton:not([hidden]),
+  .filtersViewButton,
+  .mflStatsFilterButton,
+  .mflStatsDistributionModeButton,
+  .playerAttributeViewButton
+).active:hover`;
+const activeHoverRule = exactRule(controls, activeHoverSelector);
+invariant(activeHoverRule, "controls.css must retain the v1.128.4 shared active:hover rule.");
+for (const required of [
+  "border-color: var(--primary);",
+  "background: var(--primary);",
+  "color: #ffffff;",
+]) {
+  invariant(activeHoverRule.includes(required), `Active hover controls must preserve v1.128.4 styling: ${required}`);
+}
+
 const ordinaryHoverSelector = `:is(
   .viewButton:not([hidden]),
   .filtersViewButton

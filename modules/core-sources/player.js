@@ -1006,7 +1006,7 @@ function applyOverallBoxAppearance(box, overall) {
 function animateReadyControls(container = document) {
   const playerId = playerIdFromLocation();
   if (!playerId || readyTransitionPlayerId !== playerId) return false;
-  const controls = Array.from(container?.querySelectorAll?.(".playerHeroActionMenuButton, .playerAttributeViewButton") || [])
+  const controls = Array.from(container?.querySelectorAll?.(".playerHeroActionMenuButton") || [])
     .filter((control) => control instanceof HTMLElement);
   readyTransitionPlayerId = "";
   controls.forEach((control) => {
@@ -1288,7 +1288,6 @@ function animateReadyControls(container = document) {
       button.dataset.playerAttributeView = view;
       button.setAttribute("aria-pressed", "false");
       button.textContent = label;
-      button.style.transition = PLAYER_READY_TRANSITION;
       views.appendChild(button);
     });
     return views;
