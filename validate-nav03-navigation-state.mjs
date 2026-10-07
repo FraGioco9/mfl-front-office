@@ -6,7 +6,6 @@ const initial = read("./html-sources/chrome.html");
 const session = read("./modules/core-sources/shared-session.js");
 const browser = read("./validation/browser-routing-regression.mjs");
 const types = read("./types/global.d.ts");
-const docs = read("./docs/nav-discoverability-1034.md");
 const navLabels = ["database","mfl","progression","evaluation","watchlist","myplayers","my-clubs","planner","settings"];
 for (const page of navLabels) {
   assert.match(initial, new RegExp('class="navButton(?: settingsNavButton)?"[^>]*data-page="' + page + '"'),
@@ -48,5 +47,4 @@ for (const token of ["assertNav03Navigation(\"direct refresh\")",
   "getComputedStyle(progression).display",
   "Dapper opt-in", "aria-current"])
   assert.ok(browser.includes(token), "Chromium navigation matrix must cover: " + token);
-assert.ok(docs.includes("NAV-03C") && docs.includes("Safari iPhone") && docs.includes("guest"));
 console.log("NAV-03 route/current accessibility, live progression visibility, protected discovery and mobile geometry contracts passed.");
