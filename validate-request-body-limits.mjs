@@ -16,11 +16,11 @@ const {
 
 const paths = [
   "./api/_request-body.js",
-  "./api/wallet-session.js",
-  "./api/wallet-preferences.js",
-  "./api/evaluation-save.js",
-  "./api/evaluation-share.js",
-  "./api/bug-reports.js",
+  "./api/_handler-wallet-session.js",
+  "./api/_handler-wallet-preferences.js",
+  "./api/_handler-evaluation-save.js",
+  "./api/_handler-evaluation-share.js",
+  "./api/_handler-bug-reports.js",
 ];
 const sources = Object.fromEntries(
   await Promise.all(paths.map(async (path) => [path, await readValidationText(path, import.meta.url)])),
@@ -96,11 +96,11 @@ includes(source("./api/_request-body.js"), "throw new MalformedJsonBodyError();"
 includes(source("./api/_request-body.js"), "function sendRequestBodyError(response, error)", "Request-body errors must have one canonical response mapper.");
 
 for (const [path, limit] of [
-  ["./api/wallet-session.js", "32 * 1024"],
-  ["./api/bug-reports.js", "32 * 1024"],
-  ["./api/evaluation-save.js", "256 * 1024"],
-  ["./api/evaluation-share.js", "256 * 1024"],
-  ["./api/wallet-preferences.js", "512 * 1024"],
+  ["./api/_handler-wallet-session.js", "32 * 1024"],
+  ["./api/_handler-bug-reports.js", "32 * 1024"],
+  ["./api/_handler-evaluation-save.js", "256 * 1024"],
+  ["./api/_handler-evaluation-share.js", "256 * 1024"],
+  ["./api/_handler-wallet-preferences.js", "512 * 1024"],
 ]) {
   const endpoint = source(path);
   includes(endpoint, `const MAX_BODY_BYTES = ${limit};`, `${path} must declare its explicit JSON request limit.`);
@@ -108,7 +108,7 @@ for (const [path, limit] of [
   includes(endpoint, "sendRequestBodyError", `${path} must map malformed/oversized bodies through the shared response owner.`);
 }
 
-excludes(source("./api/wallet-session.js"), 'Number(request?.headers?.["content-length"] || 0)', "Wallet session must not duplicate shared body-size preflight.");
-excludes(source("./api/bug-reports.js"), 'Number(request.headers?.["content-length"] || 0)', "Bug reports must not duplicate shared body-size preflight.");
+excludes(source("./api/_handler-wallet-session.js"), 'Number(request?.headers?.["content-length"] || 0)', "Wallet session must not duplicate shared body-size preflight.");
+excludes(source("./api/_handler-bug-reports.js"), 'Number(request.headers?.["content-length"] || 0)', "Bug reports must not duplicate shared body-size preflight.");
 
 console.log("Request body limit validation passed: JSON writers use explicit limits, streamed bytes are bounded, malformed JSON returns 400, and oversized bodies return 413.");

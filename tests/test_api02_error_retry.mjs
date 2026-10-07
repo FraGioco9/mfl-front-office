@@ -256,7 +256,7 @@ assert(appEntry.includes('new CustomEvent("mfl:data-client-retry"'));
 assert(appEntry.includes('method === "GET" || method === "HEAD"'));
 assert(appEntry.includes('new Set([408, 429, 502, 503, 504])'));
 
-const ratioSource = await readFile(new URL("../api/mfl-season-ratios-v2.js", import.meta.url), "utf8");
+const ratioSource = await readFile(new URL("../api/_handler-mfl-season-ratios-v2.js", import.meta.url), "utf8");
 assert(!ratioSource.includes("response.status(500).json({ error: message })"), "Internal upstream errors must not leak to clients");
 assert(ratioSource.includes('response.status(500).json({ error: "Could not load MFL season ratios." })'));
 

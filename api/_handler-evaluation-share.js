@@ -10,7 +10,7 @@ const {
 } = require("./_evaluation-payload");
 const { evaluationPresentValueTotalFromSharePayload } = require("./_evaluation-preview-value");
 const { readActiveEvaluationShare } = require("./_evaluation-share-preview");
-const { loadRatiosFromSupabase } = require("./mfl-season-ratios-v2");
+const { loadRatiosFromSupabase } = require("./_handler-mfl-season-ratios-v2");
 
 const MAX_BODY_BYTES = 256 * 1024;
 

@@ -19,7 +19,7 @@ const { evaluationSharePreviewFromContext } = require("./api/_evaluation-share-p
 const {
   evaluationCanonicalUrl,
   evaluationPreviewImageUrl,
-} = require("./api/evaluation-preview.js");
+} = require("./api/_handler-evaluation-preview.js");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -87,12 +87,12 @@ function validatePng(image, label) {
 }
 
 const indexHtml = readText("index.html");
-const previewApi = readText("api/evaluation-preview.js");
-const previewImageApi = readText("api/evaluation-preview-image.js");
+const previewApi = readText("api/_handler-evaluation-preview.js");
+const previewImageApi = readText("api/_handler-evaluation-preview-image.js");
 const previewCard = readText("api/_evaluation-preview-card.js");
 const previewValue = readText("api/_evaluation-preview-value.js");
 const previewOwner = readText("api/_evaluation-share-preview.js");
-const shareApi = readText("api/evaluation-share.js");
+const shareApi = readText("api/_handler-evaluation-share.js");
 const evaluationRuntime = readText("modules/app-core-evaluation-runtime.js");
 const siteStyles = readText("styles-base.css");
 const persistenceDoc = readText("./SUPABASE_PERSISTENCE.md");

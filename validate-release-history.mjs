@@ -33,7 +33,7 @@ const [releaseSource, bootstrap, bootstrapCore, indexHtml, overridesSource, hist
   read("./index.html"),
   read("./release-history-overrides.json"),
   read("./api/_data/releases-history.json"),
-  read("./api/releases.js"),
+  read("./api/_handler-releases.js"),
 ]);
 
 const release = JSON.parse(releaseSource);

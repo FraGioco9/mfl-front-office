@@ -7,7 +7,7 @@ The active authentication boundary is split across:
 - `api/_wallet-proof.js` — Flow account-proof/user-signature verification;
 - `api/_wallet-session.js` — durable one-time nonce consumption and seven-day sessions;
 - `api/_wallet-auth.js` — session-cookie authentication for protected API consumers;
-- `api/wallet-session.js` — browser challenge issuance, proof exchange, and logout.
+- `api/_handler-wallet-session.js` — browser challenge issuance, proof exchange, and logout.
 
 ## Deployment configuration
 

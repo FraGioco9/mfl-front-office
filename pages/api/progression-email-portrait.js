@@ -1,4 +1,4 @@
-const handler = require("../../api/progression-email-portrait.js");
+const handler = require("../../api/_handler-progression-email-portrait.js");
 
 export const config = { api: { bodyParser: false } };
 export default handler;

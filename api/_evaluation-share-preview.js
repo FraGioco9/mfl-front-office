@@ -2,7 +2,7 @@ const { queryOne } = require("./_database");
 const { normalizeEvaluationId } = require("./_evaluation-payload");
 const { evaluationPresentValueTotalFromSharePayload } = require("./_evaluation-preview-value");
 const { playerPortraitUrl } = require("./_player-portrait");
-const { loadRatiosFromSupabase } = require("./mfl-season-ratios-v2");
+const { loadRatiosFromSupabase } = require("./_handler-mfl-season-ratios-v2");
 const { supabaseRequest } = require("./_supabase");
 
 const GENERIC_PREVIEW = Object.freeze({

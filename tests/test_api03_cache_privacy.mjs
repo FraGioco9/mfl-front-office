@@ -104,7 +104,7 @@ function loadHandler(path, stubs) {
   }
 }
 
-const walletAccess = loadHandler("../api/wallet-access.js", {
+const walletAccess = loadHandler("../api/_handler-wallet-access.js", {
   "../api/_data-auth.js": {
     signedWalletFromRequest: async request => request.wallet || "",
     walletAllowed: async wallet => wallet === "0xallowed",
@@ -137,11 +137,11 @@ const [
   shareFixture,
   apiPersistenceDomain,
 ] = await Promise.all([
-  read("../api/planner-share.js"),
-  read("../api/evaluation-share.js"),
-  read("../api/evaluation-preview.js"),
-  read("../api/evaluation-preview-image.js"),
-  read("../api/operational-health.js"),
+  read("../api/_handler-planner-share.js"),
+  read("../api/_handler-evaluation-share.js"),
+  read("../api/_handler-evaluation-preview.js"),
+  read("../api/_handler-evaluation-preview-image.js"),
+  read("../api/_handler-operational-health.js"),
   read("../validate-sec06-share-api-fixtures.mjs"),
   read("../validate-domain-api-persistence.mjs"),
 ]);

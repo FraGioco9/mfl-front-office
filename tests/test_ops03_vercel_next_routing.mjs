@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 import { verifyPrebuiltNextRouting } from "../scripts/workflows/verify-prebuilt-next-routing.mjs";
 
@@ -10,6 +10,7 @@ const valid = verifyPrebuiltNextRouting({
 });
 assert.equal(valid.detectedStatus, "detected");
 assert.deepEqual([...valid.frontendFunctions], ["__next.func"]);
+assert.deepEqual([...valid.standaloneApiBuilds], []);
 
 assert.throws(() => verifyPrebuiltNextRouting({
   vercelConfig: { framework: null },
@@ -31,6 +32,15 @@ assert.throws(() => verifyPrebuiltNextRouting({
   functionDirs: ["api/data.func"],
 }), /no non-API Vercel Function/);
 
+assert.throws(() => verifyPrebuiltNextRouting({
+  vercelConfig: { framework: "nextjs" },
+  builds: {
+    detectedFramework: { status: "skipped" },
+    builds: [{ use: "@vercel/node", src: "api/identity.js" }],
+  },
+  functionDirs: ["[...path].func"],
+}), /standalone top-level api\/\*/);
+
 const workflow = readFileSync(new URL("../.github/workflows/vercel-site-update.yml", import.meta.url), "utf8");
 const stagedVerifier = readFileSync(new URL("../scripts/workflows/verify-staged-vercel-deployment.sh", import.meta.url), "utf8");
 const stagedIndex = workflow.indexOf("vercel deploy --prebuilt --prod --skip-domain");
@@ -49,5 +59,12 @@ assert.ok(!stagedVerifier.includes("--deployment"),
   "Staged verification must not use the obsolete vercel curl --deployment form.");
 assert.ok(!stagedVerifier.includes('--token "$VERCEL_TOKEN"'),
   "Staged verification must authenticate through the VERCEL_TOKEN environment instead of forwarding --token to curl.");
+
+const topLevelApiEntrypoints = readdirSync(new URL("../api/", import.meta.url), { withFileTypes: true })
+  .filter(entry => entry.isFile() && /\\.(?:[cm]?js|ts)$/.test(entry.name) && !entry.name.startsWith("_"))
+  .map(entry => entry.name)
+  .sort();
+assert.deepEqual(topLevelApiEntrypoints, [],
+  "Next owns all public API routes; top-level api/ must contain only internal underscore-prefixed JavaScript helpers.");
 
 console.log("OPS-03 Vercel Next packaging and stage/verify/promote release contract passed.");

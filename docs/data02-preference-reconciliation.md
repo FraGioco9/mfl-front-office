@@ -56,7 +56,7 @@ No background polling or opaque retry queue is introduced by DATA-02.
 
 ## Regression fixture
 
-`tests/test_wallet_preferences_multidevice.mjs` executes the real `api/wallet-preferences.js` handler with an isolated in-memory Supabase transport and verifies:
+`tests/test_wallet_preferences_multidevice.mjs` executes the real `api/_handler-wallet-preferences.js` handler with an isolated in-memory Supabase transport and verifies:
 
 - two devices can start from the same stale snapshot;
 - a Settings write followed by a stale Watchlist write preserves both;

@@ -10,10 +10,11 @@ invariant(wrappers.length > 0, "ARCH-07 must find Pages API wrappers.");
 
 for (const name of wrappers) {
   const wrapper = String(await readFile(new URL(name, pagesDir), "utf8")).replace(/\r\n?/g, "\n");
-  await access(new URL(name, apiDir));
+  const handlerName = `_handler-${name}`;
+  await access(new URL(handlerName, apiDir));
   invariant(
-    wrapper.includes(`require("../../api/${name}")`),
-    `Pages wrapper ${name} must forward to the same-named canonical CommonJS handler.`,
+    wrapper.includes(`require("../../api/${handlerName}")`),
+    `Pages wrapper ${name} must forward to the canonical internal CommonJS handler ${handlerName}.`,
   );
   invariant(
     wrapper.includes("export const config = { api: { bodyParser: false } };"),
@@ -31,15 +32,12 @@ for (const name of wrappers) {
   );
 }
 
-const apiFiles = (await readdir(apiDir))
+const publicTopLevelApiFiles = (await readdir(apiDir))
   .filter(name => name.endsWith(".js") && !name.startsWith("_"))
   .sort();
-const wrapperSet = new Set(wrappers);
-const intentionallyInternal = new Set([]);
-const missing = apiFiles.filter(name => !wrapperSet.has(name) && !intentionallyInternal.has(name));
 invariant(
-  missing.length === 0,
-  `Canonical public API handlers need same-named Pages wrappers: ${missing.join(", ")}.`,
+  publicTopLevelApiFiles.length === 0,
+  `Next must be the sole HTTP API owner; top-level api/ contains deployable handlers: ${publicTopLevelApiFiles.join(", ")}.`,
 );
 
 console.log(`ARCH-07 Pages/CommonJS wrapper contract passed for ${wrappers.length} API routes.`);

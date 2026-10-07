@@ -6,7 +6,7 @@ Management, scouting, progression, and evaluation tools for MFL.
 
 The MFL player, agent, club, and marketplace dataset is stored in `mfl_database.db`.
 Every page, filter, sort, search, summary, and Stats request executes a parameterized SQLite query
-through `api/data.js` while the site is running.
+through `api/_handler-data.js` while the site is running.
 
 The historical full-dataset JSON loader, browser dataset snapshots, download
 progress bar, and full-screen page-navigation loading overlay have been removed.

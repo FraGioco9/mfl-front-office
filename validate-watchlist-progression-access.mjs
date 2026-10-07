@@ -2,7 +2,7 @@ import { invariant } from "./validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 import { readCombinedCanonicalCoreSource } from "./validate-core-sources.mjs";
 
-const apiSource = String(await readFile(new URL("./api/data.js", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
+const apiSource = String(await readFile(new URL("./api/_handler-data.js", import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 const coreSource = readCombinedCanonicalCoreSource().replace(/\r\n?/g, "\n");
 
 invariant(

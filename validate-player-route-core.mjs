@@ -22,7 +22,7 @@ const [coreSource, appConfig, routeLoader, buildCore, bootstrap, walletPreferenc
   read("./route-core-loader-runtime.js"),
   read("./build-app-core.mjs"),
   read("./bootstrap.js"),
-  read("./api/wallet-preferences.js"),
+  read("./api/_handler-wallet-preferences.js"),
   read("./styles-base.css"),
   read("./modules/app-core-player-runtime.js"),
   read("./html-sources/player.html"),

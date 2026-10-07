@@ -26,7 +26,7 @@ function unscopedPreferenceSaveOwners(sources) {
 const [canonicalSources, generatedSources, walletPreferencesApi, vercelSiteUpdate, fullDatabaseRefresh] = await Promise.all([
   readNamedSources("./modules/core-sources/", (name) => name.endsWith(".js")),
   readNamedSources("./modules/", (name) => /^app-core(?:-[a-z0-9-]+)?-runtime\.js$/.test(name)),
-  read("./api/wallet-preferences.js"),
+  read("./api/_handler-wallet-preferences.js"),
   read("./.github/workflows/vercel-site-update.yml"),
   readWorkflowSource(new URL("./.github/workflows/full-database-refresh.yml", import.meta.url)),
 ]);

@@ -121,7 +121,7 @@ const [databaseWorkflow, marketplaceWorkflow, marketplaceState, docs, nextApiRou
 ]);
 
 invariant(
-  nextApiRoute.includes('require("../../api/operational-health.js")')
+  nextApiRoute.includes('require("../../api/_handler-operational-health.js")')
     && nextApiRoute.includes("export default handler"),
   "Operational health domain handler must be exposed through the canonical Next Pages API adapter.",
 );

@@ -27,7 +27,7 @@ on:
       - "shared-table-ui-runtime.js"
       - "validate-csp-legacy-eval-elimination.mjs"
       - "validation/next-csp-report-route.mjs"
-      - "api/csp-report.js"
+      - "api/_handler-csp-report.js"
       - "csp-report-only-policy.mjs"
       - "proxy.js"
       - "csp-legacy-script-hashes.mjs"

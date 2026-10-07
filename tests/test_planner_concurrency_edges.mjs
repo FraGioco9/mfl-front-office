@@ -135,8 +135,8 @@ const deps = {
   "../api/_planner-persistence.js": { sendPlannerPersistenceUnavailable: () => false },
 };
 
-const saveHandler = loadHandler("../api/planner-save.js", deps);
-const shareHandler = loadHandler("../api/planner-share.js", deps);
+const saveHandler = loadHandler("../api/_handler-planner-save.js", deps);
+const shareHandler = loadHandler("../api/_handler-planner-share.js", deps);
 
 async function call(handler, method, url, body) {
   const headers = new Map();

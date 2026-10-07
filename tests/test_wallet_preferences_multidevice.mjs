@@ -103,7 +103,7 @@ const deps = {
   "../api/_wallet-presence.js": { touchWalletLastSeen: async () => null },
 };
 
-const handler = loadHandler("../api/wallet-preferences.js", deps);
+const handler = loadHandler("../api/_handler-wallet-preferences.js", deps);
 
 async function call(method, body = undefined) {
   const response = {
@@ -171,7 +171,7 @@ await call("PUT", { settings: { ...converged.settings, theme: "light" } });
 await call("PUT", { settings: { ...deviceB.settings, theme: "dark" } });
 assert.equal(row.settings.theme, "dark");
 
-const apiSource = await readFile(new URL("../api/wallet-preferences.js", import.meta.url), "utf8");
+const apiSource = await readFile(new URL("../api/_handler-wallet-preferences.js", import.meta.url), "utf8");
 const schemaSource = await readFile(new URL("../supabase-schema.sql", import.meta.url), "utf8");
 assert.match(apiSource, /const hasDomain = \(key\) => Object\.prototype\.hasOwnProperty\.call\(incoming, key\);/);
 assert.match(apiSource, /supabaseRequest\("rpc\/patch_wallet_preferences_atomic"/);

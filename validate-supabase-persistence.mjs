@@ -8,8 +8,8 @@ const repoRoot = siteRoot;
 const apiRoot = resolve(siteRoot, "api");
 
 const read = (path) => fs.readFile(path, "utf8");
-const preferences = await read(resolve(apiRoot, "wallet-preferences.js"));
-const walletOptIns = await read(resolve(apiRoot, "wallet-opt-ins.js"));
+const preferences = await read(resolve(apiRoot, "_handler-wallet-preferences.js"));
+const walletOptIns = await read(resolve(apiRoot, "_handler-wallet-opt-ins.js"));
 const walletPresence = await read(resolve(apiRoot, "_wallet-presence.js"));
 const appCore = readCombinedCanonicalCoreSource();
 const schema = await read(resolve(repoRoot, "supabase-schema.sql"));
@@ -233,7 +233,7 @@ includes(
 );
 includes(
   documentation,
-  "`api/wallet-session.js` issues and exchanges the",
+  "`api/_handler-wallet-session.js` issues and exchanges the",
   "Supabase documentation must reference the active challenge/session endpoint.",
 );
 includes(

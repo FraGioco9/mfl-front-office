@@ -50,8 +50,8 @@ const budgeted = normalizePlannerPayload({
 assert.equal(budgeted.squad.reduce((sum, player) => sum + player.contract, 0), 100, "Server normalization must cap the aggregate contract budget at 100%.");
 
 const [saveApi, shareApi, persistenceErrors, schema, migration, shareSourceMigration, shareUniqueSourceMigration, planRevisionMigration, sourcePlanIndexMigration, capacityMigration, docs, html, planner, generatedPlanner, styles, generatedStyles, routing, lifecycle, bootstrap, stableRoutePage] = await Promise.all([
-  readFile(new URL("./api/planner-save.js", import.meta.url), "utf8"),
-  readFile(new URL("./api/planner-share.js", import.meta.url), "utf8"),
+  readFile(new URL("./api/_handler-planner-save.js", import.meta.url), "utf8"),
+  readFile(new URL("./api/_handler-planner-share.js", import.meta.url), "utf8"),
   readFile(new URL("./api/_planner-persistence.js", import.meta.url), "utf8"),
   readFile(new URL("./supabase-schema.sql", import.meta.url), "utf8"),
   readFile(new URL("./supabase/migrations/20260929215838_planner_plans_and_shares.sql", import.meta.url), "utf8"),

@@ -11,7 +11,7 @@ const [runtime, styles, responsive, controls, appEntry, appConfig, walletPrefere
   read("./controls.css"),
   read("./modules/app-entry.js"),
   read("./modules/app-config.js"),
-  read("./api/wallet-preferences.js"),
+  read("./api/_handler-wallet-preferences.js"),
   read("./api/_data-views.js"),
 ]);
 const core = readCombinedCanonicalCoreSource();

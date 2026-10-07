@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 const read = path => readFileSync(new URL("./" + path, import.meta.url), "utf8");
 const migration = read("supabase/migrations/20261001172000_restrict_application_grants.sql");
 const canonical = read("supabase-schema.sql");
-const ratios = read("api/mfl-season-ratios-v2.js");
+const ratios = read("api/_handler-mfl-season-ratios-v2.js");
 
 const tables = [
   "bug_reports", "evaluation_saves", "evaluation_shares", "mfl_season_ratios",

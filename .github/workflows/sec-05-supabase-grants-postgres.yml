@@ -5,7 +5,7 @@ on:
     paths:
       - "supabase/migrations/20261001172000_restrict_application_grants.sql"
       - "supabase-schema.sql"
-      - "api/mfl-season-ratios-v2.js"
+      - "api/_handler-mfl-season-ratios-v2.js"
       - "tests/verify-sec-05-grants.sql"
       - ".github/workflows/sec-05-supabase-grants-postgres.yml"
   workflow_dispatch:

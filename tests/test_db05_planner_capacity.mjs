@@ -10,7 +10,7 @@ const {
 const [migration, schema, plannerSave, docs] = await Promise.all([
   readFile(new URL("../supabase/migrations/20261006183001_planner_plan_capacity_guard.sql", import.meta.url), "utf8"),
   readFile(new URL("../supabase-schema.sql", import.meta.url), "utf8"),
-  readFile(new URL("../api/planner-save.js", import.meta.url), "utf8"),
+  readFile(new URL("../api/_handler-planner-save.js", import.meta.url), "utf8"),
   readFile(new URL("../docs/db05-planner-saved-list.md", import.meta.url), "utf8"),
 ]);
 

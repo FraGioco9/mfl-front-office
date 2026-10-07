@@ -82,9 +82,9 @@ invariant(requestMatchesEtag({ headers: { "if-none-match": baseEtag } }, baseEta
 invariant(requestMatchesEtag({ headers: { "if-none-match": `W/${baseEtag}` } }, baseEtag), "Weak If-None-Match values must revalidate runtime/data identity.");
 
 const [identityApi, runtimeIdentitySource, dataApi, nextConfig, runtimePreparation] = await Promise.all([
-  read("./api/identity.js"),
+  read("./api/_handler-identity.js"),
   read("./api/_runtime-data-identity.js"),
-  read("./api/data.js"),
+  read("./api/_handler-data.js"),
   read("./next.config.mjs"),
   read("./prepare-next-runtime.mjs"),
 ]);

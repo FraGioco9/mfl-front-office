@@ -48,7 +48,7 @@ function dominantChannel(pixel) {
 }
 
 const rendererSource = readText("api/_progression-email-portrait.js");
-const endpointSource = readText("api/progression-email-portrait.js");
+const endpointSource = readText("api/_handler-progression-email-portrait.js");
 
 assert(PORTRAIT_CROP_HEIGHT_PX === 400, "Progression email portraits must crop exactly the top 400 source pixels.");
 assert(PROGRESSION_EMAIL_PORTRAIT_HEIGHT_PX === 216, "Progression email portraits must render at 216px high for high-density displays.");

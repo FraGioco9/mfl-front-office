@@ -9,7 +9,7 @@ const migrationsDir = resolve(root, "supabase/migrations");
 const ledger = JSON.parse(await readFile(resolve(root, "docs/db03-schema-drift-ledger.json"), "utf8"));
 const canonical = await readFile(resolve(root, "supabase-schema.sql"), "utf8");
 const inventorySql = await readFile(resolve(root, "scripts/supabase/db03-live-readonly-inventory.sql"), "utf8");
-const plannerSave = await readFile(resolve(root, "api/planner-save.js"), "utf8");
+const plannerSave = await readFile(resolve(root, "api/_handler-planner-save.js"), "utf8");
 
 function gitBlobSha1(content) {
   const bytes = Buffer.from(content, "utf8");

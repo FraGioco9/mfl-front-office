@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const [dataPage, marketplaceApi, overlayRuntime, tableLoadingRuntime, appConfig, incrementalRouting] = await Promise.all([
   read("./api/_data-page.js"),
-  read("./api/marketplace.js"),
+  read("./api/_handler-marketplace.js"),
   read("./marketplace-overlay-runtime.js"),
   read("./table-loading-runtime.js"),
   read("./modules/app-config.js"),

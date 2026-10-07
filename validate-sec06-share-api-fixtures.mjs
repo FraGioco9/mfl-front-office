@@ -96,11 +96,11 @@ const walletDeps = {
   "./api/_request-body.js": { readJsonBody: async req => req.body, sendRequestBodyError: () => false },
   "./api/_supabase.js": { supabaseConfig: () => ({ url: "fixture" }), supabaseRequest: mockSupabaseRequest },
 };
-const planner = loadHandler("./api/planner-share.js", {
+const planner = loadHandler("./api/_handler-planner-share.js", {
   ...walletDeps,
   "./api/_planner-persistence.js": { sendPlannerPersistenceUnavailable: () => false },
 });
-const evaluation = loadHandler("./api/evaluation-share.js", {
+const evaluation = loadHandler("./api/_handler-evaluation-share.js", {
   ...walletDeps,
   "./api/_evaluation-share-preview.js": {
     readActiveEvaluationShare: async (id, player) => {
@@ -109,7 +109,7 @@ const evaluation = loadHandler("./api/evaluation-share.js", {
         ? row : null;
     },
   },
-  "./api/mfl-season-ratios-v2.js": { loadRatiosFromSupabase: async () => [] },
+  "./api/_handler-mfl-season-ratios-v2.js": { loadRatiosFromSupabase: async () => [] },
 });
 
 async function call(handler, method, url, wallet = null, body = undefined) {

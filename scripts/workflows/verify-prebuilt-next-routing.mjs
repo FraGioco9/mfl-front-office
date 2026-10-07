@@ -14,6 +14,14 @@ export function verifyPrebuiltNextRouting({ vercelConfig, builds, functionDirs }
   );
 
   const detectedStatus = String(builds?.detectedFramework?.status || "").trim().toLowerCase() || "unknown";
+  const standaloneApiBuilds = (Array.isArray(builds?.builds) ? builds.builds : [])
+    .map((build) => normalizePath(build?.src))
+    .filter((path) => /^api\/(?!_)[^/]+\.(?:[cm]?js|ts)$/.test(path));
+  assert.deepEqual(
+    standaloneApiBuilds,
+    [],
+    "Prebuilt output still contains standalone top-level api/* Vercel builds; Next Pages API must be the sole HTTP owner.",
+  );
 
   const normalizedFunctions = (functionDirs || []).map(normalizePath);
   const frontendFunctions = normalizedFunctions.filter((path) =>
@@ -27,6 +35,7 @@ export function verifyPrebuiltNextRouting({ vercelConfig, builds, functionDirs }
   return Object.freeze({
     detectedStatus,
     frontendFunctions: Object.freeze(frontendFunctions),
+    standaloneApiBuilds: Object.freeze(standaloneApiBuilds),
   });
 }
 
@@ -54,7 +63,8 @@ if (process.argv[1]?.endsWith("verify-prebuilt-next-routing.mjs")) {
   const result = verifyPrebuiltNextRouting({ vercelConfig, builds, functionDirs });
   console.log(
     `Verified Vercel Next packaging from actual build output: framework diagnostic ${result.detectedStatus}; ` +
-    `${result.frontendFunctions.length} non-API function(s): ${result.frontendFunctions.join(", ")}. ` +
+    `${result.frontendFunctions.length} non-API function(s): ${result.frontendFunctions.join(", ")}; ` +
+    "no standalone top-level api/* Vercel builds. " +
     "Route behavior is verified against the staged immutable deployment before promotion.",
   );
 }

@@ -9,7 +9,7 @@ const [migration, scheduler, schema, docs, plannerShare, evaluationPreview] = aw
   fs.readFile(resolve(root, "supabase/private-data-retention-scheduler.sql"), "utf8"),
   fs.readFile(resolve(root, "supabase-schema.sql"), "utf8"),
   fs.readFile(resolve(root, "SUPABASE_PERSISTENCE.md"), "utf8"),
-  fs.readFile(resolve(root, "api/planner-share.js"), "utf8"),
+  fs.readFile(resolve(root, "api/_handler-planner-share.js"), "utf8"),
   fs.readFile(resolve(root, "api/_evaluation-share-preview.js"), "utf8"),
 ]);
 
