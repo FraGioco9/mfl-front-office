@@ -79,10 +79,6 @@ export function createNextRewrites() {
 }
 
 function configureWebpack(config, { dev } = {}) {
-  config.resolve.alias = {
-    ...(config.resolve.alias || {}),
-    "html-react-parser$": resolve(root, "node_modules/html-react-parser/dist/html-react-parser.js"),
-  };
   if (dev) {
     config.module.rules.push({
       test: /legacy-dev-watch-token\.js$/,
@@ -94,14 +90,6 @@ function configureWebpack(config, { dev } = {}) {
 }
 
 const nextConfig = {
-  // The package's standard entrypoint mixes CommonJS with ESM domhandler in
-  // html-react-parser v6. Use its published self-contained UMD build instead.
-  // Keep the alias identical across Turbopack production builds and Webpack dev.
-  turbopack: {
-    resolveAlias: {
-      "html-react-parser": "./node_modules/html-react-parser/dist/html-react-parser.js",
-    },
-  },
   devIndicators: { position: "bottom-left" },
   env: {
     MFL_DEPLOY_COMMIT: deploymentCommit,
