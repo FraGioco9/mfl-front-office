@@ -999,6 +999,8 @@ const browserTestSource = String.raw`(() => {
     ].filter(Boolean).length;
     assert(filtersButton.getAttribute("aria-label") === "Filters: 0 advanced rules, " + quickCount + " active quick " + (quickCount === 1 ? "filter" : "filters"),
       "Filter summary must distinguish advanced-rule badge and active quick filters.");
+    assert(!filtersButton.hasAttribute("title"),
+      "Filter trigger must not expose a native title tooltip.");
     const loadedHeaderColor = getComputedStyle(nameButton).color;
     nameButton.disabled = true;
     assert(getComputedStyle(nameButton).opacity === "1", "Loading sort headers must retain full opacity despite generic disabled-button styling.");
@@ -2920,8 +2922,8 @@ const browserTestSource = String.raw`(() => {
         assert(text("#filterSummary") === "1", "UX-04 linked advanced rule badge changed after hydration.");
         assert(/^Filters: 1 advanced rule, [0-9]+ active quick filters?$/.test(filters.getAttribute("aria-label") || ""),
           "UX-04 linked filter trigger did not retain advanced vs quick accessible counts.");
-        assert(filters.title === filters.getAttribute("aria-label"),
-          "UX-04 filter tooltip differs from its accessible description.");
+        assert(!filters.hasAttribute("title"),
+          "UX-04 filter trigger must not expose a native title tooltip.");
         assert(selectedHeader?.getAttribute("aria-sort") === "ascending",
           "UX-04 linked ascending Age sort was not retained on the hydrated route.");
         const ageSort = selectedHeader?.querySelector(".tableSortButton");

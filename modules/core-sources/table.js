@@ -1171,7 +1171,6 @@ function updateFilterSummary(count = activeFilterCount()) {
   openFiltersButton?.classList.toggle("hasActiveFilters", active);
   if (openFiltersButton) {
     openFiltersButton.setAttribute("aria-label", filterDescription);
-    openFiltersButton.title = filterDescription;
   }
 }
 
