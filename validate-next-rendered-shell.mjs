@@ -49,8 +49,12 @@ invariant(
   "Required deep-route Next page must remain an empty framework mount while legacy UI ownership is migrated incrementally.",
 );
 invariant(
+  nextConfig.includes("bundlePagesRouterDependencies: true"),
+  "Pages Router SSR dependencies must be bundled so Vercel functions cannot externalize html-react-parser into an incompatible CommonJS-to-ESM runtime boundary.",
+);
+invariant(
   nextConfig.includes('"html-react-parser": "./node_modules/html-react-parser/dist/html-react-parser.js"'),
-  "Turbopack production builds must resolve html-react-parser to its self-contained UMD bundle.",
+  "Turbopack compatibility must retain the reviewed html-react-parser UMD alias.",
 );
 invariant(
   nextConfig.includes('"html-react-parser$": resolve(root, "node_modules/html-react-parser/dist/html-react-parser.js")'),
