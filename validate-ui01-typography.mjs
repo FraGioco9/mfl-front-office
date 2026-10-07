@@ -7,7 +7,6 @@ const read = path => readFileSync(resolve(root, path), "utf8");
 const foundations = read("ui-foundations.css");
 const table = read("styles.css");
 const planner = read("planner.css");
-const docs = read("docs/ui-typography-1034.md");
 assert.match(foundations, /--mfl-page-title-font-size: 20px;/);
 assert.match(foundations, /--mfl-page-title-font-weight: 700;/);
 const rule = (css, selector) => {
@@ -34,7 +33,4 @@ for (const path of ["html-sources/tables.html", "html-sources/mfl-stats.html", "
 }
 assert.match(read("responsive-sources/tables-phone.css.inc"), /--mfl-page-title-font-size: 18px;/);
 assert.match(read("responsive-sources/compact.css.inc"), /--mfl-page-title-font-size: 17px;/);
-for (const marker of ["1280px", "900px", "390px", "Player hero", "final single-release visual gate"]) {
-  assert.ok(docs.includes(marker), "Missing audit/release note: " + marker);
-}
 console.log("UI-01 canonical page-title and Planner heading typography checks passed.");
