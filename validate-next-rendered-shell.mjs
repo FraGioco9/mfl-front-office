@@ -45,6 +45,10 @@ invariant(
   "Required deep-route Next page must remain an empty framework mount while legacy UI ownership is migrated incrementally.",
 );
 invariant(
+  nextConfig.includes('experimental: { esmExternals: "loose" }'),
+  "Next-rendered shell must allow Webpack to bridge the parser's internal CommonJS require into ESM before bundling.",
+);
+invariant(
   nextConfig.includes('transpilePackages: ["html-react-parser", "domhandler"]'),
   "Next-rendered shell must bundle html-react-parser and domhandler so Vercel SSR cannot native-require the ESM dependency.",
 );
