@@ -999,6 +999,8 @@ const browserTestSource = String.raw`(() => {
     ].filter(Boolean).length;
     assert(filtersButton.getAttribute("aria-label") === "Filters: 0 advanced rules, " + quickCount + " active quick " + (quickCount === 1 ? "filter" : "filters"),
       "Filter summary must distinguish advanced-rule badge and active quick filters.");
+    assert(!filtersButton.hasAttribute("title"),
+      "Filter trigger must not expose a native title tooltip.");
     const loadedHeaderColor = getComputedStyle(nameButton).color;
     nameButton.disabled = true;
     assert(getComputedStyle(nameButton).opacity === "1", "Loading sort headers must retain full opacity despite generic disabled-button styling.");
