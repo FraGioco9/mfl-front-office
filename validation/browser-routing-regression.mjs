@@ -1035,8 +1035,8 @@ const browserTestSource = String.raw`(() => {
     filtersButton.click();
     await waitFor(() => !hidden("#filtersModal"), "Advanced Filters dialog did not open.");
     const clearRules = document.getElementById("clearFiltersButton");
-    assert(clearRules?.textContent.trim() === "Clear rules",
-      "Advanced-only clear control must not imply that quick filters are cleared.");
+    assert(clearRules?.textContent.trim() === "Clear",
+      "Advanced-only clear control must keep the approved concise label.");
     const addSelect = document.getElementById("addFilterSelect");
     assert(addSelect instanceof HTMLSelectElement && Array.from(addSelect.options).some(o => o.value === "age"),
       "Age is missing from Database advanced filters.");
@@ -1058,7 +1058,7 @@ const browserTestSource = String.raw`(() => {
     clearRules.click();
     document.getElementById("applyFiltersButton").click();
     await waitFor(() => hidden("#filtersModal") && text("#filterSummary") === "0",
-      "Clear rules did not remove the advanced filter.");
+      "Clear did not remove the advanced filter.");
     assert([
       document.getElementById("hideRetiredInput")?.checked,
       document.getElementById("hideRetiringInput")?.checked,
@@ -2904,7 +2904,7 @@ const browserTestSource = String.raw`(() => {
       if (ux04BrowserFocused && (scenario === "database-empty" || scenario === "watchlist-empty")) {
         const action = document.getElementById("tableEmptyClearFiltersButton");
         assert(action instanceof HTMLButtonElement && action.textContent.trim() === "Clear filters",
-          "UX-04 filtered-empty reset must remain visible and distinct from Clear rules.");
+          "UX-04 filtered-empty reset must remain visible and distinct from the dialog Clear action.");
         assert(document.getElementById("quickClearFiltersButton")?.hidden === true,
           "UX-04 must not reintroduce the hidden global quick-filter reset.");
         assert(document.documentElement.scrollWidth <= innerWidth + 1,

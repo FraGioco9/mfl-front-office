@@ -11,7 +11,7 @@ Scope: English interface in Database, Progression, MFL, Agents, My Players, Watc
 | Planner ownership | **Share** creates a link, **Revoke** invalidates it, **Copy share link** copies an existing link, **Copy to my plans** creates an owned copy | A copy or link does not modify the original recipient plan. |
 | Editor actions | **Save** persists changes; **Discard** abandons a draft; **Cancel** aborts a confirmation; **Close** dismisses a dialog | **Clear** empties a selected scope and **Delete** removes a persisted resource; do not reword those interchangeably. |
 | List collections | **Saved plans**, **Saved evaluations** | Use plural for a picker/list title; singular for one saved evaluation or plan, including delete confirmations. |
-| Player and filter state | **Select** is an action; **Selected** is the resulting state; **Clear rules** affects advanced rules only; **Clear filters** clears the current filter scope | Do not change filter reset semantics, selected-player availability or table sorting with copy edits. |
+| Player and filter state | **Select** is an action; **Selected** is the resulting state; **Clear** affects advanced rules only; **Clear filters** clears the current filter scope | Do not change filter reset semantics, selected-player availability or table sorting with copy edits. |
 | Network states | **Loading…**, **Retry**, specific **Could not…** messages, **No … yet** for genuine emptiness | A request failure must not be presented as a successful empty result. |
 | Entity terms | **Club** refers to an MFL club identity; **Team** refers to the team's player-selection UI | No global renaming of existing API entities or schema terms. |
 
@@ -26,7 +26,7 @@ Scope: English interface in Database, Progression, MFL, Agents, My Players, Watc
 | Planner Add players close control | Close Add players | Close add players | `html-sources/planner.html` | Consistent sentence-case accessible label; user-visible button **Add player(s)** is unchanged. |
 | Settings Save accessible name | Save all Settings changes | Save settings changes | `modules/core-sources/settings.js` | Sentence case and concise action; persists the same settings domain. |
 
-Reviewed without changing: modal **Cancel/Discard** semantics, destructive **Delete/Revoke** confirmations, search/empty/retry distinctions, **Selected/Select** state, Filter **Clear rules** vs route **Clear filters**, owner vs recipient Planner share status. These are deliberate differences and should not be blanket-replaced.
+Reviewed without changing: modal **Cancel/Discard** semantics, destructive **Delete/Revoke** confirmations, search/empty/retry distinctions, **Selected/Select** state, filter-dialog **Clear** vs route **Clear filters**, owner vs recipient Planner share status. These are deliberate differences and should not be blanket-replaced.
 
 ## Automated and release validation
 
