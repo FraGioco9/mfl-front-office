@@ -1,13 +1,13 @@
 # DEP-01 — dependency and lockfile audit
 
-**Result: NO CHANGE dependencies.**
+**Result: Next security baseline updated to 16.3.8.**
 
-Audit date: 2026-10-06.
+Audit date: 2026-10-07.
 
 ## Reviewed baseline
 
 - Node: `22.x`
-- Next: `16.3.6`
+- Next: `16.3.8`
 - React / React DOM: `19.3.0`
 - ESLint: `10.11.0`
 - transitive `brace-expansion`: `5.0.12`
@@ -16,7 +16,7 @@ The committed `package-lock.json` resolves these versions with integrity hashes 
 
 ## Security review
 
-Next 16.3.6 is the patched boundary for **GHSA-vcvr-r3jv-pc5j** affecting earlier Next 16.2.x–16.3.5 releases.
+Next 16.3.8 preserves the earlier **GHSA-vcvr-r3jv-pc5j** fix and adds the current security release fixes, including HIGH-severity Image Optimization SSRF **GHSA-cjq9-62q9-8jv4** plus the additional cache/metadata and development-server advisories included in 16.3.8.
 
 Recent brace-expansion denial-of-service advisories patched the 5.x line before the currently locked **brace-expansion 5.0.12**. No downgrade or override is required.
 

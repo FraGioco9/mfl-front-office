@@ -41,15 +41,16 @@ for (const name of [...Object.keys(pkg.dependencies || {}), ...Object.keys(pkg.d
   invariant(String(entry.license || "").trim(), `Direct dependency ${name} must expose lockfile license metadata.`);
 }
 
-invariant(installed("next")?.version === "16.3.6", "Next must remain on the reviewed 16.3.6 security baseline.");
+invariant(installed("next")?.version === "16.3.8", "Next must remain on the reviewed 16.3.8 security baseline.");
 invariant(installed("react")?.version === "19.3.0" && installed("react-dom")?.version === "19.3.0", "React and React DOM must stay aligned at 19.3.0.");
 invariant(installed("react-dom")?.peerDependencies?.react === "^19.3.0", "React DOM peer dependency must accept the installed React line.");
 invariant(installed("eslint")?.version === "10.11.0", "ESLint must remain on the reviewed 10.11.0 baseline.");
 invariant(atLeast(installed("brace-expansion")?.version, "5.0.12"), "brace-expansion must remain at or above the reviewed 5.0.12 security floor.");
 invariant(
   docs.includes("GHSA-vcvr-r3jv-pc5j")
-    && docs.includes("brace-expansion 5.0.12")
-    && docs.includes("NO CHANGE dependencies"),
+    && docs.includes("GHSA-cjq9-62q9-8jv4")
+    && docs.includes("Next 16.3.8")
+    && docs.includes("brace-expansion 5.0.12"),
   "DEP-01 documentation must retain the reviewed security rationale.",
 );
 
