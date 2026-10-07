@@ -92,9 +92,9 @@ for (const source of [appCore, generatedCore]) {
   invariant(
     source.includes('const authoritativeRender = options.authoritative === true;')
       && source.includes('const tableLoadingActive = Boolean(window.__mflTableLoadingRuntime?.requestActive?.());')
-      && source.includes('const visible = tablePages.has(state.currentPage) && (authoritativeRender || !tableLoadingActive);')
+      && source.includes('const visible = tablePages.has(state.currentPage) && (authoritativeRender || (state.dataLoaded && !tableLoadingActive));')
       && !source.includes('const tableLoadingActive = Boolean(window.__mflTableLoadingRuntime?.requestActive?.())\n    || document.documentElement.classList.contains("mflDataLoading");'),
-    "Player-count metadata must stay hidden during unresolved requests but become visible at the authoritative render commit before request cleanup.",
+    "Player-count metadata must stay hidden before data readiness and during unresolved requests, then become visible at the authoritative render commit.",
   );
   invariant(
     source.includes('const cachedPayloadSupersedesActiveRequest = Boolean(cachedPayload && window.__mflTableLoadingRuntime?.requestActive?.());')
