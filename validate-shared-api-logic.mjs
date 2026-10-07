@@ -68,11 +68,13 @@ includes(requestBody, "function sendRequestBodyError(response, error)", "Request
 invariant(occurrences(combined, "for await (const chunk of request)") === 1, "API request-body streaming must not be duplicated across endpoints.");
 
 includes(evaluationPayload, "function normalizeEvaluationId(value)", "Evaluation IDs must have one canonical normalizer.");
-includes(evaluationPayload, "function generateEvaluationId()", "Evaluation IDs must have one canonical generator.");
+includes(evaluationPayload, "function generateEvaluationId()", "Saved Evaluation IDs must have one canonical generator.");
+includes(evaluationPayload, "function generateEvaluationShareId()", "Shared Evaluation bearer IDs must have one canonical strong generator.");
 includes(evaluationPayload, "function normalizeLateSeasonRewardRates(value)", "Late-season reward rates must have one canonical normalizer.");
 includes(evaluationPayload, "function normalizeEvaluationPayload(payload, options = {})", "Evaluation API payloads must have one canonical normalizer.");
 invariant(occurrences(combined, "function normalizeEvaluationId(") === 1, "Evaluation ID normalization must not be duplicated.");
-invariant(occurrences(combined, "function generateEvaluationId(") === 1, "Evaluation ID generation must not be duplicated.");
+invariant(occurrences(combined, "function generateEvaluationId(") === 1, "Saved Evaluation ID generation must not be duplicated.");
+invariant(occurrences(combined, "function generateEvaluationShareId(") === 1, "Shared Evaluation bearer-ID generation must not be duplicated.");
 invariant(occurrences(combined, "function normalizeLateSeasonRewardRates(") === 1, "Evaluation reward-rate normalization must not be duplicated.");
 invariant(occurrences(combined, "function normalizeEvaluationPayload(") === 1, "Evaluation payload normalization must not be duplicated.");
 
@@ -88,6 +90,7 @@ includes(walletPreferences, 'require("./_evaluation-payload")', "Wallet preferen
 includes(evaluationSave, 'require("./_evaluation-payload")', "Saved Evaluations must reuse canonical Evaluation payload normalization.");
 includes(evaluationSave, "includeSummaryMetrics: true", "Saved Evaluations must explicitly retain summary metrics.");
 includes(evaluationShare, 'require("./_evaluation-payload")', "Shared Evaluations must reuse canonical Evaluation payload normalization.");
+includes(evaluationShare, "const id = generateEvaluationShareId();", "Shared Evaluations must use the 128-bit bearer-ID generator.");
 includes(permissionsVersion, 'require("./_supabase")', "Wallet permission metadata must reuse canonical Supabase ownership.");
 
 for (const [path, endpoint] of [
