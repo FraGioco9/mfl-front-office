@@ -5,7 +5,7 @@ const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
 const [workflow, docs] = await Promise.all([
   read("../.github/workflows/operational-health-monitor.yml"),
-  read("../docs/operational-health-969.md"),
+  read("../docs/operational-health.md"),
 ]);
 
 assert.match(workflow, /cron: "7,37 \* \* \* \*"/);
