@@ -79,11 +79,14 @@ export function createNextRewrites() {
 }
 
 function configureWebpack(config, { dev } = {}) {
-  config.resolve.alias = {
-    ...(config.resolve.alias || {}),
-    "html-react-parser$": resolve(root, "node_modules/html-react-parser/dist/html-react-parser.js"),
-  };
   if (dev) {
+    // Development keeps the self-contained browser-compatible UMD bridge.
+    // Production must bundle the standard package graph so Webpack can resolve
+    // html-react-parser's ESM transitive dependencies inside the SSR function.
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      "html-react-parser$": resolve(root, "node_modules/html-react-parser/dist/html-react-parser.js"),
+    };
     config.module.rules.push({
       test: /legacy-dev-watch-token\.js$/,
       use: [{ loader: resolve(root, "dev-legacy-watch-loader.cjs") }],
@@ -94,15 +97,9 @@ function configureWebpack(config, { dev } = {}) {
 }
 
 const nextConfig = {
+  // Bundle Pages Router server dependencies in production so Vercel cannot
+  // externalize html-react-parser as a CommonJS require of ESM domhandler.
   bundlePagesRouterDependencies: true,
-  // The package's standard entrypoint mixes CommonJS with ESM domhandler in
-  // html-react-parser v6. Use its published self-contained UMD build instead.
-  // Keep the alias identical across Turbopack production builds and Webpack dev.
-  turbopack: {
-    resolveAlias: {
-      "html-react-parser": "./node_modules/html-react-parser/dist/html-react-parser.js",
-    },
-  },
   devIndicators: { position: "bottom-left" },
   env: {
     MFL_DEPLOY_COMMIT: deploymentCommit,
