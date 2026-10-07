@@ -80,9 +80,9 @@ const activeSelector = `:is(
 const canonicalActiveRule = exactRule(controls, activeSelector);
 invariant(canonicalActiveRule, "controls.css must retain the canonical shared active-control rule.");
 for (const required of [
-  "border-color: var(--primary);",
-  "background: var(--primary);",
-  "color: #ffffff;",
+  "border-color: var(--mfl-filled-primary-border-color);",
+  "background: var(--mfl-filled-primary-background);",
+  "color: var(--mfl-filled-primary-text-color);",
   "cursor: default;",
 ]) {
   invariant(
