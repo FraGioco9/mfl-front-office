@@ -126,21 +126,18 @@ class ProgressionEmailGmailTestWorkflowTests(unittest.TestCase):
         workflow = read_workflow(".github/workflows/progression-email-gmail-test.yml")
 
         self.assertIn("workflow_dispatch:", workflow)
-        self.assertIn("\n  push:\n", workflow)
-        self.assertIn("fix/529-gmail-progression-email-images-order", workflow)
+        self.assertNotIn("\n  push:\n", workflow)
         self.assertNotIn("pull_request:", workflow)
         self.assertNotIn("schedule:", workflow)
-        self.assertIn("contains(github.event.head_commit.message, '[gmail-test]')", workflow)
         self.assertIn("github.actor == github.repository_owner", workflow)
-        self.assertIn("secrets.PROGRESSION_EMAIL_TEST_RECIPIENT", workflow)
-        self.assertIn("Set the PROGRESSION_EMAIL_TEST_RECIPIENT repository secret", workflow)
+        self.assertNotIn("PROGRESSION_EMAIL_TEST_RECIPIENT", workflow)
         self.assertIn("fixture:", workflow)
         self.assertIn("fixture=(database|showcase)", workflow)
         self.assertIn('player_ids = "374512,265327,185140,250483"', workflow)
-        self.assertIn("PROGRESSION_EMAIL_TEST_PLAYER_IDS", workflow)
+        self.assertNotIn("PROGRESSION_EMAIL_TEST_PLAYER_IDS", workflow)
         self.assertIn("recipient:", workflow)
         self.assertIn("required: true", workflow)
-        self.assertIn("render-progression-email-test-portraits.mjs", workflow)
+        self.assertIn("scripts/email/render-progression-test-portraits.mjs", workflow)
         self.assertIn("python -m scripts.email.progression_email_gmail_test", workflow)
         self.assertIn('--fixture "$TEST_FIXTURE"', workflow)
         self.assertIn("secrets.SMTP_HOST", workflow)
@@ -159,7 +156,7 @@ class ProgressionEmailGmailTestWorkflowTests(unittest.TestCase):
         self.assertNotIn("notification_jobs", sender)
 
         renderer = Path(
-            "render-progression-email-test-portraits.mjs"
+            "scripts/email/render-progression-test-portraits.mjs"
         ).read_text(encoding="utf-8")
         self.assertIn("renderProgressionEmailPortraitPng", renderer)
         self.assertIn("writeFile", renderer)
