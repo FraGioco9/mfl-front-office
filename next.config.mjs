@@ -92,6 +92,10 @@ const developmentWebpack = process.env.NODE_ENV !== "production"
   : {};
 
 const nextConfig = {
+  // The legacy Document renders through html-react-parser. In the Pages Router,
+  // keep it inside the server bundle so Node never native-require()s its ESM
+  // domhandler dependency from a Vercel Function.
+  transpilePackages: ["html-react-parser"],
   devIndicators: { position: "bottom-left" },
   env: {
     MFL_DEPLOY_COMMIT: deploymentCommit,
