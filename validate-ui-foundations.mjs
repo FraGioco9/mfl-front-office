@@ -54,6 +54,11 @@ for (const token of [
   "--mfl-control-hover-border-color: var(--primary-hover);",
   "--mfl-control-hover-background: var(--row-hover);",
   "--mfl-control-hover-text-color: var(--text);",
+  "--mfl-filled-primary-border-color: #1d5f8a;",
+  "--mfl-filled-primary-background: #1d5f8a;",
+  "--mfl-filled-primary-text-color: #ffffff;",
+  "--mfl-filled-primary-hover-border-color: #174d70;",
+  "--mfl-filled-primary-hover-background: #174d70;",
   "--mfl-radius-control: 6px;",
   "--mfl-checkbox-size: 16px;",
   "--mfl-radius-checkbox: 4px;",
@@ -106,6 +111,11 @@ for (const token of [
 }
 
 includes(stacking, '@import url("/ui-foundations.css");', "Global UI foundations must load before shared stacking/base styles.");
+includes(controls, "background: var(--mfl-filled-primary-background);\n  color: var(--mfl-filled-primary-text-color);", "Shared active controls must consume the theme-invariant filled-primary background/text contract.");
+includes(stylesBase, ".settingsToggleButton.active {\n  border-color: var(--mfl-filled-primary-border-color);\n  background: var(--mfl-filled-primary-background);\n  color: var(--mfl-filled-primary-text-color);", "Settings active controls must consume the theme-invariant filled-primary contract.");
+includes(stylesBase, "border: 1px solid var(--mfl-filled-primary-border-color);\n  border-radius: 6px;\n  background: var(--mfl-filled-primary-background);\n  color: var(--mfl-filled-primary-text-color);", "Player primary actions must consume the theme-invariant filled-primary contract.");
+excludes(controls, ':root[data-theme="dark"] :is(\n  #sidebar .navButton.active,', "Active shared-control text must not regain a dark-theme-only override.");
+excludes(stylesBase, ':root[data-theme="dark"] :is(\n  .settingsToggleButton.active,', "Filled primary actions must not regain a dark-theme-only text override.");
 for (const token of [
   "--danger: #a61f1f;",
   "--danger-hover: #741515;",
