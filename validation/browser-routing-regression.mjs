@@ -713,8 +713,21 @@ const browserTestSource = String.raw`(() => {
     );
   }
 
+  function resolvedPrimaryBackground() {
+    const probe = document.createElement("span");
+    probe.style.position = "fixed";
+    probe.style.pointerEvents = "none";
+    probe.style.backgroundColor = "var(--primary)";
+    document.body.appendChild(probe);
+    const value = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return value;
+  }
+
   function routeState() {
     if (scenario === "database" || scenario === "database-empty" || scenario === "database-linked-state") {
+      const activeViewButton = document.querySelector("#progressionPage .viewButton.active");
+      const activeViewStyle = activeViewButton instanceof HTMLElement ? getComputedStyle(activeViewButton) : null;
       return {
         path: window.location.pathname,
         search: window.location.search,
@@ -724,6 +737,9 @@ const browserTestSource = String.raw`(() => {
         emptyClearFilters: Boolean(document.getElementById("tableEmptyClearFiltersButton")),
         emptyHidden: hidden("#emptyState"),
         page: String(document.body.dataset.page || ""),
+        activeViewBackground: activeViewStyle?.backgroundColor || "",
+        activeViewColor: activeViewStyle?.color || "",
+        primaryBackground: resolvedPrimaryBackground(),
       };
     }
     if (scenario === "player") {
@@ -741,6 +757,15 @@ const browserTestSource = String.raw`(() => {
         activePlayerViews: activeViews,
         pressedPlayerViews: Array.from(document.querySelectorAll('#playerDetail .playerAttributeViewButton[aria-pressed="true"]'))
           .map((button) => String(button.dataset.playerAttributeView || button.dataset.view || "")),
+        activePlayerViewBackground: (() => {
+          const button = document.querySelector("#playerDetail .playerAttributeViewButton.active");
+          return button instanceof HTMLElement ? getComputedStyle(button).backgroundColor : "";
+        })(),
+        activePlayerViewColor: (() => {
+          const button = document.querySelector("#playerDetail .playerAttributeViewButton.active");
+          return button instanceof HTMLElement ? getComputedStyle(button).color : "";
+        })(),
+        primaryBackground: resolvedPrimaryBackground(),
       };
     }
     if (scenario === "watchlist" || scenario === "watchlist-empty") {
@@ -806,6 +831,15 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.tableText.includes(expectedPlayerName), "Database did not render the fixture player.");
       assert(!stateValue.emptyClearFilters, "Populated Database must not show Clear filters empty action.");
       assert(stateValue.page === "database", "Database body page owner is wrong: " + stateValue.page);
+      assert(
+        stateValue.activeViewBackground === stateValue.primaryBackground
+          && stateValue.activeViewColor === "rgb(255, 255, 255)",
+        "Database active view styling changed after first-paint release: " + JSON.stringify({
+          background: stateValue.activeViewBackground,
+          expectedBackground: stateValue.primaryBackground,
+          color: stateValue.activeViewColor,
+        }),
+      );
     } else if (scenario === "database-empty") {
       assert(stateValue.path === "/database/attributes", "Filtered Database canonical path is wrong: " + stateValue.path);
       assert(stateValue.search === "?overall.gte=99", "Filtered Database URL state was not preserved: " + stateValue.search);
@@ -847,6 +881,15 @@ const browserTestSource = String.raw`(() => {
       assert(stateValue.hasPlayerName, "Player detail did not render the fixture identity.");
       assert(stateValue.title === expectedPlayerName + " - MFL Front Office", "Player title is not the full player name.");
       assert(stateValue.pageHidden === false, "Player page remained hidden after readiness.");
+      assert(
+        stateValue.activePlayerViewBackground === stateValue.primaryBackground
+          && stateValue.activePlayerViewColor === "rgb(255, 255, 255)",
+        "Player active view styling changed after first-paint release: " + JSON.stringify({
+          background: stateValue.activePlayerViewBackground,
+          expectedBackground: stateValue.primaryBackground,
+          color: stateValue.activePlayerViewColor,
+        }),
+      );
       assert(
         stateValue.activePlayerViews.length === 1,
         "Player must expose exactly one active view after loading completes. Debug: " + JSON.stringify({

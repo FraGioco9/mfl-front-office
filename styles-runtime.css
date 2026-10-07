@@ -4721,17 +4721,6 @@ button.playerIdText:active {
   color: #ffffff;
 }
 
-:root[data-theme="dark"] :is(
-  .settingsToggleButton.active,
-  .settingsEmailActionButton.primary,
-  .playerEvaluateButton,
-  .playerExternalButton,
-  .playerEvaluateButton:hover,
-  .playerExternalButton:hover
-) {
-  color: var(--page-bg);
-}
-
 .settingsEmailActionButton:disabled {
   cursor: not-allowed;
   opacity: 0.5;
@@ -6824,17 +6813,6 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   background: var(--primary);
   color: #ffffff;
   cursor: default;
-}
-
-:root[data-theme="dark"] :is(
-  #sidebar .navButton.active,
-  .viewButton.active,
-  .filtersViewButton.active,
-  .mflStatsFilterButton.active,
-  .mflStatsDistributionModeButton.active,
-  .playerAttributeViewButton.active
-) {
-  color: var(--page-bg);
 }
 
 #sidebar .navButton.active {

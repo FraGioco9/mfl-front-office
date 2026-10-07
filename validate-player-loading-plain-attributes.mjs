@@ -107,4 +107,16 @@ if (!bootstrap.includes('<button class="playerAttributeViewButton" type="button"
   throw new Error("Player loading shell must render neutral Player view buttons until loading completes.");
 }
 
+for (const [label, runtime] of [["Canonical Player source", source], ["Generated Player runtime", generated]]) {
+  if (!runtime.includes('container?.querySelectorAll?.(".playerHeroActionMenuButton")')) {
+    throw new Error(`${label}: Player readiness animation must remain limited to the hero action control.`);
+  }
+  if (runtime.includes('container?.querySelectorAll?.(".playerHeroActionMenuButton, .playerAttributeViewButton")')) {
+    throw new Error(`${label}: Player view buttons must not participate in the readiness color/background transition.`);
+  }
+  if (runtime.includes("button.style.transition = PLAYER_READY_TRANSITION;")) {
+    throw new Error(`${label}: pending Player view buttons must stay transition-free.`);
+  }
+}
+
 console.log("Player loading uses raw plain Attributes without progression suffixes and restores the selected view only after the loading render.");

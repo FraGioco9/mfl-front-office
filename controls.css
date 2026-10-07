@@ -51,17 +51,6 @@
   cursor: default;
 }
 
-:root[data-theme="dark"] :is(
-  #sidebar .navButton.active,
-  .viewButton.active,
-  .filtersViewButton.active,
-  .mflStatsFilterButton.active,
-  .mflStatsDistributionModeButton.active,
-  .playerAttributeViewButton.active
-) {
-  color: var(--page-bg);
-}
-
 #sidebar .navButton.active {
   pointer-events: none;
 }

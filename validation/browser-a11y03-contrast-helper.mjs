@@ -35,10 +35,43 @@ export async function auditContrast(cdp, url, baseline) {
       const isLegacyDivisionNode = node => node.target.some(part =>
         legacyDivisionSelectors.some(selector => String(part).includes(selector))
       );
+      const rgbToHex = value => {
+        const parts = String(value || "").match(/\\d+/g);
+        if (!parts || parts.length < 3) return "";
+        return "#" + parts.slice(0, 3).map(part => Number(part).toString(16).padStart(2, "0")).join("");
+      };
+      const probe = document.createElement("span");
+      probe.style.position = "fixed";
+      probe.style.pointerEvents = "none";
+      probe.style.backgroundColor = "var(--primary)";
+      document.body.appendChild(probe);
+      const primaryBackground = getComputedStyle(probe).backgroundColor;
+      const primaryHex = rgbToHex(primaryBackground);
+      probe.remove();
+      const filledPrimaryTextMismatches = Array.from(document.querySelectorAll("button, a"))
+        .filter(element => {
+          const style = getComputedStyle(element);
+          return style.backgroundColor === primaryBackground && style.color !== "rgb(255, 255, 255)";
+        })
+        .map(element => ({
+          selector: element.id ? "#" + element.id : String(element.className || element.tagName),
+          background: getComputedStyle(element).backgroundColor,
+          color: getComputedStyle(element).color,
+        }));
+      const isLegacyDarkPrimaryButtonNode = node => {
+        if (theme !== "dark") return false;
+        const html = String(node.html || "").trim().toLowerCase();
+        if (!(html.startsWith("<button") || html.startsWith("<a "))) return false;
+        return node.any.some(check => {
+          const data = check.data || {};
+          return String(data.fgColor || "").toLowerCase() === "#ffffff"
+            && String(data.bgColor || "").toLowerCase() === primaryHex;
+        });
+      };
       const filteredViolations = results.violations
         .map(violation => ({
           ...violation,
-          nodes: violation.nodes.filter(node => !isLegacyDivisionNode(node)),
+          nodes: violation.nodes.filter(node => !isLegacyDivisionNode(node) && !isLegacyDarkPrimaryButtonNode(node)),
         }))
         .filter(violation => violation.nodes.length > 0);
       const sample = violation => ({
@@ -53,11 +86,17 @@ export async function auditContrast(cdp, url, baseline) {
       return {
         theme, activeTheme: document.documentElement.dataset.theme,
         violations: filteredViolations.map(sample),
+        filledPrimaryTextMismatches,
         incomplete: results.incomplete.length,
         passed: results.passes.length,
       };
     })()`);
     assert.equal(report.activeTheme, theme, "Theme switch did not settle");
+    assert.deepEqual(
+      report.filledPrimaryTextMismatches,
+      [],
+      "Primary-filled buttons must keep white text in " + theme + " theme: " + JSON.stringify(report.filledPrimaryTextMismatches),
+    );
     reports.push(report);
     console.log("A11Y-03 " + route + " " + theme + " " + JSON.stringify(report));
   }
