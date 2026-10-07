@@ -1553,8 +1553,8 @@ function stableAttributePanelHtml(row) {
     eyebrow.className = "playerEyebrow playerIdText";
     eyebrow.type = "button";
     eyebrow.dataset.tooltip = "Click to copy";
-    eyebrow.setAttribute("aria-label", "Click to copy player ID");
     eyebrow.textContent = "ID #" + playerId;
+    eyebrow.setAttribute("aria-label", `${eyebrow.textContent}, click to copy player ID`);
     const title = document.createElement("h2");
     title.className = "playerTitle";
     const titleName = document.createElement("span");
@@ -2174,7 +2174,7 @@ function renderPlayerPageOwner(playerId) {
   const ageMarkerHtml = playerRuntime?.playerAgeMarkerHtml?.(ageMarker) || "";
   const agentWalletAddress = getValue(row, "wallet_address");
   const agentTooltip = joinedAgencyTooltip(row);
-  const agentTooltipHtml = agentTooltip ? ` data-tooltip="${escapeHtml(agentTooltip)}" aria-label="${escapeHtml(agentTooltip)}"` : "";
+  const agentTooltipHtml = agentTooltip ? ` data-tooltip="${escapeHtml(agentTooltip)}" aria-description="${escapeHtml(agentTooltip)}"` : "";
   const agentLinkHtml = `<a class="agentTableLink playerAgentLink" href="${escapeHtml(agentRoute(agentWalletAddress))}"${agentTooltipHtml}>${escapeHtml(formatCellValue(row, "wallet_name"))}</a>`;
   const contractDivisionRaw = getValue(row, "active_contract_club_division");
   const contractDivision = rowHasActiveContract(row) ? contractDivisionInfo(contractDivisionRaw) : null;
@@ -2249,7 +2249,7 @@ function renderPlayerPageOwner(playerId) {
   playerDetail.innerHTML = `
     <section class="playerHero">
       <div class="playerHeroIdentity">
-        <button id="copyPlayerIdButton" class="playerEyebrow playerIdText" type="button" data-tooltip="Click to copy" aria-label="Click to copy player ID">ID #${escapeHtml(id)}</button>
+        <button id="copyPlayerIdButton" class="playerEyebrow playerIdText" type="button" data-tooltip="Click to copy" aria-label="ID #${escapeHtml(id)}, click to copy player ID">ID #${escapeHtml(id)}</button>
         <h2 class="playerTitle"><span class="playerTitleName">${escapeHtml(playerName)}</span>${listingPriceBadgeHtml(row)}<span class="playerTitleNoteIcon" data-player-note-title-icon>${playerNoteIconHtml(id)}</span></h2>
         <p>${escapeHtml(positions.join(", ") || "No positions")}</p>
       </div>
