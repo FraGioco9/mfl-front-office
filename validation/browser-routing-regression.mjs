@@ -2904,7 +2904,7 @@ const browserTestSource = String.raw`(() => {
       if (ux04BrowserFocused && (scenario === "database-empty" || scenario === "watchlist-empty")) {
         const action = document.getElementById("tableEmptyClearFiltersButton");
         assert(action instanceof HTMLButtonElement && action.textContent.trim() === "Clear filters",
-          "UX-04 filtered-empty reset must remain visible and distinct from Clear rules.");
+          "UX-04 filtered-empty reset must remain visible and distinct from the dialog Clear action.");
         assert(document.getElementById("quickClearFiltersButton")?.hidden === true,
           "UX-04 must not reintroduce the hidden global quick-filter reset.");
         assert(document.documentElement.scrollWidth <= innerWidth + 1,
