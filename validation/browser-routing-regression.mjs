@@ -205,7 +205,7 @@ const browserTestSource = String.raw`(() => {
   const errors = [];
   let parserSnapshot = null;
   let loadingSkeletonHeight = 0;
-  const linkedTablePaintHistory = { filterCounts: [], sortStates: [] };
+  const linkedTablePaintHistory = { filterCounts: [], sortStates: [], playerCounts: [] };
   let linkedTablePaintSampling = linkedTableRefresh;
 
   const sampleLinkedTablePaint = () => {
@@ -222,6 +222,13 @@ const browserTestSource = String.raw`(() => {
       const stateValue = String(sortedHeader.dataset.tableColumn || "") + ":" + String(sortedHeader.getAttribute("aria-sort") || "");
       if (stateValue !== ":" && linkedTablePaintHistory.sortStates.at(-1) !== stateValue) {
         linkedTablePaintHistory.sortStates.push(stateValue);
+      }
+    }
+    const playerCount = document.getElementById("watchlistPlayerCount");
+    if (playerCount instanceof HTMLElement && !playerCount.hidden) {
+      const count = String(playerCount.textContent || "").trim();
+      if (count && linkedTablePaintHistory.playerCounts.at(-1) !== count) {
+        linkedTablePaintHistory.playerCounts.push(count);
       }
     }
     requestAnimationFrame(sampleLinkedTablePaint);
@@ -295,6 +302,8 @@ const browserTestSource = String.raw`(() => {
       initialRoutePage: String(root.dataset.initialRoutePage || ""),
       initialRouteShell: String(root.dataset.initialRouteShell || ""),
       storedWalletOptIn: String(root.dataset.storedWalletOptIn || ""),
+      playerCountHidden: hidden("#watchlistPlayerCount"),
+      playerCountText: text("#watchlistPlayerCount"),
       homeHidden: hidden("#homePage"),
       lockedHidden: hidden("#myPlayersLockedPage"),
       myClubsHidden: hidden("#myClubsPage"),
@@ -588,6 +597,8 @@ const browserTestSource = String.raw`(() => {
       assert(parserSnapshot.initialPage === "database/attributes", "Database first paint has the wrong initial path.");
       assert(parserSnapshot.initialTablePage === "database", "Database first paint has the wrong table-page owner.");
       assert(parserSnapshot.initialTableView === "attributes", "Database first paint has the wrong view.");
+      assert(parserSnapshot.playerCountHidden === true,
+        "Database first paint exposed player-count metadata before data was authoritative: " + parserSnapshot.playerCountText);
       if (scenario.startsWith("database-nav04-url")) {
         assert(parserSnapshot.filterCount === "1",
           "NAV-04 parser first paint should count only the valid Unicode rule.");
@@ -1690,6 +1701,10 @@ const browserTestSource = String.raw`(() => {
         linkedTablePaintHistory.sortStates.length >= 1
           && linkedTablePaintHistory.sortStates.every((sortState) => sortState === "age:ascending"),
         "Linked Database refresh repainted a wrong sort header: " + JSON.stringify(linkedTablePaintHistory.sortStates),
+      );
+      assert(
+        linkedTablePaintHistory.playerCounts.every((count) => count !== "Showing 0/0 players"),
+        "Linked Database refresh exposed transient empty player-count metadata: " + JSON.stringify(linkedTablePaintHistory.playerCounts),
       );
     }
     const compactDatabaseStickyRegression = scenario === "database"
