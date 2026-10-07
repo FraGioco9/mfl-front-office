@@ -11,7 +11,8 @@ fi
 
 CHECKPOINT_MANIFEST_PATH="$(dirname "$DATABASE_SOURCE_PATH")/checkpoint-manifest.json"
 EXPECTED_MANIFEST_STAGE="${CHECKPOINT_NAME//-/_}"
-python -m scripts.database.checkpoint_manifest verify \
+PYTHONPATH="${GITHUB_WORKSPACE:?GITHUB_WORKSPACE is required}/builder${PYTHONPATH:+:$PYTHONPATH}" \
+  python -m scripts.database.checkpoint_manifest verify \
   --database "$DATABASE_SOURCE_PATH" \
   --manifest "$CHECKPOINT_MANIFEST_PATH" \
   --expected-stage "$EXPECTED_MANIFEST_STAGE" \
