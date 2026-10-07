@@ -4,7 +4,7 @@ import { readValidationText } from "./validation-text.mjs";
 const [packageJson, harness, performanceDocs, siteQuality, baselineWorkflow] = await Promise.all([
   readValidationText("./package.json", import.meta.url),
   readValidationText("./validation/performance-baseline.mjs", import.meta.url),
-  readValidationText("./docs/performance-923.md", import.meta.url),
+  readValidationText("./docs/performance.md", import.meta.url),
   readValidationText("./.github/workflows/site-quality.yml", import.meta.url),
   readValidationText("./.github/workflows/performance-baseline.yml", import.meta.url),
 ]);
