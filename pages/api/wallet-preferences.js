@@ -1,4 +1,4 @@
-const handler = require("../../api/wallet-preferences.js");
+const handler = require("../../api/_handler-wallet-preferences.js");
 
 export const config = { api: { bodyParser: false } };
 export default handler;
