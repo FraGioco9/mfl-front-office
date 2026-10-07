@@ -3,20 +3,26 @@ import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 
 const require = createRequire(import.meta.url);
-const { normalizeEvaluationId, generateEvaluationId } = require("./api/_evaluation-payload.js");
+const { normalizeEvaluationId, generateEvaluationId, generateEvaluationShareId } = require("./api/_evaluation-payload.js");
 const { normalizePlannerId, generatePlannerId } = require("./api/_planner-payload.js");
 const read = path => readFileSync(new URL(path, import.meta.url), "utf8");
 
 // Shared identifiers must never truncate or remove disallowed input into an
 // entirely different valid unlisted link.
-for (const bad of ["12345678suffix", "1234-5678", "12/345678", "12345678?wallet=B", "..12345678", "１２３４５６７８", ""]) {
+for (const bad of [
+  "12345678suffix", "1234-5678", "12/345678", "12345678?wallet=B", "..12345678",
+  "１２３４５６７８", "", "a".repeat(31), "a".repeat(33), "A".repeat(32),
+]) {
   assert.equal(normalizeEvaluationId(bad), "", `Malformed Evaluation ID should fail closed: ${bad}`);
 }
 for (const id of ["12345678", "deadBEEF", "a7"]) {
-  assert.equal(normalizeEvaluationId(id), id);
+  assert.equal(normalizeEvaluationId(id), id, "Legacy Evaluation IDs must remain readable until expiry.");
 }
 assert.equal(normalizeEvaluationId("  aBc123  "), "aBc123");
-assert.match(generateEvaluationId(), /^[a-f0-9]{8}$/);
+const strongEvaluationShareId = "a".repeat(32);
+assert.equal(normalizeEvaluationId(strongEvaluationShareId), strongEvaluationShareId);
+assert.match(generateEvaluationId(), /^[a-f0-9]{8}$/, "Saved Evaluation IDs keep their existing format.");
+assert.match(generateEvaluationShareId(), /^[a-f0-9]{32}$/, "New Evaluation share IDs must provide 128 bits of entropy.");
 assert.match(generatePlannerId(), /^[a-f0-9]{16}$/);
 for (const bad of ["abcdef0123456789suffix", "abcdef01-23456789", "abcdef012345678!", "", "000"]) {
   assert.equal(normalizePlannerId(bad), "", `Malformed Planner ID should fail closed: ${bad}`);
