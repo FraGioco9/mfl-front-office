@@ -41,7 +41,7 @@ invariant(packageJson.overrides?.["use-sync-external-store"] === "1.6.0", "Walle
 invariant(packageJson.scripts?.predev === "node prepare-next-runtime.mjs", "npm predev must prepare the temporary legacy public projection before Next starts.");
 invariant(packageJson.scripts?.dev === "next dev --webpack -p 4000", "npm run dev must directly start Next.js Webpack development mode on port 4000, matching the standard Next development lifecycle used by the sibling projects.");
 invariant(packageJson.scripts?.start === "next start -p 4000", "npm run start must own the production Next server.");
-invariant(String(packageJson.scripts?.build || "").endsWith("next build"), "npm run build must finish with next build.");
+invariant(String(packageJson.scripts?.build || "").endsWith("next build --webpack"), "npm run build must finish with next build --webpack.");
 invariant(!packageSource.includes("local-dev-server.mjs") && !packageSource.includes("vercel dev"), "Local startup must not use the retired custom/Vercel dev servers.");
 
 invariant(nextConfig.includes('fallback: [{ source: "/:path*", destination: "/index.html" }]'), "Next must preserve SPA deep-link fallback.");
