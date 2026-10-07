@@ -30,6 +30,11 @@
   --mfl-control-hover-border-color: var(--primary-hover);
   --mfl-control-hover-background: var(--row-hover);
   --mfl-control-hover-text-color: var(--text);
+  --mfl-filled-primary-border-color: #1d5f8a;
+  --mfl-filled-primary-background: #1d5f8a;
+  --mfl-filled-primary-text-color: #ffffff;
+  --mfl-filled-primary-hover-border-color: #174d70;
+  --mfl-filled-primary-hover-background: #174d70;
   --mfl-radius-control: 6px;
   --mfl-checkbox-size: 16px;
   --mfl-radius-checkbox: 4px;
@@ -2817,10 +2822,10 @@ body:not(.pinnedSidebarVisible) .toastMessage {
   align-items: center;
   justify-content: center;
   height: 40px;
-  border: 1px solid var(--primary);
+  border: 1px solid var(--mfl-filled-primary-border-color);
   border-radius: 6px;
-  background: var(--primary);
-  color: #ffffff;
+  background: var(--mfl-filled-primary-background);
+  color: var(--mfl-filled-primary-text-color);
   padding: 0 14px;
   text-decoration: none;
   cursor: pointer;
@@ -2828,9 +2833,9 @@ body:not(.pinnedSidebarVisible) .toastMessage {
 
 .playerEvaluateButton:hover,
 .playerExternalButton:hover {
-  border-color: var(--primary-hover);
-  background: var(--primary-hover);
-  color: #ffffff;
+  border-color: var(--mfl-filled-primary-hover-border-color);
+  background: var(--mfl-filled-primary-hover-background);
+  color: var(--mfl-filled-primary-text-color);
   text-decoration: none;
 }
 
@@ -4652,9 +4657,9 @@ button.playerIdText:active {
 }
 
 .settingsToggleButton.active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
+  border-color: var(--mfl-filled-primary-border-color);
+  background: var(--mfl-filled-primary-background);
+  color: var(--mfl-filled-primary-text-color);
 }
 
 .settingsEmailAddressRow {
@@ -4716,20 +4721,9 @@ button.playerIdText:active {
 }
 
 .settingsEmailActionButton.primary {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
-}
-
-:root[data-theme="dark"] :is(
-  .settingsToggleButton.active,
-  .settingsEmailActionButton.primary,
-  .playerEvaluateButton,
-  .playerExternalButton,
-  .playerEvaluateButton:hover,
-  .playerExternalButton:hover
-) {
-  color: var(--page-bg);
+  border-color: var(--mfl-filled-primary-border-color);
+  background: var(--mfl-filled-primary-background);
+  color: var(--mfl-filled-primary-text-color);
 }
 
 .settingsEmailActionButton:disabled {
@@ -6820,21 +6814,10 @@ select[data-mfl-dropdown-enhanced="true"]:disabled {
   .mflStatsDistributionModeButton,
   .playerAttributeViewButton
 ).active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
+  border-color: var(--mfl-filled-primary-border-color);
+  background: var(--mfl-filled-primary-background);
+  color: var(--mfl-filled-primary-text-color);
   cursor: default;
-}
-
-:root[data-theme="dark"] :is(
-  #sidebar .navButton.active,
-  .viewButton.active,
-  .filtersViewButton.active,
-  .mflStatsFilterButton.active,
-  .mflStatsDistributionModeButton.active,
-  .playerAttributeViewButton.active
-) {
-  color: var(--page-bg);
 }
 
 #sidebar .navButton.active {
@@ -9769,9 +9752,9 @@ html:not(.mflInitialRouteResolved):is(
 
   .menuRail .navButton.active,
   .menuRail .navButton.active:hover {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: #ffffff;
+    border-color: var(--mfl-filled-primary-border-color);
+    background: var(--mfl-filled-primary-background);
+    color: var(--mfl-filled-primary-text-color);
     box-shadow: none;
   }
 
@@ -9783,9 +9766,9 @@ html:not(.mflInitialRouteResolved):is(
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"],
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #sidebar .navButton[data-page="club"],
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"] {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: #ffffff;
+    border-color: var(--mfl-filled-primary-border-color);
+    background: var(--mfl-filled-primary-background);
+    color: var(--mfl-filled-primary-text-color);
     box-shadow: none;
   }
 
@@ -9797,9 +9780,9 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .menuRail #sidebar .navButton:not(.active):active {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: #ffffff;
+    border-color: var(--mfl-filled-primary-border-color);
+    background: var(--mfl-filled-primary-background);
+    color: var(--mfl-filled-primary-text-color);
     filter: brightness(0.9);
   }
 
@@ -11879,9 +11862,9 @@ html:not(.mflInitialRouteResolved):is(
 
   .menuRail .navButton.active,
   .menuRail .navButton.active:hover {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: #ffffff;
+    border-color: var(--mfl-filled-primary-border-color);
+    background: var(--mfl-filled-primary-background);
+    color: var(--mfl-filled-primary-text-color);
     box-shadow: none;
   }
 
@@ -11893,9 +11876,9 @@ html:not(.mflInitialRouteResolved):is(
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="agents"] #sidebar .navButton[data-page="agents"],
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-table-page="club"] #sidebar .navButton[data-page="club"],
   html:not(.mflInitialRouteResolved):not(.mflInitialRouteSuperseded)[data-initial-page="evaluation"] #sidebar .navButton[data-page="evaluation"] {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: #ffffff;
+    border-color: var(--mfl-filled-primary-border-color);
+    background: var(--mfl-filled-primary-background);
+    color: var(--mfl-filled-primary-text-color);
     box-shadow: none;
   }
 
@@ -11907,9 +11890,9 @@ html:not(.mflInitialRouteResolved):is(
   }
 
   .menuRail #sidebar .navButton:not(.active):active {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: #ffffff;
+    border-color: var(--mfl-filled-primary-border-color);
+    background: var(--mfl-filled-primary-background);
+    color: var(--mfl-filled-primary-text-color);
     filter: brightness(0.9);
   }
 
