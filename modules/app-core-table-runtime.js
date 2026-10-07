@@ -3160,7 +3160,6 @@ function tableRenderTableOwner() {
           const divisionLabel = document.createElement("span");
           divisionLabel.className = "contractDivisionLabel";
           divisionLabel.style.color = division.color;
-          divisionLabel.style.backgroundColor = division.contrastBackground;
           divisionLabel.textContent = division.name;
           cell.appendChild(divisionLabel);
         } else if (rowHasActiveContract(row)) {
