@@ -93,8 +93,10 @@ const developmentWebpack = process.env.NODE_ENV !== "production"
 
 const nextConfig = {
   // The legacy Document renders through html-react-parser. In the Pages Router,
-  // keep it inside the server bundle so Node never native-require()s its ESM
-  // domhandler dependency from a Vercel Function.
+  // keep it and its ESM domhandler dependency inside the server bundle. Loose
+  // ESM externals interop lets Webpack cross the package's internal CJS require
+  // boundary before bundling instead of rejecting require("domhandler").
+  experimental: { esmExternals: "loose" },
   transpilePackages: ["html-react-parser", "domhandler"],
   devIndicators: { position: "bottom-left" },
   env: {
