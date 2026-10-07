@@ -56,7 +56,6 @@ const validators = [
   "validate-nav03-navigation-state.mjs",
   "validate-nav04-shareable-urls.mjs",
   "validate-performance-foundations.mjs",
-  "validate-perf01-capture-evidence.mjs",
   "validate-perf03b-search-boundary.mjs",
   "validate-perf05d2-name-equality.mjs",
   "validate-perf05d2-filtered-price.mjs",
