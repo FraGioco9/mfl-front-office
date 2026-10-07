@@ -28,7 +28,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Test canonical function and migration on an isolated Postgres database
         env:
           PGHOST: 127.0.0.1
