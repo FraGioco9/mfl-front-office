@@ -87,16 +87,15 @@ jobs:
           fi
 
           body="$(
-            cat <<EOF
-          <!-- mfl-operational-health-alert -->
-          Automated OPS-02 incident opened at $(date -u +'%Y-%m-%dT%H:%M:%SZ').
-
-          $summary
-
-          Source: `GET /api/operational-health`.
-
-          This issue is intentionally deduplicated: the monitor will not create another incident while this one remains open, and will close it automatically after a healthy recovery. It does not expose raw runtime objects, wallet data or credentials.
-          EOF
+            printf '%s\n' \
+              '<!-- mfl-operational-health-alert -->' \
+              "Automated OPS-02 incident opened at $(date -u +'%Y-%m-%dT%H:%M:%SZ')." \
+              '' \
+              "$summary" \
+              '' \
+              'Source: `GET /api/operational-health`.' \
+              '' \
+              'This issue is intentionally deduplicated: the monitor will not create another incident while this one remains open, and will close it automatically after a healthy recovery. It does not expose raw runtime objects, wallet data or credentials.'
           )"
 
           gh api --method POST "repos/$GITHUB_REPOSITORY/issues" -f title="$ALERT_TITLE" -f body="$body" >/dev/null
