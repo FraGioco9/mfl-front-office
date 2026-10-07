@@ -45,12 +45,20 @@ invariant(
   "Required deep-route Next page must remain an empty framework mount while legacy UI ownership is migrated incrementally.",
 );
 invariant(
-  nextConfig.includes('experimental: { esmExternals: "loose" }'),
-  "Next-rendered shell must allow Webpack to bridge the parser's internal CommonJS require into ESM before bundling.",
+  nextConfig.includes('"html-react-parser": "./node_modules/html-react-parser/dist/html-react-parser.js"'),
+  "Turbopack production builds must resolve html-react-parser to its self-contained UMD bundle.",
 );
 invariant(
-  nextConfig.includes('transpilePackages: ["html-react-parser", "domhandler"]'),
-  "Next-rendered shell must bundle html-react-parser and domhandler so Vercel SSR cannot native-require the ESM dependency.",
+  nextConfig.includes('"html-react-parser$": resolve(root, "node_modules/html-react-parser/dist/html-react-parser.js")'),
+  "Webpack development must resolve html-react-parser to the same self-contained UMD bundle.",
+);
+invariant(
+  nextConfig.includes("webpack: configureWebpack"),
+  "Next must retain one shared Webpack hook for parser aliasing and the development legacy bridge.",
+);
+invariant(
+  !nextConfig.includes('esmExternals: "loose"') && !nextConfig.includes("transpilePackages:"),
+  "Parser compatibility must not depend on loose ESM interop or package-transpile workarounds.",
 );
 invariant(
   nextConfig.includes('devIndicators: { position: "bottom-left" }'),
