@@ -1,7 +1,5 @@
 # Production rollback runbook
 
-Issue: #1034 — OPS-04
-
 This runbook restores **application code and the bundled SQLite database as one
 Vercel deployment artifact**. It is intentionally separate from the normal
 database-refresh and site-update workflows: a rollback must not rebuild current
