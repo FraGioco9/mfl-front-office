@@ -1,125 +1,51 @@
-# DB-03 — Schema, grants and migration drift
+# Schema drift contract
 
-Issue: #1034  
-Audit date: 2026-10-06
+This repository keeps the target Supabase schema reproducible without applying database changes from CI.
 
-DB-03 makes database drift explicit without applying changes to production.
+## Canonical sources
 
-## Read-only findings
+- `supabase-schema.sql` is the current target schema.
+- `supabase/migrations/` contains versioned migrations.
+- `docs/schema-drift-ledger.json` fingerprints every repository migration by Git blob SHA-1 and records known history aliases/metadata.
+- `scripts/supabase/schema-drift-readonly-inventory.sql` is a read-only inventory query set.
+- `tests/test_schema_drift_inventory.mjs` validates the ledger, canonical schema and read-only inventory contract.
+- `.github/workflows/schema-drift.yml` restores the target into an isolated PostgreSQL 17 service and verifies grants, RLS, constraints and Planner CAS behavior.
 
-The production audit compared:
+## Safety boundary
 
-- `supabase-schema.sql`;
-- all versioned repository migrations;
-- `supabase_migrations.schema_migrations`;
-- public tables/columns;
-- constraints and indexes;
-- functions/RPCs and trigger definitions;
-- table/function grants;
-- RLS state and policies.
+The schema-drift workflow:
 
-No production DDL/DML was executed.
+- uses only isolated PostgreSQL;
+- never connects to the production Supabase project;
+- needs no production secrets;
+- does not apply migrations or DDL to production;
+- accepts only `SHOW` / `SELECT` statements in the read-only inventory.
 
-### Migration history
+Production reconciliation is always a separate explicitly authorized action.
 
-All repository/live migrations sharing the same version are semantically equal
-after normalizing comments and whitespace. The wallet-auth migration is also
-semantically equal but has a historical version alias:
+## Migration history
 
-- repository: `20260914150000_wallet_auth_sessions.sql`;
-- production history: `20260914202553 wallet_auth_sessions`.
+Already-versioned migration files are immutable. The ledger intentionally stores historical live-only migration **metadata**, not one-off SQL payloads.
 
-The versioned ledger is `docs/schema-drift-ledger.json`. Repository
-migrations are pinned by Git blob SHA-1, making any later edit to an already
-inventoried migration fail CI.
+The wallet-auth migration retains its known version alias between repository history and Supabase migration history. That alias is metadata only and does not create a second canonical migration.
 
-The ledger records historical live-only migration **metadata only**. It
-deliberately does not copy their SQL statements because historical migrations may
-contain one-off data/backfill material and are not the canonical replay source.
+## Canonical security model
 
-### Intentionally staged drift
+The isolated restore verifies the repository target keeps:
 
-Three migrations are in Git but intentionally not live yet:
+- RLS enabled for application tables;
+- browser roles without direct application-table access;
+- service-role access required by server APIs;
+- browser roles without unrestricted RPC execution;
+- the current Planner revision/CAS and share-cascade constraints.
 
-- SEC-05: `20261001172000_restrict_application_grants.sql`;
-- DB-02: `20261006183000_private_data_retention.sql`;
-- DB-05: `20261006183001_planner_plan_capacity_guard.sql`.
+## Planner concurrency contract
 
-This is release staging, not accidental drift.
-
-### Legacy agent-name drift
-
-Production still contains legacy duplicated agent-name state:
-
-- `wallet_preferences.agent_name`: 110 non-empty rows of 112;
-- `wallet_permissions.agent_name`: 2 non-empty rows of 4;
-- functions:
-  - `sync_wallet_preferences_agent_name_from_opt_ins()`;
-  - `fill_wallet_preferences_agent_name_from_opt_ins()`;
-- triggers:
-  - `wallet_opt_ins_sync_preferences_agent_name`;
-  - `wallet_preferences_fill_agent_name`.
-
-The current application contract assigns agent-name ownership to
-`wallet_opt_ins.agent_name`. The canonical schema therefore does **not** restore
-those legacy columns/functions/triggers.
-
-DB-03 does not drop them from production. Reconciliation requires a separately
-reviewed migration after verifying that no remaining runtime path consumes the
-duplicates.
-
-### Grants
-
-Production grant drift is expected until SEC-05 is applied. The target canonical
-restore verifies:
-
-- RLS enabled on every application table;
-- zero browser-facing RLS policies;
-- `anon` and `authenticated` denied direct table access;
-- service role table access preserved;
-- browser roles denied RPC execution;
-- service-role RPC execution preserved.
-
-### Planner contract
-
-Both production catalog inspection and the isolated target restore verify:
+The canonical schema keeps:
 
 - `planner_plans.revision integer not null default 1`;
 - `planner_shares.source_plan_id -> planner_plans.id ON DELETE CASCADE`;
-- unique `planner_shares(wallet_address, source_plan_id)`;
-- an update using revision 1 succeeds once and advances to revision 2;
-- a second stale revision-1 update/delete affects zero rows;
-- deleting with the current revision succeeds and cascades to its share.
+- one share per wallet/source plan;
+- stale revision writes/deletes affecting zero rows, which the API maps to HTTP 409.
 
-The application maps those zero-row stale CAS writes to HTTP 409, which remains
-covered by the Planner persistence/concurrency validators.
-
-## Read-only inventory
-
-`scripts/supabase/db03-live-readonly-inventory.sql` contains only `SHOW` and
-`SELECT` statements. It inventories migration fingerprints, public schema,
-constraints, indexes, RPC fingerprints, triggers, grants and RLS.
-
-The source validator rejects the file if any INSERT/UPDATE/DELETE/DDL/grant
-statement is introduced.
-
-## Isolated restore
-
-`.github/workflows/db-03-schema-drift.yml` starts PostgreSQL 17 and:
-
-1. verifies migration fingerprints and ledger coverage;
-2. creates only Supabase-like test roles;
-3. restores the historical season-ratio table from its dedicated repo migration;
-4. restores the current canonical target schema;
-5. validates RLS/grants/RPCs/constraints and Planner CAS;
-6. runs the read-only inventory against that isolated database to catch SQL drift.
-
-It never contacts the Supabase project and never needs production secrets.
-
-## Release interpretation
-
-A green DB-03 workflow means the **repository target state** is internally
-replayable and its drift assumptions are explicit. It does not mean SEC-05, DB-02, DB-05, or a future legacy-agent cleanup has been applied live.
-
-Any future production reconciliation remains a separate explicit authorization,
-with backup/PITR and post-apply verification.
+A green schema-drift workflow means the **repository target state** is internally replayable and its migration fingerprints are intact. It is not proof that any live environment currently matches that target.
