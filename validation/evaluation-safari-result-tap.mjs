@@ -42,7 +42,8 @@ function createFixture(query = "Test player") {
   const result = new HTMLButtonElement();
   const child = new Element(result);
   const outside = new Element();
-  const results = { hidden: false };
+  const results = new Element();
+  results.hidden = false;
   const document = {
     activeElement: field,
     getElementById: (id) => id === "evaluationSearchResults" ? results : null,
