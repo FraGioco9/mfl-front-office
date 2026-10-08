@@ -5,13 +5,13 @@ import { fileURLToPath } from "node:url";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const scenarios = [
-  "recovery-home-zero",
-  "recovery-home-retry",
-  "recovery-search",
-  "recovery-myclubs-empty",
-  "recovery-watchlist-zero",
-  "recovery-player-failure",
-  "recovery-club-failure",
+  "ux02-home-zero",
+  "ux02-home-retry",
+  "ux02-search",
+  "ux02-myclubs-empty",
+  "ux02-watchlist-zero",
+  "ux02-player-failure",
+  "ux02-club-failure",
 ];
 const status = await new Promise((resolveStatus, rejectStatus) => {
   const child = spawn(process.execPath, [resolve(currentDir, "browser-routing-regression.mjs")], {
@@ -26,5 +26,5 @@ const status = await new Promise((resolveStatus, rejectStatus) => {
   child.once("error", rejectStatus);
   child.once("close", resolveStatus);
 });
-assert.equal(status, 0, "Recovery recovery browser matrix failed.");
+assert.equal(status, 0, "Recovery browser matrix failed.");
 console.log("Recovery real-Chromium empty, failure, retry, keyboard-focus and mobile matrix passed.");
