@@ -94,7 +94,7 @@ try {
               shown: page instanceof HTMLElement && !page.hidden,
               inputVisible: input instanceof HTMLInputElement && !input.disabled
                 && Boolean(rect?.width > 10 && rect?.height > 10),
-              corePresent: typeof window.renderEvaluationPage === "function",
+              corePresent: document.documentElement.dataset.mflRouteReady === "true",
               title: document.title,
             };
           })()`,
