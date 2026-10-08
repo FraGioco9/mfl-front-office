@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -21,17 +21,46 @@ const expectedValidators = {
     "validate-mfl-stats-first-paint.mjs",
     "validate-mfl-stats-data-scope.mjs",
   ],
+  "build-generated": [
+    "validate-fragment-ownership.mjs",
+    "validate-text-reader.mjs",
+    "validate-ci-quality-scope.mjs",
+    "validate.mjs",
+    "validate-app-config.mjs",
+    "validate-core-source-ownership.mjs",
+    "validate-shared-core-route-ownership.mjs",
+    "validate-asset-cache-policy.mjs",
+    "validate-cache-policy.mjs",
+    "validate-prebuilt-cache-model.mjs",
+    "validate-tail-pagination.mjs",
+    "validate-production-core-sources.mjs",
+    "validate-generated-core-bindings.mjs",
+  ],
+  "release-deployment": [
+    "validate-release-history.mjs",
+    "validate-release-version-source.mjs",
+    "validate-release-runtime-ownership.mjs",
+    "validate-runtime-data-identity.mjs",
+    "validate-generated-styles.mjs",
+    "validate-next-deployment-ownership.mjs",
+    "validation/cross-release-cache-regression.mjs",
+    "validate-database-refresh-deployment.mjs",
+    "validate-security-boundaries.mjs",
+    "validate-operational-health.mjs",
+  ],
 };
 
 const allSource = await readFile(new URL("../validate-all.mjs", import.meta.url), "utf8");
 for (const [domain, expected] of Object.entries(expectedValidators)) {
   const source = await readFile(new URL("../validate-domain-" + domain + ".mjs", import.meta.url), "utf8");
-  const listed = Array.from(source.matchAll(/"(validate-[^"]+\.mjs)"/g), (match) => match[1]);
+  const match = source.match(/const validators = \[([\s\S]*?)\];/);
+  assert.ok(match, domain + " must declare an ordered validator array");
+  const listed = Array.from(match[1].matchAll(/"([^"]+\.mjs)"/g), (entry) => entry[1]);
   assert.deepEqual(listed, expected, domain + " must retain the original validator list and order");
   assert.match(source, /runDomainValidators\(/, domain + " must use the shared executor");
   assert.match(allSource, new RegExp('"validate-domain-' + domain + '\\.mjs"'), domain + " must stay in validate-all");
 }
-assert.equal(Object.values(expectedValidators).flat().length, 11);
+assert.equal(Object.values(expectedValidators).flat().length, 34);
 
 const helperUrl = new URL("../validation/domain-runner.mjs", import.meta.url).href;
 const scratch = await mkdtemp(join(tmpdir(), "mfl-sim08-domain-runner-"));
@@ -46,6 +75,12 @@ try {
     'globalThis.__pilotStep = 2;',
     'console.log("fixture-second");',
   ].join("\n"));
+  await mkdir(join(scratch, "validation"));
+  await writeFile(join(scratch, "validation", "nested.mjs"), [
+    'if (globalThis.__pilotStep !== 2) throw new Error("nested resolution must retain one process and ordering");',
+    'globalThis.__pilotStep = 3;',
+    'console.log("fixture-nested");',
+  ].join("\n") + "\n");
   await writeFile(join(scratch, "broken.mjs"), 'throw new Error("expected synthetic failure");\n');
   await writeFile(join(scratch, "never.mjs"), 'console.log("unexpected-after-failure");\n');
 
@@ -63,14 +98,15 @@ try {
     });
   }
 
-  const passing = runCase(["first.mjs", "second.mjs"]);
+  const passing = runCase(["first.mjs", "second.mjs", "validation/nested.mjs"]);
   assert.equal(passing.error, undefined, "success fixture process must start");
   assert.equal(passing.status, 0, passing.stderr);
   assert.equal(
     passing.stdout,
     "[fixture] first.mjs\nfixture-first\n" +
       "[fixture] second.mjs\nfixture-second\n" +
-      "Fixture validator domain passed: 2 validators in one process.\n",
+      "[fixture] validation/nested.mjs\nfixture-nested\n" +
+      "Fixture validator domain passed: 3 validators in one process.\n",
     "the executor must preserve validator ordering and summary logging",
   );
   assert.equal(passing.stderr, "");
@@ -86,4 +122,4 @@ try {
   await rm(scratch, { recursive: true, force: true });
 }
 
-console.log("SIM-08 pilot: Club/Stats 11-validator inventory, shared-process ordering, logs and fail-fast/exit contract passed.");
+console.log("SIM-08: Club/Stats and Build/Release 34-validator inventory, subdirectory imports, shared-process ordering, logs and fail-fast/exit contract passed.");
