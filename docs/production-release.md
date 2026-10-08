@@ -1,8 +1,6 @@
 # Production release gate — OPS-03
 
-Issue: #1034 — OPS-03
-
-The protected `Vercel site update` workflow remains a **manual production action**. OPS-03 does not create an automatic deploy trigger and does not change Vercel, Supabase, GitHub Environment or database state by itself.
+The protected `Vercel site update` workflow remains a **manual production action**. This workflow does not create an automatic deploy trigger and does not change Vercel, Supabase, GitHub Environment or database state by itself.
 
 ## Release request contract
 
@@ -79,6 +77,6 @@ The deployment ownership validator also requires the workflow to retain:
 - post-deploy production verification;
 - rollback identity and preflight evidence artifact.
 
-## Operational rule for #1034
+## Operational rule
 
-Do not dispatch this workflow until the issue's final release gate authorizes the single Vercel deployment. Opening, testing or merging OPS-03 is not deployment authorization.
+Production deployment remains an explicit maintainer action. Merging code or passing CI is not deployment authorization.
