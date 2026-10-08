@@ -91,11 +91,11 @@ invariant(
 );
 
 invariant(
-  sitePackage.scripts?.["performance:baseline"] === "node validation/performance-baseline.mjs",
+  sitePackage.scripts?.["performance:capture"] === "node validation/performance-capture.mjs",
   "The repeatable performance harness must remain available through the canonical site script.",
 );
 invariant(
-  !siteQuality.includes("performance:baseline"),
+  !siteQuality.includes("performance:capture"),
   "Noisy browser wall-clock performance baselines must remain opt-in rather than normal Site Quality gates.",
 );
 invariant(
