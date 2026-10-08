@@ -1,6 +1,7 @@
 // Exercise the actual built Next HTTP runtime, not an unbundled API handler.
 // Invoked while the existing Site quality production Next server is running.
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 const origin = new URL(process.argv[2] || "http://127.0.0.1:4010/");
 assert(["127.0.0.1", "localhost", "::1", "[::1]"].includes(origin.hostname),
@@ -83,6 +84,23 @@ for (const route of imageRoutes) {
   assert.equal(head.status, 200, `Preview HEAD failed: ${route}`);
   assert.match(head.headers.get("content-type") || "", /^image\/png\b/i);
   assert.equal((await head.arrayBuffer()).byteLength, 0);
+}
+
+// Vercel packages API routes from Next's output-file trace, not the full
+// local node_modules tree. Check the trace as well as HTTP output so a local
+// passing image test cannot hide missing serverless Titillium font assets.
+const imageTrace = JSON.parse(await readFile(
+  new URL("../.next/server/pages/api/evaluation-preview-image.js.nft.json", import.meta.url),
+  "utf8",
+));
+const tracedFiles = (imageTrace.files || []).map(String);
+for (const fileName of [
+  "TitilliumWeb_400Regular.ttf",
+  "TitilliumWeb_600SemiBold.ttf",
+  "TitilliumWeb_700Bold.ttf",
+]) {
+  assert.ok(tracedFiles.some((file) => file.endsWith("/" + fileName)),
+    `Preview deployment trace is missing bundled font: ${fileName}`);
 }
 
 // Frontend assets used by the Evaluation page must exist on the same build.
