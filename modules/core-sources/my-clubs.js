@@ -118,6 +118,14 @@
     card.href = clubId ? `/clubs/${encodeURIComponent(clubId)}/squad` : "#";
     card.dataset.clubId = clubId;
     card.setAttribute("aria-hidden", "true");
+    // Loading cards already know the club colours. Reuse the final card's
+    // gradient behind a transparent logo slot instead of flashing a plain tile.
+    const primary = safeColor(club?.primaryColor);
+    const secondary = safeColor(club?.secondaryColor);
+    if (primary || secondary) {
+      card.style.setProperty("--my-club-primary", primary || secondary);
+      card.style.setProperty("--my-club-secondary", secondary || primary);
+    }
 
     const logoFrame = document.createElement("div");
     logoFrame.className = "myClubLogoFrame myClubLogoFrameLoading";
