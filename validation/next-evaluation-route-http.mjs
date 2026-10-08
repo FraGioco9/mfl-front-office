@@ -31,28 +31,34 @@ for (const route of routes) {
   const body = html.split(/<\/head>/i).slice(1).join("</head>");
   assert.match(head, /<title>Evaluation - MFL Front Office<\/title>/i,
     `Evaluation title must be stable: ${route}`);
-  assert.match(head, /<meta\s+property="og:image"/i,
-    `Shared-preview metadata must be available on every Evaluation route: ${route}`);
-  assert.match(head, /<meta\s+name="twitter:card"/i,
-    `Twitter preview metadata missing: ${route}`);
-  // Match the actual image URL advertised to social crawlers. A local page
-  // linking to https://localhost would make the image fail to load even when
-  // the same endpoint works when requested directly over plain HTTP.
-  const imageTag = head.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
-  assert.ok(imageTag, `Missing Open Graph preview image URL: ${route}`);
-  const advertisedImage = new URL(imageTag[1].replaceAll("&amp;", "&"));
-  assert.equal(advertisedImage.origin, origin.origin,
-    `Evaluation preview image must use the page's own origin: ${route}`);
-  assert.equal(advertisedImage.pathname, "/api/evaluation-preview-image",
-    `Evaluation preview metadata must reference the PNG endpoint: ${route}`);
-  const originalParams = new URL(route, origin).searchParams;
-  const requestedShare = originalParams.get("share") || "";
-  const canonicalShare = /^[a-zA-Z0-9]{1,8}$/.test(requestedShare)
-    || /^[a-f0-9]{32}$/.test(requestedShare)
-    ? requestedShare : null;
-  assert.equal(advertisedImage.searchParams.get("share"), canonicalShare,
-    `Valid Evaluation share IDs must survive and malformed IDs must be discarded: ${route}`);
-
+  assert.match(head, /<meta\s+name="robots" content="noindex,nofollow,noarchive"/i,
+    `Evaluation robots policy missing: ${route}`);
+  const requestedShare = new URL(route, origin).searchParams.get("share") || "";
+  const syntacticallyValidShare = /^[a-zA-Z0-9]{1,8}$/.test(requestedShare)
+    || /^[a-f0-9]{32}$/.test(requestedShare);
+  const socialMetaPattern = /<meta\s+(?:property="og:[^"]+"|name="twitter:[^"]+")/i;
+  const advertisedSocialCard = socialMetaPattern.test(head);
+  if (!syntacticallyValidShare) {
+    assert.ok(!advertisedSocialCard,
+      `Plain, player, saved and malformed Share routes must not show a social card: ${route}`);
+  } else if (advertisedSocialCard) {
+    // In CI there are no live Supabase rows; if an active Share is provided,
+    // social metadata must still point at the correct origin and Share ID.
+    assert.match(head, /<meta\s+name="twitter:card" content="summary_large_image"/i,
+      `Active Share is missing Twitter preview metadata: ${route}`);
+    const imageTag = head.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
+    assert.ok(imageTag, `Active Share is missing the OG image URL: ${route}`);
+    const advertisedImage = new URL(imageTag[1].replaceAll("&amp;", "&"));
+    assert.equal(advertisedImage.origin, origin.origin,
+      `Active Share image must use the request origin: ${route}`);
+    assert.equal(advertisedImage.pathname, "/api/evaluation-preview-image",
+      `Active Share image must use the PNG API: ${route}`);
+    assert.equal(advertisedImage.searchParams.get("share"), requestedShare,
+      `Active Share image must retain the Share ID: ${route}`);
+  } else {
+    assert.doesNotMatch(head, /<meta\s+name="twitter:image"/i,
+      `Unresolved/expired Share must not advertise a preview image: ${route}`);
+  }
   for (const id of ["appShell", "evaluationPage", "evaluationSearchInput", "evaluationButtons"]) {
     assert.ok(html.includes(`id="${id}"`), `Canonical Evaluation shell missing ${id}: ${route}`);
   }
