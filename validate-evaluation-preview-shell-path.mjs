@@ -160,6 +160,8 @@ assert(!socialMetadataPattern.test(genericHtml),
   "Plain Evaluation must not advertise generic Open Graph or Twitter preview metadata.");
 assert(genericHtml.includes("<title>Evaluation - MFL Front Office</title>"),
   "Removing the social card must preserve the ordinary browser title.");
+assert(genericHtml.includes('<meta name="description" content="Evaluate MFL players with MFL Front Office.">'),
+  "Non-shared Evaluation must preserve an ordinary HTML description without advertising a Share.");
 assert(genericHtml.includes('<meta name="robots" content="noindex,nofollow,noarchive">'),
   "Non-shared Evaluation must keep its existing noindex policy.");
 const activeShareHtml = renderPreviewHtml(
