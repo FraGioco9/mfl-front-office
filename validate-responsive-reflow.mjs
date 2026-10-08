@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 const read = path => readFileSync(new URL(path, import.meta.url), "utf8");
 const routing = read("./validation/browser-routing-regression.mjs");
-const browser = read("./validation/browser-responsive-reflow-reflow-regression.mjs");
+const browser = read("./validation/browser-narrow-reflow-regression.mjs");
 const workflow = read("./.github/workflows/site-quality.yml");
 
 for (const width of [320, 360, 520, 640, 900, 901]) {
