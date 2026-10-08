@@ -77,11 +77,13 @@ jobs:
           WALLET_CHALLENGE_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
           WALLET_CHALLENGE_ORIGIN: http://127.0.0.1:4000
           MFL_DATABASE_PATH: ${{ runner.temp }}/mfl-next-dev-smoke.db
+          MFL_CSP_NONCE_REPORT_ONLY: "1"
         run: |
           set -euo pipefail
           # The parser-time CSP snapshot must match canonical HTML before Next loads its config.
           # Generated files remain CI-owned and are committed only after full validation.
           node build-html.mjs
+          node validate-vercel-security-headers.mjs
           node scripts/ci/create-next-sqlite-smoke-fixture.cjs "$MFL_DATABASE_PATH"
           npm run dev > /tmp/mfl-next-dev.log 2>&1 &
           NEXT_DEV_PID=$!
@@ -114,6 +116,22 @@ jobs:
           EXCHANGE_STATUS="$(curl --silent --show-error --output /tmp/mfl-wallet-exchange.json --write-out '%{http_code}' --cookie /tmp/mfl-wallet-cookies.txt --header 'Origin: http://127.0.0.1:4000' --header 'Content-Type: application/json' --data "$EXCHANGE_BODY" http://127.0.0.1:4000/api/wallet-session)"
           test "$EXCHANGE_STATUS" = "401"
           jq -e '.error == "Invalid wallet proof."' /tmp/mfl-wallet-exchange.json >/dev/null
+
+          # Consolidated rendered-shell/CSP/mobile route coverage.
+          node validation/next-rendered-shell-browser.mjs http://127.0.0.1:4000/
+          node validation/next-csp-script-hashes.mjs http://127.0.0.1:4000/
+          node validation/next-csp-nonce-browser.mjs http://127.0.0.1:4000/
+          node validate-csp-legacy-eval-elimination.mjs
+          node validation/next-csp-report-route.mjs http://127.0.0.1:4000/
+          status="$(curl --silent --show-error --output /tmp/mfl-planner-direct.html --write-out '%{http_code}' http://127.0.0.1:4000/planner)"
+          test "$status" = "200"
+          grep -q 'id="plannerPage"' /tmp/mfl-planner-direct.html
+          grep -q 'class="navEmoji navPlannerIcon"' /tmp/mfl-planner-direct.html
+          node validation/next-rendered-shell-browser.mjs http://127.0.0.1:4000/planner
+          node validation/next-mobile-table-browser.mjs http://127.0.0.1:4000/
+          node validation/next-mobile-table-route-browser.mjs http://127.0.0.1:4000
+          ! grep -Fq "viewport meta tags should not be used in _document.js's <Head>" /tmp/mfl-next-dev.log
+          ! grep -Fq "<title> should not be used in _document.js's <Head>" /tmp/mfl-next-dev.log
 
       - name: Build canonical site assets
         if: steps.changes.outputs.quality == 'true'
@@ -178,6 +196,23 @@ jobs:
       - name: Repository validation
         if: steps.changes.outputs.quality == 'true'
         run: npm run validate
+
+      - name: Isolated loading, search and feedback regressions
+        if: steps.changes.outputs.site == 'true'
+        shell: bash
+        env:
+          LOAD03_EXPECT_FIXED: "1"
+          LOAD04_EXPECT_FIXED: "1"
+        run: |
+          set -euo pipefail
+          node --check validation/load02-error-retry-isolation.mjs
+          node validation/load02-error-retry-isolation.mjs
+          node --check validation/load02-incremental-network-fixture.mjs
+          node validation/load02-incremental-network-fixture.mjs
+          node --check validation/load03-search-race-isolation.mjs
+          node validation/load03-search-race-isolation.mjs
+          node --check validation/load04-feedback-context-isolation.mjs
+          node validation/load04-feedback-context-isolation.mjs
 
       - name: PERF-06A portrait retention same-runner A/B
         if: steps.changes.outputs.site == 'true'
