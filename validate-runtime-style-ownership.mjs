@@ -7,7 +7,7 @@ async function sourceFiles(directory = siteRoot) {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    if (entry.name === "node_modules" || entry.name === ".git" || entry.name === "validation") continue;
+    if (["node_modules", ".git", ".next", ".vercel", "public", "coverage", "validation"].includes(entry.name)) continue;
     const url = new URL(entry.name + (entry.isDirectory() ? "/" : ""), directory);
     if (entry.isDirectory()) {
       files.push(...await sourceFiles(url));
