@@ -9,7 +9,7 @@ const validators = [
   "validate-asset-cache-policy.mjs",
   "validate-perf04-cache-contract.mjs",
   "validate-perf04b-prebuilt-model.mjs",
-  "validate-perf05c-tail-pagination.mjs",
+  "validate-tail-pagination.mjs",
   "validate-production-core-sources.mjs",
   "validate-generated-core-bindings.mjs",
 ];
