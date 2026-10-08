@@ -8,17 +8,17 @@ There are **13 workflows** on `main` after the October 2026 repository cleanup.
 | Workflow file | Display name | Triggers | Responsibility |
 | --- | --- | --- | --- |
 | `cleanup-unused-branches.yml` | Cleanup unused branches | Closed PR via `pull_request_target`; selected `main` pushes; manual dispatch | Deletes only remote branches that pass the protected cleanup checks. |
-| `db-03-schema-drift.yml` | DB-03 schema drift | Path-filtered pull request; manual dispatch | Isolated schema-drift inventory/restore regression for Supabase-facing changes. |
-| `db-05-planner-capacity.yml` | DB-05 Planner capacity | Path-filtered pull request; manual dispatch | Isolated Planner capacity/schema regression. |
+| `schema-drift.yml` | Schema drift | Path-filtered pull request; manual dispatch | Isolated schema-drift inventory/restore regression for Supabase-facing changes. |
+| `planner-capacity.yml` | Planner capacity | Path-filtered pull request; manual dispatch | Isolated Planner capacity/schema regression. |
 | `full-database-refresh.yml` | Full database refresh | Manual dispatch | Production database pipeline. The production clock lives in Supabase Cron, which reaches this workflow through `workflow_dispatch`; GitHub does not schedule it directly. |
 | `mfl-marketplace-snapshot.yml` | MFL marketplace snapshot | Path-filtered pull request; selected `main` pushes; manual dispatch | Marketplace snapshot validation/publication. Production cadence is owned by Supabase Cron and dispatched through `workflow_dispatch`. |
 | `operational-health-monitor.yml` | Operational health monitor | GitHub schedule at minute 07/37; manual dispatch | Read-only production-health monitoring and one deduplicated incident issue. |
 | `progression-email-gmail-test.yml` | Progression email Gmail test | Manual dispatch | Explicit owner-only real Gmail delivery test. |
-| `sec-03-auth-rate-limit-postgres.yml` | SEC-03 distributed auth rate limit | Path-filtered pull request | Isolated PostgreSQL regression for the distributed wallet-auth quota. |
-| `sec-05-supabase-grants-postgres.yml` | SEC-05 Supabase grants and RLS | Path-filtered pull request; manual dispatch | Isolated PostgreSQL grants/RLS regression. |
-| `secret-scope-audit.yml` | Secret scope presence audit | Manual dispatch | Presence-only GitHub Actions secret-scope audit; reports names and present/missing status without secret values. |
+| `wallet-auth-rate-limit-postgres.yml` | Wallet auth rate limit | Path-filtered pull request | Isolated PostgreSQL regression for the distributed wallet-auth quota. |
+| `supabase-grants-postgres.yml` | Supabase grants and RLS | Path-filtered pull request; manual dispatch | Isolated PostgreSQL grants/RLS regression. |
+| `secret-scope-check.yml` | Secret scope check | Manual dispatch | Presence-only GitHub Actions secret-scope audit; reports names and present/missing status without secret values. |
 | `site-quality.yml` | Site quality | Pull request; `main` push; manual dispatch | Canonical required `quality` check, generated-artifact ownership, build/lint/typecheck, Next rendered-shell/CSP checks, isolated loading/search/feedback fixtures, accessibility, mobile/responsive/table and core browser regressions. |
-| `validate-sec-01-trigger-search-path.yml` | SEC-01 trigger search_path regression | Path-filtered pull request | Isolated PostgreSQL regression for pinned trigger `search_path`. |
+| `trigger-search-path-postgres.yml` | Trigger search_path regression | Path-filtered pull request | Isolated PostgreSQL regression for pinned trigger `search_path`. |
 | `vercel-site-update.yml` | Vercel site update | Manual dispatch from `main` with pinned SHA + explicit production approval | Production Vercel deployment using the latest valid database artifact. Preflight requires the requested SHA to equal current `main`, requires the exact-head `quality` check and no blocking/unsettled checks, records a release fingerprint, binds the deploy job to the `production` environment, and rechecks `main` immediately before publish. |
 
 ## Canonical local commands
