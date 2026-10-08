@@ -9,6 +9,7 @@ const loadingStyles = source("loading.css");
 const baseStyles = source("styles-base.css");
 const generatedStyles = source("styles-runtime.css");
 const cardRuntime = source("modules/core-sources/my-clubs.js");
+const generatedCardRuntime = source("modules/app-core-my-clubs-runtime.js");
 const clubRuntime = source("modules/core-sources/club.js");
 const bootstrap = source("bootstrap.js");
 
@@ -39,6 +40,10 @@ assert.match(baseStyles, /\.clubIdentityLogo,\n\.clubIdentityLogoSkeleton \{[\s\
 
 // Both cold and warm paths must retain their existing image/error handling;
 // the fix changes only the visual placeholder, not the image request lifecycle.
+const coldCard = cardRuntime.slice(cardRuntime.indexOf("function skeletonCard(club)"), cardRuntime.indexOf("function renderClubSkeletons"));
+assert.match(coldCard, /card\.style\.setProperty\("--my-club-primary", primary \|\| secondary\);/u);
+assert.match(coldCard, /card\.style\.setProperty\("--my-club-secondary", secondary \|\| primary\);/u);
+assert.ok(generatedCardRuntime.includes(coldCard.trim()), "Generated My Clubs runtime must preserve cold-load club colours.");
 assert.match(cardRuntime, /logoFrame\.className = "myClubLogoFrame myClubLogoFrameLoading";/u);
 assert.match(cardRuntime, /logoFrame\.className = "myClubLogoFrame";/u);
 assert.match(cardRuntime, /logo\.addEventListener\("error",/u);
