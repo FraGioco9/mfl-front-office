@@ -1,0 +1,148 @@
+name: SIM-09A R0B read-only dependency audit
+
+on:
+  push:
+    branches:
+      - audit/sim-09a-r0b
+    paths:
+      - scripts/audit/sim-09a-r0b.mjs
+      - .github/workflows/audit-sim09a-r0b.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sim-09a-r0b-audit-only
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    name: Isolated main dependency scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPECTED_MAIN_SHA: 89b39c8db12bf809771d43c995c14aed4fdc8775
+    steps:
+      - name: Check out audit tools only (no persisted credentials)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify pinned main and create isolated detached worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACTUAL_MAIN="$(git ls-remote origin refs/heads/main | cut -f1)"
+          test "$ACTUAL_MAIN" = "$EXPECTED_MAIN_SHA"
+          git cat-file -e "$EXPECTED_MAIN_SHA^{commit}"
+          git worktree add --detach "$RUNNER_TEMP/mfl-main" "$EXPECTED_MAIN_SHA"
+          test "$(git -C "$RUNNER_TEMP/mfl-main" rev-parse HEAD)" = "$EXPECTED_MAIN_SHA"
+          test -z "$(git -C "$RUNNER_TEMP/mfl-main" status --porcelain)"
+          mkdir -p "$RUNNER_TEMP/r0b-result"
+          echo "Isolated checkout verified at $EXPECTED_MAIN_SHA"
+
+      - name: Install parser dependencies in disposable checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/mfl-main"
+          npm ci --ignore-scripts --no-audit --no-fund
+          node -e "const ts=require('@typescript/typescript6'); if(typeof ts.createSourceFile!=='function')process.exit(1)"
+          test -z "$(git status --porcelain)"
+
+      - name: Scan all tracked files and produce conservative dependency graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          node "$GITHUB_WORKSPACE/scripts/audit/sim-09a-r0b.mjs" "$RUNNER_TEMP/mfl-main" "$EXPECTED_MAIN_SHA" "$RUNNER_TEMP/r0b-result"
+
+      - name: Attempt Next build/trace in disposable checkout
+        shell: bash
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          MFL_DATABASE_PATH: ""
+        run: |
+          set -uo pipefail
+          cd "$RUNNER_TEMP/mfl-main"
+          export MFL_DATABASE_PATH="$RUNNER_TEMP/mfl-empty-audit.db"
+          if npm run build > "$RUNNER_TEMP/r0b-result/next-build.log" 2>&1; then
+            printf 'SUCCESS\n' > "$RUNNER_TEMP/r0b-result/next-build-status.txt"
+            echo "Next.js build succeeded in detached temporary checkout"
+          else
+            printf 'FAILED_OR_UNAVAILABLE\n' > "$RUNNER_TEMP/r0b-result/next-build-status.txt"
+            echo "Next.js build failed; runtime parity remains OPEN (see artifact)"
+            tail -n 45 "$RUNNER_TEMP/r0b-result/next-build.log"
+          fi
+          exit 0
+
+      - name: Inspect generated Next file traces without modifying source
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          const root=path.join(process.env.RUNNER_TEMP,'mfl-main');
+          const dir=path.join(root,'.next');
+          const report=path.join(process.env.RUNNER_TEMP,'r0b-result');
+          const files=[];
+          function visit(p){
+            if(!fs.existsSync(p))return;
+            for(const e of fs.readdirSync(p,{withFileTypes:true})){
+              const f=path.join(p,e.name);
+              if(e.isDirectory()){if(!['cache','static'].includes(e.name))visit(f);}
+              else if(f.endsWith('.nft.json')){
+                try{const d=JSON.parse(fs.readFileSync(f,'utf8'));files.push({file:path.relative(root,f),dependencies:(d.files||[]).length,trackedCandidates:(d.files||[]).filter(x=>!x.includes('node_modules')).slice(0,120)});}
+                catch(err){files.push({file:f,error:String(err)});}
+              }
+            }
+          }
+          visit(dir);
+          fs.writeFileSync(path.join(report,'next-traces.json'),JSON.stringify({traces:files},null,2));
+          console.log('Next file tracing outputs:',files.length);
+          NODE
+
+      - name: Print the 25 candidate outcomes and audit limitations
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          const dir=path.join(process.env.RUNNER_TEMP,'r0b-result');
+          const r=JSON.parse(fs.readFileSync(path.join(dir,'r0b-scan.json'),'utf8'));
+          const build=fs.readFileSync(path.join(dir,'next-build-status.txt'),'utf8').trim();
+          console.log(JSON.stringify({sha:r.sha,files:r.files,root:r.root,rootValidators:r.root_validators,edges:r.edges,dynamicSites:r.dynamic_sites,parseWarnings:r.parseWarnings,noDetectedInbound:r.unreferenced_NOT_SAFE,build},null,2));
+          for(let i=0;i<r.candidates.length;i++){
+            const c=r.candidates[i];
+            console.log(String(i+1).padStart(2,'0'),c.path,'inbound='+c.inbound,'consumers='+c.consumers.slice(0,4).join(','));
+          }
+          const summary=[
+            '### R0-B isolated main graph — audit only',
+            '- Source commit: '+r.sha,
+            '- Tracked files: '+r.files+'; root: '+r.root+'; validator root: '+r.root_validators,
+            '- Evidence edges: '+r.edges+'; unresolved dynamic sites: '+r.dynamic_sites,
+            '- Next build: '+build,
+            '- Candidate files: '+r.candidates.length,
+            '- **No file with zero detected inbound is certified DELETE-safe. R0-C and manual checks remain necessary.**'
+          ].join('\n')+'\n';
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,summary);
+          NODE
+
+      - name: Upload audit reports as workflow artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sim-09a-r0b-main-audit
+          path: ${{ runner.temp }}/r0b-result/
+          if-no-files-found: warn
+          retention-days: 30
