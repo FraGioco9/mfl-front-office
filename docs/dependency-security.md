@@ -1,8 +1,6 @@
-# DEP-01 — dependency and lockfile audit
+# Dependency security and lockfile contract
 
 **Result: Next security baseline updated to 16.3.8.**
-
-Audit date: 2026-10-07.
 
 ## Reviewed baseline
 
