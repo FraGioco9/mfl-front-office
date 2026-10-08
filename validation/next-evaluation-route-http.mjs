@@ -35,6 +35,21 @@ for (const route of routes) {
     `Shared-preview metadata must be available on every Evaluation route: ${route}`);
   assert.match(head, /<meta\s+name="twitter:card"/i,
     `Twitter preview metadata missing: ${route}`);
+  // Match the actual image URL advertised to social crawlers. A local page
+  // linking to https://localhost would make the image fail to load even when
+  // the same endpoint works when requested directly over plain HTTP.
+  const imageTag = head.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
+  assert.ok(imageTag, `Missing Open Graph preview image URL: ${route}`);
+  const advertisedImage = new URL(imageTag[1].replaceAll("&amp;", "&"));
+  assert.equal(advertisedImage.origin, origin.origin,
+    `Evaluation preview image must use the page's own origin: ${route}`);
+  assert.equal(advertisedImage.pathname, "/api/evaluation-preview-image",
+    `Evaluation preview metadata must reference the PNG endpoint: ${route}`);
+  const originalParams = new URL(route, origin).searchParams;
+  assert.equal(advertisedImage.searchParams.get("share"),
+    originalParams.has("share") ? originalParams.get("share") : null,
+    `Evaluation image URL must preserve historical share id: ${route}`);
+
   for (const id of ["appShell", "evaluationPage", "evaluationSearchInput", "evaluationButtons"]) {
     assert.ok(html.includes(`id="${id}"`), `Canonical Evaluation shell missing ${id}: ${route}`);
   }
