@@ -206,7 +206,8 @@ assert(siteStyles.includes('font-family: "Titillium Web"'), "The site must conti
 assert(previewCard.includes('const FONT_FAMILY = "Titillium Web"'), "Dynamic Evaluation preview cards must use the same Titillium Web font as the site.");
 assert(
   previewCard.includes('require("pureimage")')
-    && previewCard.includes("@expo-google-fonts/titillium-web")
+    && previewCard.includes('process.cwd(), "node_modules", "@expo-google-fonts", "titillium-web"')
+    && !previewCard.includes('require.resolve("@expo-google-fonts/titillium-web/package.json")')
     && previewCard.includes("TitilliumWeb_400Regular.ttf")
     && previewCard.includes("TitilliumWeb_600SemiBold.ttf")
     && previewCard.includes("TitilliumWeb_700Bold.ttf"),
