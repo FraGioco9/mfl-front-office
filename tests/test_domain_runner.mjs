@@ -37,12 +37,10 @@ const helperUrl = new URL("../validation/domain-runner.mjs", import.meta.url).hr
 const scratch = await mkdtemp(join(tmpdir(), "mfl-sim08-domain-runner-"));
 try {
   await writeFile(join(scratch, "first.mjs"), [
-    'assertNeverCalled: { }', // replaced before writing; synthetic-only fixtures
-  ].join("\n").replace('assertNeverCalled: { }', [
     'if (globalThis.__pilotStep !== undefined) throw new Error("wrong initial context");',
     'globalThis.__pilotStep = 1;',
     'console.log("fixture-first");',
-  ].join("\n")));
+  ].join("\n") + "\n");
   await writeFile(join(scratch, "second.mjs"), [
     'if (globalThis.__pilotStep !== 1) throw new Error("different process or wrong order");',
     'globalThis.__pilotStep = 2;',
