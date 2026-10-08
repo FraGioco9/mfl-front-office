@@ -7,7 +7,7 @@ const [bootstrapCore, appEntry, sharedCore, tableCore, baselineHarness] = await 
   readValidationText("./modules/app-entry.js", import.meta.url),
   Promise.resolve(readCanonicalCoreSource("shared")),
   Promise.resolve(readCanonicalCoreSource("table")),
-  readValidationText("./validation/performance-baseline.mjs", import.meta.url),
+  readValidationText("./validation/performance-capture.mjs", import.meta.url),
 ]);
 
 for (const token of [
@@ -107,7 +107,7 @@ invariant(
 );
 
 for (const token of [
-  "const BASELINE_SCHEMA_VERSION = 13;",
+  "const CAPTURE_SCHEMA_VERSION = 13;",
   'firstStageAt("route-shell-sync-start")',
   'firstStageAt("route-shell-sync-complete")',
   'timeline.find((entry) => entry?.phase === "route-preloader-paint-complete")',

@@ -34,7 +34,7 @@ const { reverseOrderSql } = require("./_data-page-order");
 const LISTING_COLUMN = "listing_price";
 const LISTING_PRICE_SQL = "marketplace_price(player_id)";
 const PAGE_COUNT_CACHE_MAX_ENTRIES = 256;
-const PERF05D2_MAX_LISTING_IDS = 9_000;
+const MAX_SIMPLE_LISTING_FILTER_IDS = 9_000;
 const pageCountCache = new Map();
 let pageCountCacheGeneration = "";
 const TABLE_PAYLOAD_SCOPES = new Set([...TABLE_SCOPES, "club"]);
@@ -576,9 +576,9 @@ async function pagedData(request, signedWallet, fullAccess, ownedProgression, ti
     // much JSON/heap and regress ordinary first pages in both pinned A/B runs.
     let count = 0;
     for (const key in marketplace.prices) {
-      if (Object.hasOwn(marketplace.prices, key) && ++count > PERF05D2_MAX_LISTING_IDS) break;
+      if (Object.hasOwn(marketplace.prices, key) && ++count > MAX_SIMPLE_LISTING_FILTER_IDS) break;
     }
-    if (count <= PERF05D2_MAX_LISTING_IDS) {
+    if (count <= MAX_SIMPLE_LISTING_FILTER_IDS) {
       const ids = Object.entries(marketplace.prices)
         .filter(([id,price]) => Number.isSafeInteger(Number(id))
           && Number(id) > 0 && Number.isFinite(Number(price)) && Number(price) >= 0)

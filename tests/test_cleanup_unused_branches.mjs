@@ -128,7 +128,7 @@ test("fork and deleted-fork heads never protect foreign refs", () => {
   assert.equal(deleted.has("missing"), false);
 });
 
-test("reject malformed PR pages and empty PR inventory", () => {
+test("reject malformed PR pages while accepting a complete empty inventory", () => {
   const good = pull(1, "parent", "head");
   for (const input of [
     "", "{}", "[]", JSON.stringify([{}]), JSON.stringify([[{ ...good, base: null }]]),
@@ -137,9 +137,13 @@ test("reject malformed PR pages and empty PR inventory", () => {
     JSON.stringify([[{ ...good, head: { ...good.head, ref: "bad ref" } }]]),
   ]) assert.throws(() => parseOpenPulls(input, REPO));
 
-  const mocked = simulated({ openPulls: [pages([])] });
-  assert.throws(() => cleanup(mocked), /No open PRs/);
-  assert.deepEqual(mocked.deleted, []);
+  const protectedRefs = parseOpenPulls(pages([]), REPO);
+  assert.deepEqual([...protectedRefs.keys()], ["main"]);
+
+  const refs = remote([["main", SHA_A], ["orphan", SHA_B]]);
+  const mocked = simulated({ openPulls: [pages([])], remoteHeads: [refs] });
+  const result = cleanup(mocked);
+  assert.deepEqual(result.deleted, ["orphan"]);
 });
 
 test("offline/403/500 GitHub API fails closed", () => {
@@ -183,7 +187,7 @@ test("failed git push fails unless a competing cleanup already removed ref", () 
   assert.deepEqual(result.alreadyGone, ["orphan"]);
 });
 
-test("default allowlist protects audit, WIP, keep and release branches", () => {
+test("default allowlist protects WIP, keep and release branches but not completed audits", () => {
   const refs = remote([
     ["main", SHA_A], ["parent", SHA_B], ["fix-child", SHA_C],
     ["audit-1034-temp", SHA_A], ["wip/foo", SHA_A], ["keep-local", SHA_A],
@@ -191,11 +195,11 @@ test("default allowlist protects audit, WIP, keep and release branches", () => {
   ]);
   const mocked = simulated({ remoteHeads: [refs] });
   const result = cleanup(mocked);
-  assert.deepEqual(mocked.deleted, ["ordinary-old"]);
-  for (const branch of ["audit-1034-temp", "wip/foo", "keep-local", "release/v1.129.0"]) {
+  assert.deepEqual(mocked.deleted, ["audit-1034-temp", "ordinary-old"]);
+  for (const branch of ["wip/foo", "keep-local", "release/v1.129.0"]) {
     assert.ok(result.kept.find(x => x.branch === branch && x.reason.startsWith("ALLOWLIST:")));
   }
-  assert.ok(DEFAULT_BRANCH_ALLOWLIST.includes("audit-*"));
+  assert.ok(!DEFAULT_BRANCH_ALLOWLIST.includes("audit-*"));
 });
 
 test("custom allowlist accepts exact or terminal-prefix patterns only", () => {
@@ -259,7 +263,7 @@ test("workflow defaults manual cleanup to dry-run and has no deploy side effect"
   assert.match(source, /min_age_days:[\s\S]*?default: "14"/);
   assert.match(source, /CLEANUP_DRY_RUN:/);
   assert.match(source, /CLEANUP_MIN_AGE_DAYS:/);
-  assert.match(source, /CLEANUP_BRANCH_ALLOWLIST: audit-\*,wip-\*/);
+  assert.match(source, /CLEANUP_BRANCH_ALLOWLIST: wip-\*,wip\/\*,keep-\*,keep\/\*,release-\*,release\/\*/);
   assert.match(source, /ref: main/);
   assert.match(source, /group: cleanup-unused-branches-/);
   assert.match(source, /cancel-in-progress: false/);

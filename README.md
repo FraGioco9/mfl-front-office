@@ -83,21 +83,18 @@ The check path regenerates canonical HTML/application-core/style artifacts, prep
 
 ## GitHub Actions
 
-The repository currently tracks **26 workflows** under `.github/workflows/`. The exact file-by-file trigger and ownership inventory is maintained in [GitHub Actions workflow inventory](docs/github-actions-workflows.md).
+The repository tracks **13 workflows** under `.github/workflows/`. The exact trigger and ownership inventory is maintained in [GitHub Actions workflow inventory](docs/github-actions-workflows.md).
 
 At a high level:
 
-- **Site quality** owns the required `quality` check and is the sole writer of tracked generated application artifacts.
-- **A11Y, mobile, table, LOAD and focused security workflows** provide pull-request regressions, with path filters where appropriate.
-- **Full database refresh** and the production **Marketplace snapshot** cadence are scheduled by Supabase Cron and reach GitHub through `workflow_dispatch`; they are not GitHub-scheduled production clocks.
-- **Operational health monitor** is the production monitor that does use a GitHub `schedule:` trigger, every hour at minutes 07 and 37.
-- **Performance baseline, progression-email preview/test and Vercel site update** are explicit/manual operational tools.
-- **Actions artifact capacity report** is a monthly/manual read-only storage inventory; **Secret scope presence audit** is a manual presence-only credential-scope check.
-- **Cleanup unused branches** is the only workflow with branch-deletion authority and retains its dedicated safeguards.
+- **Site quality** owns the required `quality` check, generated artifacts, rendered-shell/CSP coverage, loading/search/feedback regressions, accessibility/mobile/table browser tests, build, lint and typecheck.
+- **Schema drift, Planner capacity and focused security workflows** remain separate only where isolated PostgreSQL/service execution materially improves safety.
+- **Full database refresh** and **Marketplace snapshot** production cadence are Supabase-Cron-owned and enter GitHub through `workflow_dispatch`.
+- **Operational health monitor** is the only GitHub-scheduled production monitor.
+- **Progression email Gmail test** and **Vercel site update** are explicit manual operations.
+- **Cleanup unused branches** is the only workflow with branch-deletion authority and keeps dedicated safeguards.
 
-Generated artifacts have one writer: **Site quality**. Release projection logic is
-part of the canonical application-core build, so there is no second projection
-workflow racing the generated commit.
+Generated application artifacts have one writer: **Site quality**. Production deploy remains manual and protected.
 
 ## Development ownership
 

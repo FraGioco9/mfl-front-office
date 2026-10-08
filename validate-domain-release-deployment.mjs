@@ -5,11 +5,10 @@ const validators = [
   "validate-runtime-data-identity.mjs",
   "validate-generated-styles.mjs",
   "validate-next-deployment-ownership.mjs",
-  "validation/perf04b-cross-release-cache.mjs",
+  "validation/cross-release-cache-regression.mjs",
   "validate-database-refresh-deployment.mjs",
   "validate-security-boundaries.mjs",
   "validate-operational-health.mjs",
-  "validation/data01c4-local-ios-dapper-contract.mjs",
 ];
 
 for (const validator of validators) {

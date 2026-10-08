@@ -77,11 +77,13 @@ jobs:
           WALLET_CHALLENGE_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
           WALLET_CHALLENGE_ORIGIN: http://127.0.0.1:4000
           MFL_DATABASE_PATH: ${{ runner.temp }}/mfl-next-dev-smoke.db
+          MFL_CSP_NONCE_REPORT_ONLY: "1"
         run: |
           set -euo pipefail
           # The parser-time CSP snapshot must match canonical HTML before Next loads its config.
           # Generated files remain CI-owned and are committed only after full validation.
           node build-html.mjs
+          node validate-vercel-security-headers.mjs
           node scripts/ci/create-next-sqlite-smoke-fixture.cjs "$MFL_DATABASE_PATH"
           npm run dev > /tmp/mfl-next-dev.log 2>&1 &
           NEXT_DEV_PID=$!
@@ -114,6 +116,22 @@ jobs:
           EXCHANGE_STATUS="$(curl --silent --show-error --output /tmp/mfl-wallet-exchange.json --write-out '%{http_code}' --cookie /tmp/mfl-wallet-cookies.txt --header 'Origin: http://127.0.0.1:4000' --header 'Content-Type: application/json' --data "$EXCHANGE_BODY" http://127.0.0.1:4000/api/wallet-session)"
           test "$EXCHANGE_STATUS" = "401"
           jq -e '.error == "Invalid wallet proof."' /tmp/mfl-wallet-exchange.json >/dev/null
+
+          # Consolidated rendered-shell/CSP/mobile route coverage.
+          node validation/next-rendered-shell-browser.mjs http://127.0.0.1:4000/
+          node validation/next-csp-script-hashes.mjs http://127.0.0.1:4000/
+          node validation/next-csp-nonce-browser.mjs http://127.0.0.1:4000/
+          node validate-csp-legacy-eval-elimination.mjs
+          node validation/next-csp-report-route.mjs http://127.0.0.1:4000/
+          status="$(curl --silent --show-error --output /tmp/mfl-planner-direct.html --write-out '%{http_code}' http://127.0.0.1:4000/planner)"
+          test "$status" = "200"
+          grep -q 'id="plannerPage"' /tmp/mfl-planner-direct.html
+          grep -q 'class="navEmoji navPlannerIcon"' /tmp/mfl-planner-direct.html
+          node validation/next-rendered-shell-browser.mjs http://127.0.0.1:4000/planner
+          node validation/next-mobile-table-browser.mjs http://127.0.0.1:4000/
+          node validation/next-mobile-table-route-browser.mjs http://127.0.0.1:4000
+          ! grep -Fq "viewport meta tags should not be used in _document.js's <Head>" /tmp/mfl-next-dev.log
+          ! grep -Fq "<title> should not be used in _document.js's <Head>" /tmp/mfl-next-dev.log
 
       - name: Build canonical site assets
         if: steps.changes.outputs.quality == 'true'
@@ -161,7 +179,7 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:4010/database/attributes > /tmp/mfl-deep-route.html
           grep -q "MFL Front Office" /tmp/mfl-deep-route.html
           node validation/next-initial-page-metadata-http.mjs http://127.0.0.1:4010 || { cat /tmp/mfl-next-start.log >&2; exit 1; }
-          node validation/perf04-cache-http.mjs http://127.0.0.1:4010 || { cat /tmp/mfl-next-start.log >&2; exit 1; }
+          node validation/cache-policy-http-regression.mjs http://127.0.0.1:4010 || { cat /tmp/mfl-next-start.log >&2; exit 1; }
           curl --fail --silent --show-error http://127.0.0.1:4010/api/wallet-session > /tmp/mfl-wallet-session.json
           jq -e '.token and (.nonce | test("^[0-9a-f]{64}$"))' /tmp/mfl-wallet-session.json >/dev/null
           node validation/next-csp-nonce-browser.mjs http://127.0.0.1:4010/ --production
@@ -179,37 +197,77 @@ jobs:
         if: steps.changes.outputs.quality == 'true'
         run: npm run validate
 
-      - name: PERF-06A portrait retention same-runner A/B
+      - name: Isolated loading, search and feedback regressions
         if: steps.changes.outputs.site == 'true'
-        run: node validation/perf06-portrait-cache-ab.mjs
+        shell: bash
+        env:
+          LOAD03_EXPECT_FIXED: "1"
+          LOAD04_EXPECT_FIXED: "1"
+        run: |
+          set -euo pipefail
+          node --check validation/request-failure-regression.mjs
+          node validation/request-failure-regression.mjs
+          node --check validation/incremental-network-regression.mjs
+          node validation/incremental-network-regression.mjs
+          node --check validation/search-concurrency-regression.mjs
+          node validation/search-concurrency-regression.mjs
+          node --check validation/feedback-context-regression.mjs
+          node validation/feedback-context-regression.mjs
 
-      - name: UX-02 recovery browser matrix
+      - name: Player portrait cache regression
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-ux02-recovery-regression.mjs
+        run: node validation/player-portrait-cache-regression.mjs
 
-      - name: UX-03 saved actions desktop and phone browser matrix
+      - name: Recovery browser matrix
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-ux03-action-regression.mjs
+        run: node validation/browser-recovery-regression.mjs
 
-      - name: UX-04 linked/empty filter state desktop and phone matrix
+      - name: Saved actions browser matrix
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-ux04-filter-state-regression.mjs
+        run: node validation/browser-saved-actions-regression.mjs
 
-      - name: RESP-01 Chromium narrow CSS reflow matrix
+      - name: Filter state browser matrix
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-resp01-reflow-regression.mjs
+        run: node validation/browser-filter-state-regression.mjs
+
+      - name: Narrow CSS reflow browser matrix
+        if: steps.changes.outputs.site == 'true'
+        run: node validation/browser-narrow-reflow-regression.mjs
 
       - name: Browser routing regression
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-routing-responsive-shell.mjs
 
-      - name: TEST-04B Player to Evaluation real rate readiness
+      - name: Player to Evaluation rate readiness
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-evaluation-rate-route-commit.mjs
 
       - name: Planner browser regression
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-planner-regression.mjs
+
+      - name: Consolidated accessibility and responsive regressions
+        if: steps.changes.outputs.site == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run test:a11y
+          npm run test:a11y:controls
+          npm run test:a11y:contrast
+          npm run test:a11y:announcements
+          npm run test:a11y:motion
+          npm run test:a11y:landmarks
+          node validate-mobile-summary-first-paint.mjs
+          node validation/browser-mobile-first-paint-regression.mjs
+          node validation/browser-listing-width-regression.mjs
+          node validation/browser-mobile-table-responsive-resize.mjs
+          node validation/browser-long-mobile-table-regression.mjs
+          node validation/browser-sticky-name-theme-regression.mjs
+          node validation/browser-orientation-regression.mjs
+          node validation/browser-responsive-shell-breakpoint.mjs
+          node validation/browser-intermediate-responsive-extension.mjs
+          node validation/browser-mobile-route-coverage.mjs
+          node validation/browser-table-header-1374-regression.mjs
 
       - name: Commit generated site artifacts
         id: generated

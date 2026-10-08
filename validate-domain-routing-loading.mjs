@@ -22,7 +22,7 @@ const validators = [
   "validate-app-core-startup-handshake.mjs",
   "validate-data-client-foundation.mjs",
   "validate-client-performance-timing.mjs",
-  "validate-performance-baseline-harness.mjs",
+  "validate-performance-capture.mjs",
 ];
 
 for (const validator of validators) {

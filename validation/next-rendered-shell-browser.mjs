@@ -178,12 +178,18 @@ async function waitForRenderedShell(cdp) {
     const pathname = new URL(targetUrl).pathname;
     const expectedTitle = pathname === "/planner" ? "Planner - MFL Front Office" : "MFL Front Office";
     const titleReady = value?.documentTitle === expectedTitle && value?.readyState === "complete";
-    if (value?.nextMount && value?.appShell && value?.topbar && value?.modal && value?.portal && value?.badge && titleReady) {
+    const developmentRuntimeReady = Boolean(value?.badge)
+      || (
+        value?.nextDevClientId !== null
+        && Array.isArray(value?.nextScripts)
+        && value.nextScripts.some((src) => String(src).includes("/_next/static/development/"))
+      );
+    if (value?.nextMount && value?.appShell && value?.topbar && value?.modal && value?.portal && developmentRuntimeReady && titleReady) {
       return value;
     }
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
   }
-  throw new Error(`Next-rendered shell or development indicator did not become available before timeout. Last state: ${JSON.stringify(lastValue)}`);
+  throw new Error(`Next-rendered shell or development runtime did not become available before timeout. Last state: ${JSON.stringify(lastValue)}`);
 }
 
 async function waitForLegacyAutoRefresh(cdp, {

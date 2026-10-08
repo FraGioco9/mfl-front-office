@@ -1,0 +1,154 @@
+name: Supabase grants and RLS
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/20261001172000_restrict_application_grants.sql"
+      - "supabase-schema.sql"
+      - "api/_handler-mfl-season-ratios-v2.js"
+      - "tests/verify-sec-05-grants.sql"
+      - ".github/workflows/supabase-grants-postgres.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  grants:
+    name: Deny-by-default Postgres 17 regression
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v7
+      - name: Prepare standalone database and legacy broad grants
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+          psql -X -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create role service_role nologin bypassrls;
+          -- Mirror the legacy Supabase per-owner grants on newly-created
+          -- public-schema tables, sequences and functions.
+          alter default privileges for role postgres in schema public
+            grant all privileges on tables to anon, authenticated, service_role;
+          alter default privileges for role postgres in schema public
+            grant all privileges on sequences to anon, authenticated, service_role;
+          alter default privileges for role postgres in schema public
+            grant execute on functions to anon, authenticated, service_role;
+          SQL
+          sed '/^-- SEC-05 (#1034):/,$d' supabase-schema.sql > /tmp/sec-05-pre-migration.sql
+          psql -X -v ON_ERROR_STOP=1 -1 -f /tmp/sec-05-pre-migration.sql
+          # Historical ratio table is owned by its own earlier versioned migration,
+          # not by the canonical wallet/persistence schema.
+          psql -X -v ON_ERROR_STOP=1 -1 \
+            -f supabase/migrations/20260730160100_create_mfl_season_ratios.sql
+          # Verify that the fixture actually simulates the historical grants.
+          test "$(psql -XqAt -c "select has_table_privilege('anon','public.wallet_preferences','SELECT')")" = t
+          test "$(psql -XqAt -c "select has_table_privilege('authenticated','public.mfl_season_ratios','TRUNCATE')")" = t
+          test "$(psql -XqAt -c "select has_function_privilege('anon','public.set_updated_at()','EXECUTE')")" = t
+
+      - name: Apply grant-hardening migration twice for idempotence
+        shell: bash
+        run: |
+          set -euo pipefail
+          for iteration in 1 2; do
+            psql -X -v ON_ERROR_STOP=1 -1 \
+              -f supabase/migrations/20261001172000_restrict_application_grants.sql
+            psql -X -v ON_ERROR_STOP=1 -f tests/verify-sec-05-grants.sql
+          done
+
+      - name: Verify denied browser roles and allowed service role using SQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          if psql -X -v ON_ERROR_STOP=1 \
+            -c "set role anon; select wallet_address from public.wallet_preferences limit 1;" \
+            >/tmp/sec05-anon.out 2>&1; then
+            echo 'anon unexpectedly read wallet preferences' >&2; exit 1
+          fi
+          if psql -X -v ON_ERROR_STOP=1 \
+            -c "set role authenticated; select ratio from public.mfl_season_ratios limit 1;" \
+            >/tmp/sec05-auth.out 2>&1; then
+            echo 'authenticated unexpectedly read historical ratios' >&2; exit 1
+          fi
+          # A service-role transaction still writes and reads wallet preferences;
+          # no real user data is used or retained.
+          psql -X -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          set role service_role;
+          insert into public.wallet_preferences (wallet_address)
+            values ('0x0123456789abcdef');
+          update public.wallet_preferences
+            set updated_at = '2026-10-01T00:00:00Z'
+            where wallet_address = '0x0123456789abcdef';
+          do $verify$
+          begin
+            if not exists (
+              select 1 from public.wallet_preferences
+              where wallet_address = '0x0123456789abcdef'
+                and updated_at <> '2026-10-01T00:00:00Z'::timestamptz
+            ) then
+              raise exception 'Service-role table write or set_updated_at trigger failed';
+            end if;
+          end;
+          $verify$;
+          rollback;
+          SQL
+
+      - name: Verify new postgres-owned tables do not regrant client privileges
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 <<'SQL'
+          create table public.sec05_future_table(id int primary key);
+          create sequence public.sec05_future_sequence;
+          do $verify$
+          begin
+            if has_table_privilege('anon','public.sec05_future_table','SELECT,INSERT,UPDATE,DELETE')
+               or has_table_privilege('authenticated','public.sec05_future_table','SELECT,INSERT,UPDATE,DELETE')
+               or has_sequence_privilege('anon','public.sec05_future_sequence','USAGE,SELECT')
+               or has_sequence_privilege('authenticated','public.sec05_future_sequence','USAGE,SELECT')
+               or not has_table_privilege('service_role','public.sec05_future_table','SELECT')
+            then
+              raise exception 'Postgres-owned future table or sequence default grants are insecure';
+            end if;
+          end;
+          $verify$;
+          SQL
+
+      - name: Verify canonical SQL mirror includes the same staged grant patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          canonical = Path('supabase-schema.sql').read_text(encoding='utf-8')
+          migration = Path('supabase/migrations/20261001172000_restrict_application_grants.sql').read_text(encoding='utf-8')
+          assert migration in canonical, 'Canonical schema must retain versioned SEC-05 migration.'
+          assert canonical.count(migration) == 1, 'Canonical schema must contain SEC-05 migration exactly once.'
+          print('SEC-05 canonical schema and migration parity passed; later migrations may follow.')
+          PY

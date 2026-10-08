@@ -27,9 +27,6 @@ on:
         options:
           - dark
           - light
-  push:
-    branches:
-      - fix/529-gmail-progression-email-images-order
 
 permissions:
   contents: read
@@ -37,28 +34,18 @@ permissions:
 
 jobs:
   send-gmail-test:
-    if: >-
-      github.actor == github.repository_owner &&
-      (
-        github.event_name == 'workflow_dispatch' ||
-        contains(github.event.head_commit.message, '[gmail-test]')
-      )
+    if: github.actor == github.repository_owner
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      TEST_RECIPIENT: ${{ github.event_name == 'workflow_dispatch' && inputs.recipient || secrets.PROGRESSION_EMAIL_TEST_RECIPIENT }}
-      CONFIGURED_FIXTURE: ${{ github.event_name == 'workflow_dispatch' && inputs.fixture || vars.PROGRESSION_EMAIL_TEST_FIXTURE }}
-      CONFIGURED_PLAYER_IDS: ${{ github.event_name == 'workflow_dispatch' && inputs.player_ids || vars.PROGRESSION_EMAIL_TEST_PLAYER_IDS }}
-      CONFIGURED_THEME: ${{ github.event_name == 'workflow_dispatch' && inputs.theme || vars.PROGRESSION_EMAIL_TEST_THEME }}
-      GMAIL_TEST_COMMIT_MESSAGE: ${{ github.event.head_commit.message || '' }}
+      TEST_RECIPIENT: ${{ inputs.recipient }}
+      CONFIGURED_FIXTURE: ${{ inputs.fixture }}
+      CONFIGURED_PLAYER_IDS: ${{ inputs.player_ids }}
+      CONFIGURED_THEME: ${{ inputs.theme }}
 
     steps:
       - name: Check out email renderer
         uses: actions/checkout@v7
-
-      - name: Validate test recipient
-        shell: bash
-        run: bash "$GITHUB_WORKSPACE/scripts/workflows/progression-email-gmail-test-validate-test-recipient.sh"
 
       - name: Resolve test configuration
         shell: bash
@@ -86,14 +73,12 @@ jobs:
         run: bash "$GITHUB_WORKSPACE/scripts/workflows/progression-email-gmail-test-resolve-test-players.sh"
 
       - name: Install portrait renderer dependencies
-        working-directory: site
         run: npm ci --no-audit --no-fund
 
-      - name: Render branch portraits
-        working-directory: site
+      - name: Render test portraits
         run: >-
-          node render-progression-email-test-portraits.mjs
-          ../progression-email-test-portraits
+          node scripts/email/render-progression-test-portraits.mjs
+          progression-email-test-portraits
           "${{ steps.players.outputs.player_ids }}"
 
       - name: Send one Gmail test email

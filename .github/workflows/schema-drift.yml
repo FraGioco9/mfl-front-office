@@ -1,0 +1,98 @@
+name: Schema drift regression
+
+on:
+  pull_request:
+    paths:
+      - "supabase-schema.sql"
+      - "supabase/migrations/**"
+      - "scripts/supabase/schema-drift-readonly-inventory.sql"
+      - "docs/schema-drift-ledger.json"
+      - "docs/schema-drift.md"
+      - "api/_handler-planner-save.js"
+      - "tests/test_schema_drift_inventory.mjs"
+      - "tests/verify-schema-drift-restore.sql"
+      - ".github/workflows/schema-drift.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    name: Fingerprints and isolated Postgres 17 restore
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Verify migration fingerprints and drift ledger
+        run: node tests/test_schema_drift_inventory.mjs
+
+      - name: Prepare isolated Supabase-like roles
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+          psql -X -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create role service_role nologin bypassrls;
+          SQL
+
+      - name: Restore canonical target schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          # mfl_season_ratios is intentionally versioned outside supabase-schema.sql.
+          psql -X -v ON_ERROR_STOP=1 -1             -f supabase/migrations/20260730160100_create_mfl_season_ratios.sql
+          psql -X -v ON_ERROR_STOP=1 -1 -f supabase-schema.sql
+
+      - name: Verify target schema, grants, RLS, constraints and Planner CAS
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -f tests/verify-schema-drift-restore.sql
+
+      - name: Parse the read-only inventory against the isolated restore
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Supabase owns this schema in production. The fixture creates only the
+          # metadata shape required for the SELECT-only report to parse/run.
+          psql -X -v ON_ERROR_STOP=1 <<'SQL'
+          create schema supabase_migrations;
+          create table supabase_migrations.schema_migrations (
+            version text primary key,
+            name text not null,
+            statements text[] not null default '{}'
+          );
+          SQL
+          psql -X -v ON_ERROR_STOP=1             -f scripts/supabase/schema-drift-readonly-inventory.sql             > /tmp/schema-drift-readonly-inventory.txt
+          grep -q "planner_plans" /tmp/schema-drift-readonly-inventory.txt
+          grep -q "service_role" /tmp/schema-drift-readonly-inventory.txt

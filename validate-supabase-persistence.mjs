@@ -15,7 +15,7 @@ const appCore = readCombinedCanonicalCoreSource();
 const schema = await read(resolve(repoRoot, "supabase-schema.sql"));
 const migration = await read(resolve(repoRoot, "supabase/migrations/20260823140000_minimize_wallet_preferences_table_state.sql"));
 const atomicMigration = await read(resolve(repoRoot, "supabase/migrations/20260908131924_atomic_wallet_preferences.sql"));
-const documentation = await read(resolve(repoRoot, "SUPABASE_PERSISTENCE.md"));
+const documentation = await read(resolve(repoRoot, "docs/supabase-persistence.md"));
 
 function includes(source, expected, message) {
   if (!source.includes(expected)) {
@@ -197,7 +197,7 @@ for (const table of [
   "private_data_retention_audit",
   "mfl_season_ratios",
 ]) {
-  includes(documentation, `\`${table}\``, `SUPABASE_PERSISTENCE.md must document ${table}.`);
+  includes(documentation, `\`${table}\``, `docs/supabase-persistence.md must document ${table}.`);
 }
 
 includes(
