@@ -100,10 +100,15 @@ def verify_route(path: str, token: str) -> None:
             f"expected one of {sorted(allowed_titles)!r}, observed {titles!r}. "
             "Check Vercel static rewrites versus Next SSR routing."
         )
-    if route_mode == "next-ssr" and (
-        'name="description"' not in head or 'property="og:title"' not in head
-    ):
-        raise RuntimeError(f"{path} initial HTML is missing canonical description or og:title metadata")
+    if route_mode == "next-ssr":
+        if 'name="description"' not in head:
+            raise RuntimeError(f"{path} initial HTML is missing canonical description metadata")
+        if path == "/evaluation":
+            # Match the approved ordinary Evaluation response: no social card.
+            if 'property="og:' in head or 'name="twitter:' in head:
+                raise RuntimeError(f"{path} plain Evaluation must not expose social-card metadata")
+        elif 'property="og:title"' not in head:
+            raise RuntimeError(f"{path} initial HTML is missing canonical og:title metadata")
 
 
 
