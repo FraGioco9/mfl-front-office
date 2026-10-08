@@ -138,8 +138,10 @@ assert(
 );
 const nextRewrites = createNextRewrites();
 assert(
-  nextRewrites.beforeFiles?.some((rewrite) => rewrite.source === "/evaluation" && rewrite.destination === "/api/evaluation-preview"),
-  "Next must route every direct /evaluation request through the preview-aware SPA shell handler.",
+  nextRewrites.beforeFiles?.some((rewrite) => rewrite.source === "/evaluation"
+    && rewrite.destination === "/api/evaluation-preview"
+    && !rewrite.has?.length),
+  "Next must route every direct /evaluation request (with or without share) through the preview-aware SPA shell handler.",
 );
 
 const envKeys = [
