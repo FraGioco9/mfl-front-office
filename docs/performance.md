@@ -18,15 +18,15 @@ Do not enforce wall-clock millisecond thresholds in normal Site Quality. Shared 
 fixture transfer speed and host contention make those measurements unsuitable as merge gates. Deterministic
 architecture and behavioral contracts remain the required CI boundary.
 
-## Opt-in browser baseline
+## Opt-in browser capture
 
 Run the canonical harness with:
 
 ```powershell
-npm run performance:baseline
+npm run performance:capture
 ```
 
-The baseline is opt-in and must never be described as production latency.
+The capture is opt-in and must never be described as production latency.
 
 The standard capture uses:
 
