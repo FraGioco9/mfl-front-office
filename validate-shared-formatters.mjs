@@ -8,7 +8,7 @@ const routeSources = Object.entries(canonicalCoreDomains).filter(([domain]) => d
 const [databaseStats, planner, docs] = await Promise.all([
   read("./database-stats-runtime.js"),
   read("./modules/core-sources/planner.js"),
-  read("./docs/arch05-shared-formatters.md"),
+  read("./docs/shared-formatters.md"),
 ]);
 
 const sharedFormatterOwners = [
