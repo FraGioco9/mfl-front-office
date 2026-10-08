@@ -12,6 +12,7 @@ const {
   evaluationShellPath,
   browserTitleForMetadata,
   publicEvaluationPlayerName,
+  renderPreviewHtml,
 } = evaluationPreviewHandler;
 
 function assert(condition, message) {
@@ -144,6 +145,44 @@ assert(
   "Next must route every direct /evaluation request (with or without share) through the preview-aware SPA shell handler.",
 );
 
+// Browser titles are independent of social cards: a normal Evaluation URL
+// must not expose a generic "Shared Evaluation" card. A resolved active
+// shared evaluation must retain the full Open Graph and Twitter metadata.
+const sourceHtml = readText("index.html");
+const genericHtml = renderPreviewHtml(
+  sourceHtml,
+  { isShared: false, title: "Shared Evaluation - MFL Front Office" },
+  "https://mfl-front-office.vercel.app/evaluation",
+  "https://mfl-front-office.vercel.app/api/evaluation-preview-image",
+);
+const socialMetadataPattern = /<meta\s+(?:property="og:[^"]+"|name="twitter:[^"]+")/i;
+assert(!socialMetadataPattern.test(genericHtml),
+  "Plain Evaluation must not advertise generic Open Graph or Twitter preview metadata.");
+assert(genericHtml.includes("<title>Evaluation - MFL Front Office</title>"),
+  "Removing the social card must preserve the ordinary browser title.");
+assert(genericHtml.includes('<meta name="description" content="Evaluate MFL players with MFL Front Office.">'),
+  "Non-shared Evaluation must preserve an ordinary HTML description without advertising a Share.");
+assert(genericHtml.includes('<meta name="robots" content="noindex,nofollow,noarchive">'),
+  "Non-shared Evaluation must keep its existing noindex policy.");
+const activeShareHtml = renderPreviewHtml(
+  sourceHtml,
+  {
+    isShared: true,
+    title: "Example Player Evaluation - MFL Front Office",
+    description: "A publicly shared Evaluation",
+    playerName: "Example Player",
+  },
+  "https://mfl-front-office.vercel.app/evaluation?player=12345&share=abcd1234",
+  "https://mfl-front-office.vercel.app/api/evaluation-preview-image?player=12345&share=abcd1234",
+);
+for (const tag of ['property="og:title"', 'property="og:image"', 'name="twitter:card" content="summary_large_image"', 'name="twitter:image"']) {
+  assert(activeShareHtml.includes(tag), `Active Share must preserve social metadata ${tag}.`);
+}
+assert(activeShareHtml.includes("<title>Evaluation - Example Player - MFL Front Office</title>"),
+  "Active Share browser title must preserve the public player name.");
+assert(activeShareHtml.includes("player=12345&amp;share=abcd1234"),
+  "Active Share metadata must preserve escaped player and Share ID URLs.");
+
 const envKeys = [
   "SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_URL",
@@ -184,9 +223,8 @@ try {
     assert(response.ended, `${label} refresh must finish the response.`);
     assert(response.headers.get("cache-control") === "no-store, max-age=0",
       `${label} preview HTML must remain uncached because shares are revocable.`);
-    assert(response.body.includes('property="og:image"')
-      && response.body.includes('name="twitter:card" content="summary_large_image"'),
-      `${label} preview HTML must advertise a dynamic social-preview image.`);
+    assert(!socialMetadataPattern.test(response.body),
+      `${label} without an active Supabase Share must not advertise Open Graph or Twitter cards.`);
     const requestUrl = new URL(url, "https://mfl-front-office.vercel.app");
     const playerName = publicEvaluationPlayerName(requestUrl.searchParams.get("player"));
     const expectedTitle = browserTitleForMetadata({}, playerName);
@@ -222,4 +260,4 @@ try {
   }
 }
 
-console.log("Evaluation preview shell-path and earliest canonical browser-title validation passed for plain, player, saved, shared, and broken Evaluation URLs.");
+console.log("Evaluation preview shell-path, share-only social cards, and canonical browser-title validation passed.");
