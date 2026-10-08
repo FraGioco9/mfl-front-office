@@ -1,4 +1,4 @@
-name: DB-05 Planner saved-plan capacity
+name: Planner capacity
 
 on:
   pull_request:
