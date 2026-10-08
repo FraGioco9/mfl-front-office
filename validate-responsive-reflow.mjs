@@ -7,12 +7,12 @@ const browser = read("./validation/browser-narrow-reflow-regression.mjs");
 const workflow = read("./.github/workflows/site-quality.yml");
 
 for (const width of [320, 360, 520, 640, 900, 901]) {
-  assert.ok(routing.includes(`"/database/attributes#responsive-reflow-${width}"`),
+  assert.ok(routing.includes(`"/database/attributes#resp01-${width}"`),
     `Responsive reflow Chromium layout viewport missing: ${width}px`);
-  assert.ok(browser.includes(`"database-responsive-reflow-${width}"`),
+  assert.ok(browser.includes(`"database-resp01-${width}"`),
     `Responsive reflow browser runner does not exercise ${width}px`);
 }
-for (const scenario of ["database-responsive-reflow-landscape", "player-responsive-reflow-320", "planner-responsive-reflow-320"]) {
+for (const scenario of ["database-resp01-landscape", "player-resp01-320", "planner-resp01-320"]) {
   assert.ok(routing.includes(`"${scenario}"`) && browser.includes(`"${scenario}"`),
     `Responsive reflow missing content route: ${scenario}`);
 }
@@ -26,6 +26,6 @@ assert.ok(routing.includes("window.innerWidth === expected")
 assert.ok(browser.includes('MFL_PLANNER_BROWSER_FOCUSED: "1"')
   && browser.includes('MFL_PLANNER_BROWSER_PHASE: "shell"'),
   "320px Planner reflow must use the focused shell/club selection test rather than desktop pitch size tests.");
-assert.ok(workflow.includes("node validation/browser-responsive-reflow-reflow-regression.mjs"),
+assert.ok(workflow.includes("node validation/browser-narrow-reflow-regression.mjs"),
   "Responsive reflow CSS reflow suite must be enforced by Site Quality.");
 console.log("Responsive reflow source ownership, matrix, pre-navigation metrics and CI coverage verified.");
