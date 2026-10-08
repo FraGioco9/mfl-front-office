@@ -109,7 +109,11 @@ function previewMetadataHtml(metadata, canonicalUrl, imageUrl) {
 
 function renderPreviewHtml(indexHtml, metadata, canonicalUrl, imageUrl, fallbackPlayerName = "") {
   const browserTitle = htmlEscape(browserTitleForMetadata(metadata, fallbackPlayerName));
-  const meta = previewMetadataHtml(metadata, canonicalUrl, imageUrl);
+  // A normal Evaluation URL (including player/saved) is not a shared
+  // evaluation. Only an active, resolved Share should advertise social cards.
+  const meta = metadata?.isShared
+    ? previewMetadataHtml(metadata, canonicalUrl, imageUrl)
+    : '<meta name="robots" content="noindex,nofollow,noarchive">';
   return indexHtml.replace(
     "<title>MFL Front Office</title>",
     `<title>${browserTitle}</title>\n    ${meta}`,
