@@ -179,7 +179,7 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:4010/database/attributes > /tmp/mfl-deep-route.html
           grep -q "MFL Front Office" /tmp/mfl-deep-route.html
           node validation/next-initial-page-metadata-http.mjs http://127.0.0.1:4010 || { cat /tmp/mfl-next-start.log >&2; exit 1; }
-          node validation/perf04-cache-http.mjs http://127.0.0.1:4010 || { cat /tmp/mfl-next-start.log >&2; exit 1; }
+          node validation/cache-policy-http-regression.mjs http://127.0.0.1:4010 || { cat /tmp/mfl-next-start.log >&2; exit 1; }
           curl --fail --silent --show-error http://127.0.0.1:4010/api/wallet-session > /tmp/mfl-wallet-session.json
           jq -e '.token and (.nonce | test("^[0-9a-f]{64}$"))' /tmp/mfl-wallet-session.json >/dev/null
           node validation/next-csp-nonce-browser.mjs http://127.0.0.1:4010/ --production
@@ -214,31 +214,31 @@ jobs:
           node --check validation/load04-feedback-context-isolation.mjs
           node validation/load04-feedback-context-isolation.mjs
 
-      - name: PERF-06A portrait retention same-runner A/B
+      - name: Player portrait cache regression
         if: steps.changes.outputs.site == 'true'
-        run: node validation/perf06-portrait-cache-ab.mjs
+        run: node validation/player-portrait-cache-regression.mjs
 
-      - name: UX-02 recovery browser matrix
+      - name: Recovery browser matrix
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-ux02-recovery-regression.mjs
+        run: node validation/browser-recovery-regression.mjs
 
-      - name: UX-03 saved actions desktop and phone browser matrix
+      - name: Saved actions browser matrix
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-ux03-action-regression.mjs
+        run: node validation/browser-saved-actions-regression.mjs
 
-      - name: UX-04 linked/empty filter state desktop and phone matrix
+      - name: Filter state browser matrix
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-ux04-filter-state-regression.mjs
+        run: node validation/browser-filter-state-regression.mjs
 
-      - name: RESP-01 Chromium narrow CSS reflow matrix
+      - name: Narrow CSS reflow browser matrix
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-resp01-reflow-regression.mjs
+        run: node validation/browser-narrow-reflow-regression.mjs
 
       - name: Browser routing regression
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-routing-responsive-shell.mjs
 
-      - name: TEST-04B Player to Evaluation real rate readiness
+      - name: Player to Evaluation rate readiness
         if: steps.changes.outputs.site == 'true'
         run: node validation/browser-evaluation-rate-route-commit.mjs
 
@@ -261,9 +261,9 @@ jobs:
           node validation/browser-mobile-first-paint-regression.mjs
           node validation/browser-listing-width-regression.mjs
           node validation/browser-mobile-table-responsive-resize.mjs
-          node validation/browser-resp02-long-mobile-table.mjs
-          node validation/browser-perf02c-sticky-theme-regression.mjs
-          node validation/browser-resp03-orientation-regression.mjs
+          node validation/browser-long-mobile-table-regression.mjs
+          node validation/browser-sticky-name-theme-regression.mjs
+          node validation/browser-orientation-regression.mjs
           node validation/browser-responsive-shell-breakpoint.mjs
           node validation/browser-intermediate-responsive-extension.mjs
           node validation/browser-mobile-route-coverage.mjs
