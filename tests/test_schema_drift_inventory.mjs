@@ -6,9 +6,9 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const migrationsDir = resolve(root, "supabase/migrations");
-const ledger = JSON.parse(await readFile(resolve(root, "docs/db03-schema-drift-ledger.json"), "utf8"));
+const ledger = JSON.parse(await readFile(resolve(root, "docs/schema-drift-ledger.json"), "utf8"));
 const canonical = await readFile(resolve(root, "supabase-schema.sql"), "utf8");
-const inventorySql = await readFile(resolve(root, "scripts/supabase/db03-live-readonly-inventory.sql"), "utf8");
+const inventorySql = await readFile(resolve(root, "scripts/supabase/schema-drift-readonly-inventory.sql"), "utf8");
 const plannerSave = await readFile(resolve(root, "api/_handler-planner-save.js"), "utf8");
 
 function gitBlobSha1(content) {
@@ -23,14 +23,14 @@ const migrationFiles = (await readdir(migrationsDir))
   .filter((name) => /^\d+_.+\.sql$/.test(name))
   .sort();
 const ledgerFiles = ledger.migrations.map((entry) => entry.file).sort();
-assert.deepEqual(ledgerFiles, migrationFiles, "DB-03 ledger must cover every versioned repository migration exactly once");
+assert.deepEqual(ledgerFiles, migrationFiles, "Schema drift ledger must cover every versioned repository migration exactly once");
 
 for (const entry of ledger.migrations) {
   const content = await readFile(resolve(migrationsDir, entry.file), "utf8");
   assert.equal(gitBlobSha1(content), entry.gitBlobSha1, "Migration fingerprint drift: " + entry.file);
   assert(
     ["normalized_match", "repo_history_only", "version_alias", "staged_release"].includes(entry.status),
-    "Unknown DB-03 migration status: " + entry.status,
+    "Unknown Schema drift migration status: " + entry.status,
   );
 }
 
@@ -79,15 +79,15 @@ for (const legacyName of [
 
 const sqlWithoutComments = inventorySql.replace(/--[^\n]*/g, "");
 const statements = sqlWithoutComments.split(";").map((value) => value.trim()).filter(Boolean);
-assert(statements.length >= 8, "DB-03 live inventory must cover migrations, schema, grants, constraints, RPC and triggers");
+assert(statements.length >= 8, "Schema drift live inventory must cover migrations, schema, grants, constraints, RPC and triggers");
 for (const statement of statements) {
-  assert(/^(show|select)\b/i.test(statement), "DB-03 live inventory must remain read-only: " + statement.slice(0, 60));
+  assert(/^(show|select)\b/i.test(statement), "Schema drift live inventory must remain read-only: " + statement.slice(0, 60));
 }
 for (const forbidden of [
   /\binsert\b/i, /\bupdate\b/i, /\bdelete\b/i, /\balter\b/i,
   /\bcreate\b/i, /\bdrop\b/i, /\btruncate\b/i, /\bgrant\b/i, /\brevoke\b/i,
 ]) {
-  assert(!forbidden.test(sqlWithoutComments), "DB-03 live inventory contains a write/DDL keyword: " + forbidden);
+  assert(!forbidden.test(sqlWithoutComments), "Schema drift live inventory contains a write/DDL keyword: " + forbidden);
 }
 
 assert(canonical.includes("revision integer not null default 1"));
@@ -98,7 +98,7 @@ assert(plannerSave.includes("revision: expectedRevision + 1"));
 assert(plannerSave.includes('response.status(409).json({ error: "Saved plan changed. Reload it before saving." })'));
 assert(plannerSave.includes('response.status(409).json({ error: "Saved plan changed. Reload it before deleting." })'));
 
-console.log("DB03_SCHEMA_DRIFT_INVENTORY_PASS " + JSON.stringify({
+console.log("SCHEMA_DRIFT_INVENTORY_PASS " + JSON.stringify({
   migrationFingerprints: ledger.migrations.length,
   liveOnlyHistoryMetadata: ledger.liveOnlyMigrationHistory.length,
   stagedReleaseMigrations: staged,
