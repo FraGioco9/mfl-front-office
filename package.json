@@ -18,7 +18,7 @@
     "verify:generated": "git diff --exit-code -- styles-runtime.css table-width-runtime.js \":(glob)modules/app-core*-runtime.js\" index.html responsive.css",
     "validate": "node validate-all.mjs",
     "check": "npm run lint && npm run typecheck && npm run build && npm run verify:generated && npm run validate",
-    "performance:baseline": "node validation/performance-baseline.mjs",
+    "performance:capture": "node validation/performance-capture.mjs",
     "predev": "node prepare-next-runtime.mjs",
     "test:a11y": "node validation/browser-a11y01-route-audit.mjs",
     "test:a11y:controls": "node validation/browser-a11y02-control-semantics.mjs",
