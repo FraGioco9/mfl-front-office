@@ -11,7 +11,7 @@ class SecretScopeContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.checker = (ROOT / "scripts/operations/check-secret-presence.mjs").read_text(encoding="utf-8")
-        cls.workflow = (ROOT / ".github/workflows/secret-scope-audit.yml").read_text(encoding="utf-8")
+        cls.workflow = (ROOT / ".github/workflows/secret-scope-check.yml").read_text(encoding="utf-8")
         cls.docs = (ROOT / "docs/secret-rotation.md").read_text(encoding="utf-8")
         cls.database_dispatch = (
             ROOT / "supabase/functions/mfl-database-refresh-dispatch/index.ts"
