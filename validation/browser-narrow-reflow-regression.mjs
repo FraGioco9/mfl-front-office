@@ -10,15 +10,15 @@ import { fileURLToPath } from "node:url";
 // Safari/iPhone touch, or an authenticated Dapper wallet.
 const directory = dirname(fileURLToPath(import.meta.url));
 const scenarios = [
-  "player-narrow-reflow-320",
-  "planner-narrow-reflow-320",
-  "database-narrow-reflow-320",
-  "database-narrow-reflow-360",
-  "database-narrow-reflow-520",
-  "database-narrow-reflow-640",
-  "database-narrow-reflow-900",
-  "database-narrow-reflow-901",
-  "database-narrow-reflow-landscape",
+  "player-resp01-320",
+  "planner-resp01-320",
+  "database-resp01-320",
+  "database-resp01-360",
+  "database-resp01-520",
+  "database-resp01-640",
+  "database-resp01-900",
+  "database-resp01-901",
+  "database-resp01-landscape",
 ];
 
 const code = await new Promise((resolveStatus, rejectStatus) => {
