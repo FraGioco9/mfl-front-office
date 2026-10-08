@@ -15,7 +15,7 @@ const [
   pageLifecycle,
   staticUi,
   walletSession,
-  sec06Fixtures,
+  shareFixtures,
 ] = await Promise.all([
   read("./docs/account-sharing-help.md"),
   read("./html-sources/static.html"),
@@ -28,7 +28,7 @@ const [
   read("./modules/core-sources/shared-page-lifecycle.js"),
   read("./static-ui-runtime.js"),
   read("./api/_handler-wallet-session.js"),
-  read("./validate-sec06-share-api-fixtures.mjs"),
+  read("./validate-share-api-fixtures.mjs"),
 ]);
 
 const helpHref = 'https://github.com/FraGioco9/mfl-front-office/blob/main/docs/account-sharing-help.md';
@@ -94,8 +94,8 @@ assert.ok(
   "Wallet-unavailable help must remain anchored to the server authentication failure contract.",
 );
 assert.ok(
-  sec06Fixtures.includes('"A revoked share must immediately be unavailable without public caching."'),
-  "DOC-04 revoked-share guidance must remain backed by the SEC-06 fixture.",
+  shareFixtures.includes('"A revoked share must immediately be unavailable without public caching."'),
+  "DOC-04 revoked-share guidance must remain backed by the share API fixture.",
 );
 
 console.log("DOC-04 account, opt-in, save and public-sharing help contracts verified.");
