@@ -155,7 +155,7 @@ const genericHtml = renderPreviewHtml(
   "https://mfl-front-office.vercel.app/evaluation",
   "https://mfl-front-office.vercel.app/api/evaluation-preview-image",
 );
-const socialMetadataPattern = /<meta\\s+(?:property="og:[^"]+"|name="twitter:[^"]+")/i;
+const socialMetadataPattern = /<meta\s+(?:property="og:[^"]+"|name="twitter:[^"]+")/i;
 assert(!socialMetadataPattern.test(genericHtml),
   "Plain Evaluation must not advertise generic Open Graph or Twitter preview metadata.");
 assert(genericHtml.includes("<title>Evaluation - MFL Front Office</title>"),
