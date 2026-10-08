@@ -7,7 +7,7 @@ const [bootstrapCore, appEntry, sharedCore, tableCore, baselineHarness] = await 
   readValidationText("./modules/app-entry.js", import.meta.url),
   Promise.resolve(readCanonicalCoreSource("shared")),
   Promise.resolve(readCanonicalCoreSource("table")),
-  readValidationText("./validation/performance-baseline.mjs", import.meta.url),
+  readValidationText("./validation/performance-capture.mjs", import.meta.url),
 ]);
 
 for (const token of [
