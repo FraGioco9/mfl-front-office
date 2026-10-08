@@ -7,7 +7,7 @@ const [appConfig, appEntry, ownership, docs] = await Promise.all([
   read("./modules/app-config.js"),
   read("./modules/app-entry.js"),
   read("./validate-core-source-ownership.mjs"),
-  read("./docs/arch04-runtime-dependency-map.md"),
+  read("./docs/runtime-dependency-map.md"),
 ]);
 
 const shared = coreSourceManifest.find(({ domain }) => domain === "shared");
