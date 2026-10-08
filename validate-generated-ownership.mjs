@@ -11,7 +11,7 @@ const [pkg, buildHtml, buildResponsive, buildStyles, buildCore, prepare, legacyA
   read("./prepare-next-runtime.mjs"),
   read("./legacy-public-assets.cjs"),
   read("./.gitignore"),
-  read("./docs/arch06-generated-ownership-map.md"),
+  read("./docs/generated-ownership.md"),
 ]);
 
 invariant(buildHtml.includes('writeGeneratedFragmentFile(new URL("./index.html"'), "index.html must retain build-html ownership.");
