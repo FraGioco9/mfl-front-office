@@ -205,14 +205,14 @@ jobs:
           LOAD04_EXPECT_FIXED: "1"
         run: |
           set -euo pipefail
-          node --check validation/load02-error-retry-isolation.mjs
-          node validation/load02-error-retry-isolation.mjs
-          node --check validation/load02-incremental-network-fixture.mjs
-          node validation/load02-incremental-network-fixture.mjs
-          node --check validation/load03-search-race-isolation.mjs
-          node validation/load03-search-race-isolation.mjs
-          node --check validation/load04-feedback-context-isolation.mjs
-          node validation/load04-feedback-context-isolation.mjs
+          node --check validation/request-failure-regression.mjs
+          node validation/request-failure-regression.mjs
+          node --check validation/incremental-network-regression.mjs
+          node validation/incremental-network-regression.mjs
+          node --check validation/search-concurrency-regression.mjs
+          node validation/search-concurrency-regression.mjs
+          node --check validation/feedback-context-regression.mjs
+          node validation/feedback-context-regression.mjs
 
       - name: Player portrait cache regression
         if: steps.changes.outputs.site == 'true'
