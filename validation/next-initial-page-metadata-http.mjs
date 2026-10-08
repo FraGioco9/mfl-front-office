@@ -25,7 +25,15 @@ for (const [path, expectedStatus] of routes) {
     ? initialPageMetadata(path) : entityStatusMetadata(kind, expectedStatus);
   assert.deepEqual(titles, [expected.title], "Raw first-response HTML must have one correct title: " + path);
   assert.match(head, /<meta\b[^>]*name="description"/i, "Missing description on " + path);
-  assert.match(head, /<meta\b[^>]*property="og:title"/i, "Missing og:title on " + path);
+  if (path.startsWith("/evaluation")) {
+    // Ordinary Evaluation navigation must not appear as a shared player card.
+    assert.doesNotMatch(head, /<meta\b[^>]*property="og:/i,
+      "Non-shared Evaluation must not advertise Open Graph metadata: " + path);
+    assert.doesNotMatch(head, /<meta\b[^>]*name="twitter:/i,
+      "Non-shared Evaluation must not advertise a Twitter card: " + path);
+  } else {
+    assert.match(head, /<meta\b[^>]*property="og:title"/i, "Missing og:title on " + path);
+  }
   assert.ok(!head.includes("private-wallet-secret"), "Private query should not appear in metadata.");
 }
 console.log("NAV-01 Next first HTML: metadata and HTTP 200/404 passed on " + routes.length + " routes.");
