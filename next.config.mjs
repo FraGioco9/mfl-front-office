@@ -66,10 +66,12 @@ export function createNextHeaders({ production = process.env.NODE_ENV === "produ
 
 export function createNextRewrites() {
   return {
+    // Serve every direct Evaluation URL through one first-paint HTML pipeline.
+    // The previous share-only rewrite left plain/player/saved Evaluation on a
+    // different Next SSR path, making the page behavior route-dependent.
     beforeFiles: [
       {
         source: "/evaluation",
-        has: [{ type: "query", key: "share" }],
         destination: "/api/evaluation-preview",
       },
     ],
