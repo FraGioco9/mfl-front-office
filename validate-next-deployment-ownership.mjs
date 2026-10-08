@@ -78,9 +78,9 @@ invariant(
   vercelRewrites.some((rule) =>
     rule.source === "/evaluation"
       && rule.destination === "/api/evaluation-preview"
-      && rule.has?.some((condition) => condition.type === "query" && condition.key === "share")
+      && !rule.has?.length
   ),
-  "Vercel routing must preserve shared Evaluation preview requests before the SPA shell fallback.",
+  "Vercel must handle every direct Evaluation URL consistently before the SPA fallback.",
 );
 invariant(
   !vercelRewrites.some((rule) =>
@@ -95,8 +95,8 @@ invariant(
 invariant(
   vercelRewrites.some((rule) => rule.source === "/evaluation"
     && rule.destination === "/api/evaluation-preview"
-    && rule.has?.some((condition) => condition.key === "share")),
-  "Preserve the evaluation share preview route before Next SSR.",
+    && !rule.has?.length),
+  "Preserve all Evaluation links through the same HTML shell instead of splitting by share query.",
 );
 invariant(
   !vercelRewrites.some((rule) => rule.source === "/api/:path*" && rule.destination === "/index.html"),
