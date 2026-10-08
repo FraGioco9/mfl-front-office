@@ -61,7 +61,12 @@ const FLAG_CODE_BY_NATIONALITY = Object.freeze({
   USA: "US", UZBEKISTAN: "UZ", WALES: "1f3f4-e0067-e0062-e0077-e006c-e0073-e0074-e007f",
 });
 
-const FONT_PACKAGE_ROOT = path.dirname(require.resolve("@expo-google-fonts/titillium-web/package.json"));
+// Webpack turns require.resolve(package.json) into a numeric module id in
+// Pages API bundles (observed 5861 on Vercel), which path.dirname rejects.
+// Next outputFileTracingIncludes ships the actual TTFs under node_modules.
+const FONT_PACKAGE_ROOT = path.resolve(
+  process.cwd(), "node_modules", "@expo-google-fonts", "titillium-web",
+);
 const FONT_PATHS = Object.freeze([
   [400, path.join(FONT_PACKAGE_ROOT, "400Regular", "TitilliumWeb_400Regular.ttf")],
   [600, path.join(FONT_PACKAGE_ROOT, "600SemiBold", "TitilliumWeb_600SemiBold.ttf")],

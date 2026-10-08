@@ -16,9 +16,8 @@ assert.equal(config.headers.length, 1);
 assert.equal(config.headers[0].source, "/(.*)");
 assert.deepEqual(config.rewrites, [{
   source: "/evaluation",
-  has: [{ type: "query", key: "share" }],
   destination: "/api/evaluation-preview",
-}], "Only the Evaluation share-preview override may precede route-specific Next SSR on Vercel.");
+}], "Every direct Evaluation URL must reach the same preview-aware HTML route on Vercel.");
 const headers = config.headers[0].headers;
 const headerMap = new Map(headers.map(entry => [entry.key.toLowerCase(), entry.value]));
 assert.equal(headerMap.size, headers.length, "Duplicate security headers are not allowed.");

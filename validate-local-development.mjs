@@ -47,9 +47,9 @@ invariant(!packageSource.includes("local-dev-server.mjs") && !packageSource.incl
 invariant(nextConfig.includes('fallback: [{ source: "/:path*", destination: "/index.html" }]'), "Next must preserve SPA deep-link fallback.");
 invariant(
   nextConfig.includes('source: "/evaluation"')
-    && nextConfig.includes('has: [{ type: "query", key: "share" }]')
-    && nextConfig.includes('destination: "/api/evaluation-preview"'),
-  "Next must preserve shared Evaluation preview routing while ordinary Evaluation remains Next-rendered.",
+    && nextConfig.includes('destination: "/api/evaluation-preview"')
+    && !nextConfig.includes('has: [{ type: "query", key: "share" }]'),
+  "Next must route plain/player/saved/shared Evaluation consistently through the preview-aware HTML shell.",
 );
 invariant(nextConfig.includes('"/api/data": ["./api/data-files/mfl_database.db"]'), "Next tracing must retain the SQLite database for the data API.");
 invariant(prepareRuntime.includes("export async function prepareNextRuntime()"), "Next public compatibility projection must expose a reusable development/build sync function.");

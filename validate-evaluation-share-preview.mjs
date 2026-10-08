@@ -115,6 +115,8 @@ const previewRewriteIndex = nextRewrites.beforeFiles?.findIndex((rewrite) => (
   rewrite.source === "/evaluation" && rewrite.destination === "/api/evaluation-preview"
 )) ?? -1;
 assert(previewRewriteIndex >= 0, "Next must route direct Evaluation URLs through the preview-aware SPA endpoint.");
+assert(!nextRewrites.beforeFiles[previewRewriteIndex].has?.length,
+  "Plain/player/saved/shared Evaluation must share the same HTML route; restricting the rewrite to share recreates the regression.");
 assert(
   nextRewrites.fallback?.some((rewrite) => rewrite.source === "/:path*" && rewrite.destination === "/index.html"),
   "Next must preserve the SPA fallback after the Evaluation-specific rewrite.",
@@ -204,7 +206,8 @@ assert(siteStyles.includes('font-family: "Titillium Web"'), "The site must conti
 assert(previewCard.includes('const FONT_FAMILY = "Titillium Web"'), "Dynamic Evaluation preview cards must use the same Titillium Web font as the site.");
 assert(
   previewCard.includes('require("pureimage")')
-    && previewCard.includes("@expo-google-fonts/titillium-web")
+    && previewCard.includes('process.cwd(), "node_modules", "@expo-google-fonts", "titillium-web"')
+    && !previewCard.includes('require.resolve("@expo-google-fonts/titillium-web/package.json")')
     && previewCard.includes("TitilliumWeb_400Regular.ttf")
     && previewCard.includes("TitilliumWeb_600SemiBold.ttf")
     && previewCard.includes("TitilliumWeb_700Bold.ttf"),

@@ -179,6 +179,8 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:4010/database/attributes > /tmp/mfl-deep-route.html
           grep -q "MFL Front Office" /tmp/mfl-deep-route.html
           node validation/next-initial-page-metadata-http.mjs http://127.0.0.1:4010 || { cat /tmp/mfl-next-start.log >&2; exit 1; }
+          node validation/next-evaluation-route-http.mjs http://127.0.0.1:4010 || { cat /tmp/mfl-next-start.log >&2; exit 1; }
+          node validation/next-evaluation-browser.mjs http://127.0.0.1:4010 || { cat /tmp/mfl-next-start.log >&2; exit 1; }
           node validation/cache-policy-http-regression.mjs http://127.0.0.1:4010 || { cat /tmp/mfl-next-start.log >&2; exit 1; }
           curl --fail --silent --show-error http://127.0.0.1:4010/api/wallet-session > /tmp/mfl-wallet-session.json
           jq -e '.token and (.nonce | test("^[0-9a-f]{64}$"))' /tmp/mfl-wallet-session.json >/dev/null
