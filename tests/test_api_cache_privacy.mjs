@@ -142,7 +142,7 @@ const [
   read("../api/_handler-evaluation-preview.js"),
   read("../api/_handler-evaluation-preview-image.js"),
   read("../api/_handler-operational-health.js"),
-  read("../validate-sec06-share-api-fixtures.mjs"),
+  read("../validate-share-api-fixtures.mjs"),
   read("../validate-domain-api-persistence.mjs"),
 ]);
 
@@ -175,7 +175,7 @@ assert(
   "The share fixture must retain the revoke-after-read regression.",
 );
 assert(
-  apiPersistenceDomain.includes('"validate-sec06-share-api-fixtures.mjs"'),
+  apiPersistenceDomain.includes('"validate-share-api-fixtures.mjs"'),
   "The share revoke fixture must remain part of the aggregate API persistence gate.",
 );
 
