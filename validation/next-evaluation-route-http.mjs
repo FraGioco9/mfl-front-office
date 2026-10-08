@@ -46,9 +46,12 @@ for (const route of routes) {
   assert.equal(advertisedImage.pathname, "/api/evaluation-preview-image",
     `Evaluation preview metadata must reference the PNG endpoint: ${route}`);
   const originalParams = new URL(route, origin).searchParams;
-  assert.equal(advertisedImage.searchParams.get("share"),
-    originalParams.has("share") ? originalParams.get("share") : null,
-    `Evaluation image URL must preserve historical share id: ${route}`);
+  const requestedShare = originalParams.get("share") || "";
+  const canonicalShare = /^[a-zA-Z0-9]{1,8}$/.test(requestedShare)
+    || /^[a-f0-9]{32}$/.test(requestedShare)
+    ? requestedShare : null;
+  assert.equal(advertisedImage.searchParams.get("share"), canonicalShare,
+    `Valid Evaluation share IDs must survive and malformed IDs must be discarded: ${route}`);
 
   for (const id of ["appShell", "evaluationPage", "evaluationSearchInput", "evaluationButtons"]) {
     assert.ok(html.includes(`id="${id}"`), `Canonical Evaluation shell missing ${id}: ${route}`);
