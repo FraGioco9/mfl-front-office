@@ -163,8 +163,8 @@ async function runOrientationRegression(cdp, url, baseline) {
 }
 
 const cases = [
-  { name: "player", old: '["player", "/players/1"],', replacement: '["player", "/players/1#narrow-reflow-390", 390, 844],' },
-  { name: "planner", old: '["planner", "/planner", process.env.MFL_UX03_BROWSER_VIEWPORT === "phone" ? 390 : 1280, process.env.MFL_UX03_BROWSER_VIEWPORT === "phone" ? 844 : 900],', replacement: '["planner", "/planner#narrow-reflow-390", 390, 844],' },
+  { name: "player", old: '["player", "/players/1"],', replacement: '["player", "/players/1#resp01-390", 390, 844],' },
+  { name: "planner", old: '["planner", "/planner", process.env.MFL_UX03_BROWSER_VIEWPORT === "phone" ? 390 : 1280, process.env.MFL_UX03_BROWSER_VIEWPORT === "phone" ? 844 : 900],', replacement: '["planner", "/planner#resp01-390", 390, 844],' },
 ];
 try {
   for (const entry of cases) {
