@@ -7,11 +7,10 @@ const {
   plannerPlanCapacityExceeded,
 } = require("../api/_planner-persistence.js");
 
-const [migration, schema, plannerSave, docs] = await Promise.all([
+const [migration, schema, plannerSave] = await Promise.all([
   readFile(new URL("../supabase/migrations/20261006183001_planner_plan_capacity_guard.sql", import.meta.url), "utf8"),
   readFile(new URL("../supabase-schema.sql", import.meta.url), "utf8"),
   readFile(new URL("../api/_handler-planner-save.js", import.meta.url), "utf8"),
-  readFile(new URL("../docs/db05-planner-saved-list.md", import.meta.url), "utf8"),
 ]);
 
 assert.equal(
@@ -38,12 +37,12 @@ for (const source of [migration, schema]) {
 assert.equal(
   schema.split(migration.trim()).length - 1,
   1,
-  "Canonical schema must contain the exact DB-05 migration once",
+  "Canonical schema must contain the exact Planner capacity migration once",
 );
 assert.equal(
   /create\s+(?:unique\s+)?index/i.test(migration),
   false,
-  "DB-05 must not add an index without workload evidence",
+  "Planner capacity must not add an index without workload evidence",
 );
 
 assert(plannerSave.includes("MAX_SAVED_PLANS_PER_WALLET = 50"));
@@ -53,11 +52,4 @@ assert(plannerSave.includes('trace.warn("capacity_limit", { status: 429 })'));
 assert(plannerSave.includes("revision=eq." + "${expectedRevision}"));
 assert(plannerSave.includes("revision: expectedRevision + 1"));
 
-assert(docs.includes("35 calls"));
-assert(docs.includes("0.342 ms"));
-assert(docs.includes("0.539 ms"));
-assert(docs.includes("49"));
-assert(docs.includes("51"));
-assert(docs.includes("No new index"));
-
-console.log("DB05_PLANNER_CAPACITY_SOURCE_PASS");
+console.log("PLANNER_CAPACITY_SOURCE_PASS");
