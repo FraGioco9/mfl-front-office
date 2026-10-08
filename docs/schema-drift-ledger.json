@@ -1,0 +1,163 @@
+{
+  "version": 1,
+  "capturedAt": "2026-10-06",
+  "scope": "DB-03 read-only schema, grant, migration and RPC drift inventory",
+  "production": {
+    "timezone": "Europe/Rome",
+    "publicTables": 12,
+    "rlsEnabledTables": 12,
+    "rlsPolicies": 0,
+    "notes": [
+      "SEC-05 restrict_application_grants is staged in Git and intentionally not applied live.",
+      "DB-02 private_data_retention is staged in Git and intentionally not applied live.",
+      "DB-05 planner_plan_capacity_guard is staged in Git and intentionally not applied live."
+    ]
+  },
+  "migrations": [
+    {
+      "file": "20260730160100_create_mfl_season_ratios.sql",
+      "gitBlobSha1": "a0eae86070330e0bbe5682200644779c198df544",
+      "status": "repo_history_only",
+      "note": "Object exists live, but migration history version is not recorded live."
+    },
+    {
+      "file": "20260823140000_minimize_wallet_preferences_table_state.sql",
+      "gitBlobSha1": "a66e605ea412e38e99d2b8e54b5aaf404ba875c2",
+      "status": "repo_history_only",
+      "note": "Data-normalization migration is not recorded in live migration history."
+    },
+    {
+      "file": "20260904165225_extend_evaluation_share_expiry_to_one_year.sql",
+      "gitBlobSha1": "eb0da3d98fc53c6a9f380fad2285513e6e3beec1",
+      "status": "normalized_match"
+    },
+    {
+      "file": "20260904231420_create_bug_reports.sql",
+      "gitBlobSha1": "ea29660ae3bf1c5a08870d8fabeecfb7c2c41ad0",
+      "status": "normalized_match"
+    },
+    {
+      "file": "20260908131924_atomic_wallet_preferences.sql",
+      "gitBlobSha1": "741b6cc36887ab3a7b9c8d41403f129e188a7fee",
+      "status": "normalized_match"
+    },
+    {
+      "file": "20260914150000_wallet_auth_sessions.sql",
+      "gitBlobSha1": "e128560a231787dad0dcc3a3791762b78091745b",
+      "status": "version_alias",
+      "liveVersion": "20260914202553",
+      "note": "Normalized SQL matches live migration named wallet_auth_sessions."
+    },
+    {
+      "file": "20260914230251_fix_wallet_auth_session_expiry_ambiguity.sql",
+      "gitBlobSha1": "ef0465c447d5c2dfa20a1481a2690c20ce6d5132",
+      "status": "normalized_match"
+    },
+    {
+      "file": "20260929215838_planner_plans_and_shares.sql",
+      "gitBlobSha1": "2e5c013921c516b2ce983672a86f53617cce331f",
+      "status": "normalized_match"
+    },
+    {
+      "file": "20260930125208_planner_share_source_plan.sql",
+      "gitBlobSha1": "50df5d875b6ed8ed4fcead52a72aec2421c94a62",
+      "status": "normalized_match"
+    },
+    {
+      "file": "20260930220112_planner_share_unique_source.sql",
+      "gitBlobSha1": "6fbad1a7cd1968f21c69c02332fcfbbe721e5758",
+      "status": "normalized_match"
+    },
+    {
+      "file": "20260930220121_planner_plan_revision.sql",
+      "gitBlobSha1": "31278b083f9c69eb79962503aa8534a33a5b55cd",
+      "status": "normalized_match"
+    },
+    {
+      "file": "20260930220230_planner_share_source_plan_index.sql",
+      "gitBlobSha1": "fb1b83d3c4405f64bec023ecc2579eb8f6d1b57e",
+      "status": "normalized_match"
+    },
+    {
+      "file": "20261001152303_pin_updated_at_trigger_search_path.sql",
+      "gitBlobSha1": "d496ae0efe97b0dacb443e18df6a96b25ae84580",
+      "status": "normalized_match"
+    },
+    {
+      "file": "20261001155224_wallet_auth_distributed_rate_limit.sql",
+      "gitBlobSha1": "7b1cded72888d33c4bbc67c79adcc707ff71dfb5",
+      "status": "normalized_match"
+    },
+    {
+      "file": "20261001172000_restrict_application_grants.sql",
+      "gitBlobSha1": "09d0e37e28dd8827a8f431321d92ab32f67ae1c5",
+      "status": "staged_release"
+    },
+    {
+      "file": "20261006183000_private_data_retention.sql",
+      "gitBlobSha1": "f559b2890e267076581f066e7fea012f21467ad4",
+      "status": "staged_release"
+    },
+    {
+      "file": "20261006183001_planner_plan_capacity_guard.sql",
+      "gitBlobSha1": "98c4a5cc52f6aa7921ad581b9c5cb3944dfd0edb",
+      "status": "staged_release"
+    }
+  ],
+  "liveOnlyMigrationHistory": [
+    {
+      "version": "20260828151712",
+      "name": "add_agent_name_to_wallet_opt_ins"
+    },
+    {
+      "version": "20260828152626",
+      "name": "set_database_timezone_europe_rome"
+    },
+    {
+      "version": "20260828210337",
+      "name": "add_agent_name_to_wallet_preferences_and_permissions"
+    },
+    {
+      "version": "20260904164020",
+      "name": "sync_wallet_preferences_agent_name_from_opt_ins"
+    },
+    {
+      "version": "20260914202553",
+      "name": "wallet_auth_sessions",
+      "representedBy": "20260914150000_wallet_auth_sessions.sql"
+    }
+  ],
+  "knownLegacySchemaDrift": {
+    "columns": [
+      {
+        "table": "wallet_preferences",
+        "column": "agent_name",
+        "liveNonEmptyRows": 110,
+        "liveRows": 112
+      },
+      {
+        "table": "wallet_permissions",
+        "column": "agent_name",
+        "liveNonEmptyRows": 2,
+        "liveRows": 4
+      }
+    ],
+    "functions": [
+      "sync_wallet_preferences_agent_name_from_opt_ins",
+      "fill_wallet_preferences_agent_name_from_opt_ins"
+    ],
+    "triggers": [
+      "wallet_opt_ins_sync_preferences_agent_name",
+      "wallet_preferences_fill_agent_name"
+    ],
+    "canonicalOwner": "wallet_opt_ins.agent_name",
+    "action": "Reconcile only in a separately reviewed migration; do not copy raw historical live migration payloads into the repository."
+  },
+  "plannerContract": {
+    "revision": "integer not null default 1",
+    "sourcePlanFk": "planner_shares.source_plan_id -> planner_plans.id on delete cascade",
+    "walletSourceUnique": "planner_shares(wallet_address, source_plan_id)",
+    "cas": "PATCH/DELETE include the expected revision; stale revision returns no row and maps to HTTP 409.",
+    "capacity": "maximum 50 saved plans per wallet; DB-05 trigger serializes same-wallet inserts and rejects plan 51"
+  }
+}
