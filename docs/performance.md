@@ -14,7 +14,7 @@ Normal Site Quality protects deterministic performance architecture rather than 
 
 ### CI performance enforcement
 
-Do not enforce wall-clock millisecond thresholds in normal Site Quality. Shared CI runners, browser versions,
+For stable CI results, do not enforce wall-clock millisecond thresholds in normal Site Quality. Shared CI runners, browser versions,
 fixture transfer speed and host contention make those measurements unsuitable as merge gates. Deterministic
 architecture and behavioral contracts remain the required CI boundary.
 
