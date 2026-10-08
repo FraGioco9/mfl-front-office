@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createNextRewrites, outputFileTracingIncludes } from "./next.config.mjs";
 
@@ -49,8 +50,44 @@ function createResponseRecorder() {
 const expectedShellPath = resolve(siteRoot, "index.html");
 assert(
   evaluationShellPath() === expectedShellPath,
-  "Evaluation preview must resolve the SPA shell relative to api, not the serverless runtime working directory.",
+  "Local Evaluation preview must resolve the generated SPA shell from the project root.",
 );
+
+// Simulate Next's actual deployed Pages bundle layout. The original code
+// passed source-tree tests but searched .next/server/pages/index.html in Vercel.
+const packagedRoot = mkdtempSync(join(tmpdir(), "mfl-evaluation-shell-"));
+try {
+  const bundledApiDirectory = resolve(packagedRoot, ".next", "server", "pages", "api");
+  const sourceApiDirectory = resolve(packagedRoot, "api");
+  const packagedShell = resolve(packagedRoot, "index.html");
+  mkdirSync(bundledApiDirectory, { recursive: true });
+  mkdirSync(sourceApiDirectory, { recursive: true });
+  writeFileSync(packagedShell, "<title>MFL Front Office</title>", "utf8");
+
+  assert(
+    evaluationShellPath({
+      workingDirectory: packagedRoot,
+      moduleDirectory: bundledApiDirectory,
+    }) === packagedShell,
+    "Bundled Evaluation preview must prioritize the traced shell at the deployment project root.",
+  );
+  assert(
+    evaluationShellPath({
+      workingDirectory: resolve(packagedRoot, "non-project-working-dir"),
+      moduleDirectory: bundledApiDirectory,
+    }) === packagedShell,
+    "Bundled Evaluation preview must also recover the traced root shell from the compiled module location.",
+  );
+  assert(
+    evaluationShellPath({
+      workingDirectory: resolve(packagedRoot, "non-project-working-dir"),
+      moduleDirectory: sourceApiDirectory,
+    }) === packagedShell,
+    "Unbundled Evaluation preview must preserve the source-tree fallback.",
+  );
+} finally {
+  rmSync(packagedRoot, { recursive: true, force: true });
+}
 assert(
   browserTitleForMetadata({}) === "Evaluation - MFL Front Office",
   "Blank Evaluation browser titles must use the canonical Evaluation fallback.",
@@ -71,13 +108,14 @@ assert(publicEvaluationPlayerName("missing-player") === "", "Invalid Player IDs 
 
 const previewSource = readText("api/_handler-evaluation-preview.js");
 assert(
-  previewSource.includes('path.resolve(__dirname, "..", "index.html")'),
-  "Evaluation preview must derive index.html from its deployed module directory.",
+  previewSource.includes('path.resolve(workingDirectory, "index.html")')
+    && previewSource.includes('path.resolve(moduleDirectory, "..", "..", "..", "..", "index.html")')
+    && previewSource.includes("fs.existsSync(candidate)"),
+  "Evaluation preview must resolve the traced project-root HTML across source and compiled Next layouts.",
 );
 assert(
-  !previewSource.includes('path.join(process.cwd(), "index.html")')
-    && !previewSource.includes('path.resolve(process.cwd(), "index.html")'),
-  "Evaluation preview must not assume the Vercel function working directory contains index.html.",
+  !previewSource.includes('return path.resolve(__dirname, "..", "index.html");'),
+  "Evaluation preview must not return only the obsolete compiled-Pages-relative path.",
 );
 assert(
   previewSource.includes('queryOne("SELECT name FROM players WHERE player_id = ? LIMIT 1", [playerId])')
@@ -142,6 +180,11 @@ try {
     );
     assert(response.statusCode === 200, `${label} refresh must return the Evaluation SPA shell with HTTP 200.`);
     assert(response.ended, `${label} refresh must finish the response.`);
+    assert(response.headers.get("cache-control") === "no-store, max-age=0",
+      `${label} preview HTML must remain uncached because shares are revocable.`);
+    assert(response.body.includes('property="og:image"')
+      && response.body.includes('name="twitter:card" content="summary_large_image"'),
+      `${label} preview HTML must advertise a dynamic social-preview image.`);
     const requestUrl = new URL(url, "https://mfl-front-office.vercel.app");
     const playerName = publicEvaluationPlayerName(requestUrl.searchParams.get("player"));
     const expectedTitle = browserTitleForMetadata({}, playerName);
