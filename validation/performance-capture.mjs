@@ -10,7 +10,7 @@ const DEFAULT_ROUTE_TIMEOUT_MS = 60_000;
 const SLOW_ROUTE_TIMEOUT_MS = 240_000;
 const SETTLE_GRACE_MS = 150;
 const NETWORK_IDLE_GRACE_MS = 250;
-const BASELINE_SCHEMA_VERSION = 13;
+const CAPTURE_SCHEMA_VERSION = 13;
 
 function integerEnv(name, fallback, minimum = 1, maximum = 50) {
   const value = Number.parseInt(String(process.env[name] || ""), 10);
@@ -1546,7 +1546,7 @@ function buildSummary(raw) {
 
 function captureResumeKey(entities, journeys, targetContext) {
   return JSON.stringify({
-    schemaVersion: BASELINE_SCHEMA_VERSION,
+    schemaVersion: CAPTURE_SCHEMA_VERSION,
     baseUrl,
     environmentLabel,
     repetitions,
@@ -1567,7 +1567,7 @@ function captureResumeKey(entities, journeys, targetContext) {
 function buildReport(raw, entities, journeys, targetContext, complete) {
   return {
     metadata: {
-      schemaVersion: BASELINE_SCHEMA_VERSION,
+      schemaVersion: CAPTURE_SCHEMA_VERSION,
       capturedAt: new Date().toISOString(),
       baseUrl,
       environmentLabel,
