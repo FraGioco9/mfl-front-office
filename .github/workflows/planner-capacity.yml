@@ -1,0 +1,118 @@
+name: DB-05 Planner saved-plan capacity
+
+on:
+  pull_request:
+    paths:
+      - "api/_handler-planner-save.js"
+      - "api/_planner-persistence.js"
+      - "supabase-schema.sql"
+      - "supabase/migrations/20261006183001_planner_plan_capacity_guard.sql"
+      - "tests/test_db05_planner_capacity.mjs"
+      - "tests/verify-db05-planner-capacity.sql"
+      - "docs/db05-planner-saved-list.md"
+      - ".github/workflows/planner-capacity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capacity:
+    name: PostgreSQL 17 concurrent 49/50/51 regression
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Verify source contract
+        run: node tests/test_db05_planner_capacity.mjs
+
+      - name: Prepare isolated roles and canonical schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+          psql -X -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create role service_role nologin bypassrls;
+          SQL
+          psql -X -v ON_ERROR_STOP=1 -1             -f supabase/migrations/20260730160100_create_mfl_season_ratios.sql
+          psql -X -v ON_ERROR_STOP=1 -1 -f supabase-schema.sql
+
+      - name: Verify two simultaneous creates cannot produce plan 51
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 <<'SQL'
+          truncate table public.planner_shares, public.planner_plans;
+          set role service_role;
+          insert into public.planner_plans(id,wallet_address,club_id,name,payload,revision)
+          select
+            'd' || lpad(g::text,15,'0'),
+            '0x1111111111111111',
+            '9001',
+            'Concurrent plan ' || g,
+            '{}'::jsonb,
+            1
+          from generate_series(1,49) g;
+          reset role;
+          SQL
+
+          set +e
+          psql -X -v ON_ERROR_STOP=1             -c "set role service_role; insert into public.planner_plans(id,wallet_address,club_id,name,payload,revision) values ('e000000000000001','0x1111111111111111','9001','Concurrent A','{}'::jsonb,1);"             >/tmp/db05-a.out 2>&1 &
+          pid_a=$!
+          psql -X -v ON_ERROR_STOP=1             -c "set role service_role; insert into public.planner_plans(id,wallet_address,club_id,name,payload,revision) values ('e000000000000002','0x1111111111111111','9001','Concurrent B','{}'::jsonb,1);"             >/tmp/db05-b.out 2>&1 &
+          pid_b=$!
+
+          wait "$pid_a"; rc_a=$?
+          wait "$pid_b"; rc_b=$?
+          set -e
+
+          successes=0
+          if [ "$rc_a" -eq 0 ]; then successes=$((successes + 1)); fi
+          if [ "$rc_b" -eq 0 ]; then successes=$((successes + 1)); fi
+          if [ "$successes" -ne 1 ]; then
+            echo "Expected exactly one successful concurrent insert; got $successes" >&2
+            cat /tmp/db05-a.out >&2
+            cat /tmp/db05-b.out >&2
+            exit 1
+          fi
+
+          if [ "$rc_a" -ne 0 ]; then grep -q "planner_plan_limit_exceeded" /tmp/db05-a.out; fi
+          if [ "$rc_b" -ne 0 ]; then grep -q "planner_plan_limit_exceeded" /tmp/db05-b.out; fi
+
+          count="$(psql -XqAt -c "select count(*) from public.planner_plans where wallet_address='0x1111111111111111'")"
+          test "$count" = "50"
+
+      - name: Verify 50/51 boundary, stale CAS and share cascade
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -f tests/verify-db05-planner-capacity.sql
