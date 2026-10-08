@@ -13,7 +13,7 @@ const validators = [
   "validate-ui-foundations.mjs",
   "validate-behavior-foundations.mjs",
   "validate-shadow-foundations.mjs",
-  "validate-ui-foundations-final-audit.mjs",
+  "validate-ui-foundations-ownership.mjs",
   "validate-evaluation-mfl-usd-focus.mjs",
   "validate-css-ownership-consolidation.mjs",
   "validate-global-escape-ownership.mjs",
