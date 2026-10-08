@@ -113,7 +113,10 @@ function renderPreviewHtml(indexHtml, metadata, canonicalUrl, imageUrl, fallback
   // evaluation. Only an active, resolved Share should advertise social cards.
   const meta = metadata?.isShared
     ? previewMetadataHtml(metadata, canonicalUrl, imageUrl)
-    : '<meta name="robots" content="noindex,nofollow,noarchive">';
+    : [
+      '<meta name="description" content="Evaluate MFL players with MFL Front Office.">',
+      '<meta name="robots" content="noindex,nofollow,noarchive">',
+    ].join("\n    ");
   return indexHtml.replace(
     "<title>MFL Front Office</title>",
     `<title>${browserTitle}</title>\n    ${meta}`,
