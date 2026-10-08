@@ -1,4 +1,4 @@
-# OPS-08 — Secret ownership, environment scoping and rotation
+# Secret ownership, environment scoping and rotation
 
 This runbook records names, owners and scopes only. Never paste secret values into GitHub issues, logs, workflow summaries or documentation. The repository cannot and should not read GitHub secret values through API tooling.
 
@@ -90,7 +90,7 @@ After Preview proves the new configuration:
 4. Verify runtime identity, operational health, wallet challenge/login, persistence and same-origin writes.
 5. Revoke superseded credentials only after verification.
 
-OPS-08 does not authorize an intermediate production deployment for issue #1034.
+This runbook does not authorize an intermediate production deployment for issue #1034.
 
 ### 6. GitHub production secrets
 
@@ -110,7 +110,7 @@ Run the presence-only workflow after each configuration change. Presence is nece
 - Preview runtime fails: revert Preview variables; do not touch Production.
 - Production runtime fails: use the OPS-04 rollback runbook; do not mix historical code with an unrelated database snapshot.
 
-## Deliberate non-actions in OPS-08
+## Deliberate non-actions in This runbook
 
 - no secret values are read or changed by this PR;
 - no GitHub, Vercel or Supabase environment is created or mutated;
