@@ -1,7 +1,5 @@
 # Security response and abuse boundaries
 
-Part of #969.
-
 ## Browser response headers
 
 `next.config.mjs` owns the application-wide browser security headers. They apply to the shell, static application assets and API responses through one `/:path*` rule, independently from route-specific cache policy.
@@ -17,13 +15,11 @@ This intentionally limits only capabilities the application does not use. The CS
 
 A full `script-src`/style/connect/image CSP is not introduced in this slice because the current compatibility shell still contains inline runtime code and loads Flow/Dapper/MFL resources from multiple explicit origins. Tightening those directives should happen only after nonce/hash/origin ownership is designed and browser-tested.
 
-SEC-04 (#1034) adds a **production-only CSP Report-Only candidate**, not a
-change to the enforced CSP. The candidate detects legacy/Next inline-script
-usage and unexpected external destinations without blocking FCL/Dapper or
-ordinary navigation. The first-party `/api/csp-report` endpoint accepts
-both reporting formats, bounds payloads, and logs only sanitized origins
-and coarse route categories. See [the staged CSP rollout and origin
-inventory](security-csp.md) before proposing enforcement.
+Production also emits a **Report-Only CSP candidate**, not a change to the enforced CSP.
+It detects legacy/Next inline-script usage and unexpected external destinations without blocking
+FCL/Dapper or ordinary navigation. The first-party `/api/csp-report` endpoint accepts both
+reporting formats, bounds payloads, and logs only sanitized origins and coarse route categories.
+See [Content Security Policy](content-security-policy.md) before proposing enforcement.
 
 `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` are intentionally not set by the application because the current Dapper/Flow authentication path can use popup/RPC and third-party resources. Those policies require dedicated wallet-flow verification before adoption.
 
