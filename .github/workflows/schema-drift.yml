@@ -5,9 +5,9 @@ on:
     paths:
       - "supabase-schema.sql"
       - "supabase/migrations/**"
-      - "scripts/supabase/db03-live-readonly-inventory.sql"
-      - "docs/db03-schema-drift-ledger.json"
-      - "docs/db03-schema-drift.md"
+      - "scripts/supabase/schema-drift-readonly-inventory.sql"
+      - "docs/schema-drift-ledger.json"
+      - "docs/schema-drift.md"
       - "api/_handler-planner-save.js"
       - "tests/test_schema_drift_inventory.mjs"
       - "tests/verify-schema-drift-restore.sql"
@@ -93,6 +93,6 @@ jobs:
             statements text[] not null default '{}'
           );
           SQL
-          psql -X -v ON_ERROR_STOP=1             -f scripts/supabase/db03-live-readonly-inventory.sql             > /tmp/db03-readonly-inventory.txt
-          grep -q "planner_plans" /tmp/db03-readonly-inventory.txt
-          grep -q "service_role" /tmp/db03-readonly-inventory.txt
+          psql -X -v ON_ERROR_STOP=1             -f scripts/supabase/schema-drift-readonly-inventory.sql             > /tmp/schema-drift-readonly-inventory.txt
+          grep -q "planner_plans" /tmp/schema-drift-readonly-inventory.txt
+          grep -q "service_role" /tmp/schema-drift-readonly-inventory.txt
