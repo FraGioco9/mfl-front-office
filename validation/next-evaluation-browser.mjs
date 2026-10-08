@@ -46,7 +46,7 @@ try {
         const tabs = await response.json();
         page = tabs.find((tab) => tab.type === "page" && tab.url.startsWith(target));
       }
-    } catch {}
+    } catch { /* Debug endpoint may not be ready yet. */ }
     if (!page?.webSocketDebuggerUrl) {
       page = null;
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -105,7 +105,7 @@ try {
         last = value;
         if (value?.ready === "complete" && value?.pageName === "evaluation"
           && value?.shown && value?.inputVisible && value?.corePresent) return value;
-      } catch {}
+      } catch { /* Navigation can replace the previous JS context. */ }
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     throw Error(`${label} Evaluation did not hydrate to an interactive search screen. Last: ${JSON.stringify(last)}`);
