@@ -206,8 +206,11 @@ invariant(
     && deploymentVerifier.includes('allowed_titles = {expected_titles[path]}')
     && deploymentVerifier.includes('allowed_titles.add("MFL Front Office")')
     && deploymentVerifier.includes('if len(titles) != 1 or titles[0] not in allowed_titles:')
-    && deploymentVerifier.includes('if route_mode == "next-ssr" and (')
-    && deploymentVerifier.includes('property="og:title"'),
+    && deploymentVerifier.includes('if route_mode == "next-ssr":')
+    && deploymentVerifier.includes('if path == "/evaluation":')
+    && deploymentVerifier.includes(`'name="description"' not in head`)
+    && deploymentVerifier.includes(`'property="og:' in head or 'name="twitter:' in head`)
+    && deploymentVerifier.includes(`elif 'property="og:title"' not in head:`),
   "Legacy static routes must retain shell/title/security checks while modern Next SSR metadata remains mandatory.",
 );
 

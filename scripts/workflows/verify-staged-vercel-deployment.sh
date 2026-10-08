@@ -95,8 +95,14 @@ if titles != [expected_titles[path]]:
     raise SystemExit(
         f"{path} staged title mismatch: expected {expected_titles[path]!r}, observed {titles!r}"
     )
-if 'name="description"' not in head or 'property="og:title"' not in head:
-    raise SystemExit(f"{path} staged HTML is missing description or og:title")
+if 'name="description"' not in head:
+    raise SystemExit(f"{path} staged HTML is missing description")
+if path == "/evaluation":
+    # Only an active public Share may advertise an Evaluation social card.
+    if 'property="og:' in head or 'name="twitter:' in head:
+        raise SystemExit(f"{path} plain Evaluation must not expose social-card metadata")
+elif 'property="og:title"' not in head:
+    raise SystemExit(f"{path} staged HTML is missing og:title")
 PY
 done
 
