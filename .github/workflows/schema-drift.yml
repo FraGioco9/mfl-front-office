@@ -9,8 +9,8 @@ on:
       - "docs/db03-schema-drift-ledger.json"
       - "docs/db03-schema-drift.md"
       - "api/_handler-planner-save.js"
-      - "tests/test_db03_schema_drift_inventory.mjs"
-      - "tests/verify-db03-isolated-restore.sql"
+      - "tests/test_schema_drift_inventory.mjs"
+      - "tests/verify-schema-drift-restore.sql"
       - ".github/workflows/schema-drift.yml"
   workflow_dispatch:
 
@@ -49,7 +49,7 @@ jobs:
           node-version: 22
 
       - name: Verify migration fingerprints and drift ledger
-        run: node tests/test_db03_schema_drift_inventory.mjs
+        run: node tests/test_schema_drift_inventory.mjs
 
       - name: Prepare isolated Supabase-like roles
         shell: bash
@@ -77,7 +77,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          psql -X -v ON_ERROR_STOP=1 -f tests/verify-db03-isolated-restore.sql
+          psql -X -v ON_ERROR_STOP=1 -f tests/verify-schema-drift-restore.sql
 
       - name: Parse the read-only inventory against the isolated restore
         shell: bash
