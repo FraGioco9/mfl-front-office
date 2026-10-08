@@ -64,6 +64,18 @@ assert.ok(stagedVerifier.includes(String.raw`r"<title\b[^>]*>`),
 assert.ok(!stagedVerifier.includes(String.raw`r"<title\\b[^>]*>`),
   "Staged verification must not look for a literal backslash before the title word boundary.");
 
+const liveVerifier = readFileSync(new URL("../scripts/workflows/verify-live-production-deployment.sh", import.meta.url), "utf8");
+for (const [label, source] of [["staged", stagedVerifier], ["live", liveVerifier]]) {
+  assert.ok(source.includes('if path == "/evaluation":'),
+    `${label} release verifier must exempt ordinary Evaluation from the social-card requirement.`);
+  assert.ok(source.includes(`'name="description"' not in head`),
+    `${label} release verifier must still require HTML descriptions.`);
+  assert.ok(source.includes(`'property="og:' in head or 'name="twitter:' in head`),
+    `${label} release verifier must reject accidental social cards on ordinary Evaluation.`);
+  assert.ok(source.includes(`elif 'property="og:title"' not in head:`),
+    `${label} release verifier must still require og:title for other SSR routes.`);
+}
+
 const topLevelApiEntrypoints = readdirSync(new URL("../api/", import.meta.url), { withFileTypes: true })
   .filter(entry => entry.isFile() && /\\.(?:[cm]?js|ts)$/.test(entry.name) && !entry.name.startsWith("_"))
   .map(entry => entry.name)
