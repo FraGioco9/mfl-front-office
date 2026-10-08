@@ -38,7 +38,7 @@ const [
   read("./api/_handler-identity.js"),
   read("./api/_data-auth.js"),
   read("./docs/security-boundaries.md"),
-  read("./docs/api03-cache-privacy-contract.md"),
+  read("./docs/api-cache-privacy.md"),
 ]);
 
 const headerMap = new Map(
