@@ -16,6 +16,7 @@
   let recentWriteSequence = 0;
   let recentLoadingActive = document.getElementById("evaluationSearchResults")?.dataset.mflEvaluationRecentLoading === "true";
   let resultPointerDown = false;
+  let resultPointerTarget = null;
   let committingRecentResults = false;
 
   const originalRecentRule = typeof window.shouldShowEvaluationRecentResults === "function"
@@ -525,15 +526,33 @@
   }
 
   function onPointerDown(event) {
-    resultPointerDown = event.target instanceof Element
-      && Boolean(event.target.closest("#evaluationSearchResults .evaluationSearchResult"));
+    const result = event.target instanceof Element
+      ? event.target.closest("#evaluationSearchResults .evaluationSearchResult")
+      : null;
+    resultPointerTarget = result instanceof HTMLButtonElement && !result.disabled ? result : null;
+    resultPointerDown = Boolean(resultPointerTarget);
     if (resultPointerDown || !(event.target instanceof Element)) return;
     const title = event.target.closest(".evaluationSearch .field > span");
     if (title instanceof HTMLElement) event.preventDefault();
   }
 
-  function onPointerUp() {
+  function onPointerUp(event) {
+    // WebKit can blur the focused search after pointerup but before the click.
+    // Keep the result visible until its click handler gets to commit selection.
+    if (!resultPointerDown) return;
+    const releasedResult = event.target instanceof Element
+      ? event.target.closest("#evaluationSearchResults .evaluationSearchResult")
+      : null;
+    if (releasedResult === resultPointerTarget) return;
     resultPointerDown = false;
+    resultPointerTarget = null;
+    syncTypedResultVisibility();
+  }
+
+  function onPointerCancel() {
+    resultPointerDown = false;
+    resultPointerTarget = null;
+    syncTypedResultVisibility();
   }
 
   function onFocus(event) {
@@ -566,6 +585,10 @@
   }
 
   function onClick(event) {
+    // Capture runs before the result button's own click listener. Do not hide
+    // the menu here: the button listener must still receive this same click.
+    resultPointerDown = false;
+    resultPointerTarget = null;
     if (!(event.target instanceof Element)) return;
     const title = event.target.closest(".evaluationSearch .field > span");
     if (title instanceof HTMLElement) {
@@ -600,6 +623,7 @@
   syncClearButton();
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("pointerup", onPointerUp, true);
+  document.addEventListener("pointercancel", onPointerCancel, true);
   input()?.addEventListener("focus", onFocus, true);
   input()?.addEventListener("blur", onBlur, true);
   document.addEventListener("click", onClick, true);
@@ -613,6 +637,7 @@
     destroyed = true;
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("pointerup", onPointerUp, true);
+    document.removeEventListener("pointercancel", onPointerCancel, true);
     input()?.removeEventListener("focus", onFocus, true);
     input()?.removeEventListener("blur", onBlur, true);
     document.removeEventListener("click", onClick, true);
@@ -626,6 +651,7 @@
     recentPayloadSignature = "";
     clearRecentLoadingOwnership();
     resultPointerDown = false;
+    resultPointerTarget = null;
     recentWriteSequence += 1;
     delete window[RECENT_ENTRIES_KEY];
     if (originalRecentRule && window.shouldShowEvaluationRecentResults === recentRule) {
