@@ -59,9 +59,9 @@ assert.match(dataPage, /const LISTING_COLUMN = "listing_price"/);
 assert.ok(dataPage.includes('AS "${LISTING_COLUMN}"'));
 assert.doesNotMatch(dataPage, /quoteIdentifier\(LISTING_COLUMN\)/);
 assert.match(dataPage, /const LISTING_PRICE_SQL = "marketplace_price\(player_id\)"/);
-// PERF-05D2 permits bounded dynamic JSON IDs only for a single for_sale rule,
- // never as a fixed persisted price index or general table sort.
-assert.match(dataPage, /const PERF05D2_MAX_LISTING_IDS = 9_000/);
+// Bounded dynamic JSON IDs are allowed only for a single for_sale rule,
+// never as a fixed persisted price index or general table sort.
+assert.match(dataPage, /const MAX_SIMPLE_LISTING_FILTER_IDS = 9_000/);
 assert.match(dataPage, /const simpleForSale = scope === "database"/);
 assert.match(dataPage, /&& rules\.length === 1/);
 assert.match(dataPage, /player_id IN \(SELECT CAST\(value AS INTEGER\) FROM json_each\(\?\)\)/);
