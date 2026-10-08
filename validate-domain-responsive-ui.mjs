@@ -1,6 +1,6 @@
 const validators = [
   "validate-responsive-layout.mjs",
-  "validate-resp01-reflow.mjs",
+  "validate-responsive-reflow.mjs",
   "validate-intermediate-desktop-smoke-layout.mjs",
   "validate-responsive-header-label-fallback.mjs",
   "validate-mobile-box-press-shape.mjs",
