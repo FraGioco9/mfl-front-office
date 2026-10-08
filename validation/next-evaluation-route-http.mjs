@@ -53,16 +53,37 @@ for (const route of routes) {
     `Evaluation HEAD must not include a body: ${route}`);
 }
 
-// Catch Webpack's require.resolve(package.json) -> numeric module-id error
-// in the actual compiled evaluation-preview-image API function.
-const image = await fetch(new URL("/api/evaluation-preview-image", origin), {
-  redirect: "manual", signal: AbortSignal.timeout(45000),
-});
-assert.equal(image.status, 200, "Compiled Evaluation preview PNG endpoint returned an error.");
-assert.match(image.headers.get("content-type") || "", /^image\/png\b/i);
-const bytes = Buffer.from(await image.arrayBuffer());
-assert.ok(bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
-  "Compiled Evaluation preview must emit valid PNG bytes.");
+// Exercise the compiled API with legacy share URLs as well as the generic
+// image. An older saved share must not fail PNG generation merely because
+// it uses the previous URL format. The local CI fixture intentionally has no
+// live Supabase share credentials, so these verify safe fallback responses;
+// a real historical share still requires manual acceptance.
+const imageRoutes = [
+  "/api/evaluation-preview-image",
+  "/api/evaluation-preview-image?share=abcd1234",
+  "/api/evaluation-preview-image?player=12345&share=abcd1234",
+  "/api/evaluation-preview-image?player=12345&share=missing-share",
+];
+const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+for (const route of imageRoutes) {
+  const endpoint = new URL(route, origin);
+  const image = await fetch(endpoint, { redirect: "manual", signal: AbortSignal.timeout(45000) });
+  assert.equal(image.status, 200, `Compiled Evaluation preview PNG failed: ${route}`);
+  assert.match(image.headers.get("content-type") || "", /^image\/png\b/i,
+    `Preview must be an image, not an error page: ${route}`);
+  assert.match(image.headers.get("cache-control") || "", /\bno-store\b/i);
+  const bytes = Buffer.from(await image.arrayBuffer());
+  assert.ok(bytes.subarray(0, 8).equals(pngSignature),
+    `Compiled Evaluation preview must emit PNG bytes: ${route}`);
+  assert.equal(Number(image.headers.get("content-length")), bytes.length,
+    `Image content length mismatch: ${route}`);
+  const head = await fetch(endpoint, {
+    method: "HEAD", redirect: "manual", signal: AbortSignal.timeout(45000),
+  });
+  assert.equal(head.status, 200, `Preview HEAD failed: ${route}`);
+  assert.match(head.headers.get("content-type") || "", /^image\/png\b/i);
+  assert.equal((await head.arrayBuffer()).byteLength, 0);
+}
 
 // Frontend assets used by the Evaluation page must exist on the same build.
 for (const asset of ["/modules/app-entry.js", "/styles-runtime.css", "/bootstrap.js"]) {
@@ -70,4 +91,4 @@ for (const asset of ["/modules/app-entry.js", "/styles-runtime.css", "/bootstrap
   assert.equal(response.status, 200, `Evaluation client asset unavailable: ${asset}`);
 }
 
-console.log(`Next production Evaluation route parity passed: ${routes.length} GET+HEAD variants, PNG endpoint, assets.`);
+console.log(`Next production Evaluation route parity passed: ${routes.length} HTML routes, ${imageRoutes.length} preview PNG variants (GET+HEAD), assets.`);
