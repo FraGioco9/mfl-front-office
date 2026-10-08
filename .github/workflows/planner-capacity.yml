@@ -7,8 +7,8 @@ on:
       - "api/_planner-persistence.js"
       - "supabase-schema.sql"
       - "supabase/migrations/20261006183001_planner_plan_capacity_guard.sql"
-      - "tests/test_db05_planner_capacity.mjs"
-      - "tests/verify-db05-planner-capacity.sql"
+      - "tests/test_planner_capacity.mjs"
+      - "tests/verify-planner-capacity.sql"
       - "docs/db05-planner-saved-list.md"
       - ".github/workflows/planner-capacity.yml"
   workflow_dispatch:
@@ -48,7 +48,7 @@ jobs:
           node-version: 22
 
       - name: Verify source contract
-        run: node tests/test_db05_planner_capacity.mjs
+        run: node tests/test_planner_capacity.mjs
 
       - name: Prepare isolated roles and canonical schema
         shell: bash
@@ -115,4 +115,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          psql -X -v ON_ERROR_STOP=1 -f tests/verify-db05-planner-capacity.sql
+          psql -X -v ON_ERROR_STOP=1 -f tests/verify-planner-capacity.sql
