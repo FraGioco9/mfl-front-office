@@ -43,8 +43,20 @@ function requestOrigin(request) {
   return forwardedHost ? `${protocol}://${forwardedHost}` : "https://mfl-front-office.vercel.app";
 }
 
-function evaluationShellPath() {
-  return path.resolve(__dirname, "..", "index.html");
+function evaluationShellPath({ workingDirectory = process.cwd(), moduleDirectory = __dirname } = {}) {
+  // Next bundles this module into .next/server/pages/api in production. In
+  // that layout __dirname/../index.html points inside the compiled Pages tree,
+  // not to the traced SPA shell at the deployment project root.
+  const candidates = [
+    path.resolve(workingDirectory, "index.html"),
+    path.resolve(moduleDirectory, "..", "index.html"),
+    path.resolve(moduleDirectory, "..", "..", "..", "..", "index.html"),
+  ];
+  const shellPath = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!shellPath) {
+    throw new Error("Evaluation SPA shell index.html is missing from the deployment.");
+  }
+  return shellPath;
 }
 
 function evaluationCanonicalUrl(origin, shareId, playerId) {
