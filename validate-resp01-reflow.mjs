@@ -3,18 +3,18 @@ import { readFileSync } from "node:fs";
 
 const read = path => readFileSync(new URL(path, import.meta.url), "utf8");
 const routing = read("./validation/browser-routing-regression.mjs");
-const browser = read("./validation/browser-resp01-reflow-regression.mjs");
+const browser = read("./validation/browser-narrow-reflow-regression.mjs");
 const workflow = read("./.github/workflows/site-quality.yml");
 
 for (const width of [320, 360, 520, 640, 900, 901]) {
-  assert.ok(routing.includes(`"/database/attributes#resp01-${width}"`),
-    `RESP-01 Chromium layout viewport missing: ${width}px`);
-  assert.ok(browser.includes(`"database-resp01-${width}"`),
-    `RESP-01 browser runner does not exercise ${width}px`);
+  assert.ok(routing.includes(`"/database/attributes#responsive-reflow-${width}"`),
+    `Responsive reflow Chromium layout viewport missing: ${width}px`);
+  assert.ok(browser.includes(`"database-responsive-reflow-${width}"`),
+    `Responsive reflow browser runner does not exercise ${width}px`);
 }
-for (const scenario of ["database-resp01-landscape", "player-resp01-320", "planner-resp01-320"]) {
+for (const scenario of ["database-responsive-reflow-landscape", "player-responsive-reflow-320", "planner-responsive-reflow-320"]) {
   assert.ok(routing.includes(`"${scenario}"`) && browser.includes(`"${scenario}"`),
-    `RESP-01 missing content route: ${scenario}`);
+    `Responsive reflow missing content route: ${scenario}`);
 }
 assert.ok(routing.includes('reflowMatrix ? "about:blank" : url')
   && routing.includes('"Emulation.setDeviceMetricsOverride"')
@@ -26,6 +26,6 @@ assert.ok(routing.includes("window.innerWidth === expected")
 assert.ok(browser.includes('MFL_PLANNER_BROWSER_FOCUSED: "1"')
   && browser.includes('MFL_PLANNER_BROWSER_PHASE: "shell"'),
   "320px Planner reflow must use the focused shell/club selection test rather than desktop pitch size tests.");
-assert.ok(workflow.includes("node validation/browser-resp01-reflow-regression.mjs"),
-  "RESP-01 CSS reflow suite must be enforced by Site Quality.");
-console.log("RESP-01 source ownership, matrix, pre-navigation metrics and CI coverage verified.");
+assert.ok(workflow.includes("node validation/browser-responsive-reflow-reflow-regression.mjs"),
+  "Responsive reflow CSS reflow suite must be enforced by Site Quality.");
+console.log("Responsive reflow source ownership, matrix, pre-navigation metrics and CI coverage verified.");
