@@ -1,3 +1,5 @@
+import { runDomainValidators } from "./validation/domain-runner.mjs";
+
 const validators = [
   "validate-global-search-results.mjs",
   "validate-global-search-agent-activation.mjs",
@@ -29,14 +31,9 @@ const validators = [
   "validate-watchlist-selector-navigation.mjs",
 ];
 
-for (const validator of validators) {
-  console.log(`[route-features] ${validator}`);
-  try {
-    await import(new URL(`./${validator}`, import.meta.url));
-  } catch (error) {
-    console.error(`[route-features] FAILED ${validator}`);
-    throw error;
-  }
-}
-
-console.log(`Route-features validator domain passed: ${validators.length} validators in one process.`);
+await runDomainValidators({
+  domain: "route-features",
+  title: "Route-features",
+  validators,
+  baseUrl: import.meta.url,
+});
