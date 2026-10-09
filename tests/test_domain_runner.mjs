@@ -207,6 +207,41 @@ const expectedValidators = {
     "validate-new-player-icon.mjs",
     "validate-progression-joined-agency-filter.mjs",
   ],
+  "api-persistence": [
+    "validate-shared-api-logic.mjs",
+    "validate-request-body-limits.mjs",
+    "validate-wallet-proof.mjs",
+    "validate-wallet-challenge.mjs",
+    "validate-wallet-session.mjs",
+    "validate-wallet-session-integration.mjs",
+    "validate-wallet-auth-rate-limit.mjs",
+    "validate-wallet-mutation-origin.mjs",
+    "validate-csp-report-only.mjs",
+    "validate-vercel-security-headers.mjs",
+    "validate-csp-legacy-script-hashes.mjs",
+    "validate-csp-next-nonce.mjs",
+    "validate-csp-legacy-eval-elimination.mjs",
+    "validate-wallet-permission-cache.mjs",
+    "validate-data-read-cache-policy.mjs",
+    "validate-public-page-cache-policy.mjs",
+    "validate-database-stats-ownership.mjs",
+    "validate-my-clubs-data.mjs",
+    "validate-supabase-persistence.mjs",
+    "validate-supabase-private-grants.mjs",
+    "validate-wallet-core.mjs",
+    "validate-wallet-preferences-lifecycle.mjs",
+    "validate-wallet-preference-write-scoping.mjs",
+    "validate-evaluation-share-expiry.mjs",
+    "validate-evaluation-share-preview.mjs",
+    "validate-planner-persistence.mjs",
+    "validate-shared-link-boundaries.mjs",
+    "validate-share-api-fixtures.mjs",
+    "validate-auth-boundary.mjs",
+    "validate-evaluation-preview-portrait.mjs",
+    "validate-evaluation-preview-rarity-accent.mjs",
+    "validate-evaluation-preview-shell-path.mjs",
+    "validate-bug-report.mjs",
+  ],
 };
 
 const allSource = await readFile(new URL("../validate-all.mjs", import.meta.url), "utf8");
@@ -218,7 +253,7 @@ for (const [domain, expected] of Object.entries(expectedValidators)) {
   assert.deepEqual(listed, expected, domain + " must retain the original validator list and order");
   assert.match(source, /runDomainValidators\(/, domain + " must use the shared executor");
   assert.match(source, /baseUrl:\s*import\.meta\.url/, domain + " must preserve relative imports");
-  if (["evaluation", "responsive-ui", "route-features", "routing-loading", "shared-ui", "table"].includes(domain)) {
+  if (["evaluation", "responsive-ui", "route-features", "routing-loading", "shared-ui", "table", "api-persistence"].includes(domain)) {
     const contract = {
       evaluation: ["evaluation", "Evaluation"],
       "responsive-ui": ["responsive-ui", "Responsive UI"],
@@ -226,13 +261,14 @@ for (const [domain, expected] of Object.entries(expectedValidators)) {
       "routing-loading": ["routing/loading", "Routing/loading"],
       "shared-ui": ["shared-ui", "Shared UI"],
       table: ["table", "Table"],
+      "api-persistence": ["api/persistence", "API/persistence"],
     }[domain];
     assert.ok(source.includes('domain: "' + contract[0] + '"'), domain + " must retain the original log prefix");
     assert.ok(source.includes('title: "' + contract[1] + '"'), domain + " must retain the original success summary");
   }
   assert.match(allSource, new RegExp('"validate-domain-' + domain + '\\.mjs"'), domain + " must stay in validate-all");
 }
-assert.equal(Object.values(expectedValidators).flat().length, 181);
+assert.equal(Object.values(expectedValidators).flat().length, 214);
 
 const helperUrl = new URL("../validation/domain-runner.mjs", import.meta.url).href;
 const scratch = await mkdtemp(join(tmpdir(), "mfl-sim08-domain-runner-"));
@@ -294,4 +330,4 @@ try {
   await rm(scratch, { recursive: true, force: true });
 }
 
-console.log("SIM-08: ten domains (181 validators), nested imports, shared-process ordering, logs, fail-fast and exit contract passed.");
+console.log("SIM-08: all eleven domains (214 validators), nested imports, shared-process ordering, logs, fail-fast and exit contract passed.");
