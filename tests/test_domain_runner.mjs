@@ -48,6 +48,49 @@ const expectedValidators = {
     "validate-security-boundaries.mjs",
     "validate-operational-health.mjs",
   ],
+  "evaluation": [
+    "validate-eval-ownership.mjs",
+    "validate-evaluation-search-lifecycle.mjs",
+    "validation/evaluation-safari-result-tap.mjs",
+    "validate-evaluation-search-fast-select.mjs",
+    "validate-evaluation-search-clear-selection.mjs",
+    "validate-evaluation-search-stacking.mjs",
+    "validate-evaluation-load-cache.mjs",
+    "validate-evaluation-route-ownership.mjs",
+    "validate-evaluation-refresh-hydration.mjs",
+    "validate-evaluation-overall-hover.mjs",
+    "validate-evaluation-mfl-usd-edit-cancel.mjs",
+    "validate-evaluation-mfl-usd-loading-race.mjs",
+    "validate-evaluation-discount-derived-loading.mjs",
+    "validate-evaluation-snapshot-edit-route.mjs",
+    "validate-evaluation-saved-share-icon.mjs",
+    "validate-progression-email-portrait.mjs",
+  ],
+  "responsive-ui": [
+    "validate-responsive-layout.mjs",
+    "validate-responsive-reflow.mjs",
+    "validate-intermediate-desktop-smoke-layout.mjs",
+    "validate-responsive-header-label-fallback.mjs",
+    "validate-mobile-box-press-shape.mjs",
+    "validate-mobile-footer-floor.mjs",
+    "validate-footer-route-coverage.mjs",
+    "validate-player-mobile-scaling.mjs",
+    "validate-player-note-first-paint.mjs",
+    "validate-player-view-scroll-preservation.mjs",
+    "validate-settings-mobile-actions.mjs",
+    "validate-evaluation-mobile-first-paint.mjs",
+    "validate-evaluation-responsive-player-names.mjs",
+    "validate-stats-mobile-scaling.mjs",
+    "validate-mobile-table-retry.mjs",
+    "validate-mobile-progression-view-widths.mjs",
+    "validate-mobile-table-compact-contract.mjs",
+    "validate-small-screen-table-compaction.mjs",
+    "validate-mobile-first-paint-cascade.mjs",
+    "validate-mobile-header-first-paint-metrics.mjs",
+    "validate-mobile-pager-scaling.mjs",
+    "validate-mobile-selection-bar-scaling.mjs",
+    "validate-changelog-responsive-scaling.mjs",
+  ],
 };
 
 const allSource = await readFile(new URL("../validate-all.mjs", import.meta.url), "utf8");
@@ -58,9 +101,14 @@ for (const [domain, expected] of Object.entries(expectedValidators)) {
   const listed = Array.from(match[1].matchAll(/"([^"]+\.mjs)"/g), (entry) => entry[1]);
   assert.deepEqual(listed, expected, domain + " must retain the original validator list and order");
   assert.match(source, /runDomainValidators\(/, domain + " must use the shared executor");
+  assert.match(source, /baseUrl:\s*import\.meta\.url/, domain + " must preserve relative imports");
+  if (domain === "evaluation" || domain === "responsive-ui") {
+    assert.ok(source.includes('domain: "' + domain + '"'), domain + " must retain the original prefix");
+    assert.ok(source.includes('title: "' + (domain === "evaluation" ? "Evaluation" : "Responsive UI") + '"'), domain + " must retain the summary");
+  }
   assert.match(allSource, new RegExp('"validate-domain-' + domain + '\\.mjs"'), domain + " must stay in validate-all");
 }
-assert.equal(Object.values(expectedValidators).flat().length, 34);
+assert.equal(Object.values(expectedValidators).flat().length, 73);
 
 const helperUrl = new URL("../validation/domain-runner.mjs", import.meta.url).href;
 const scratch = await mkdtemp(join(tmpdir(), "mfl-sim08-domain-runner-"));
@@ -122,4 +170,4 @@ try {
   await rm(scratch, { recursive: true, force: true });
 }
 
-console.log("SIM-08: Club/Stats and Build/Release 34-validator inventory, subdirectory imports, shared-process ordering, logs and fail-fast/exit contract passed.");
+console.log("SIM-08: six domains (73 validators), nested imports, shared-process ordering, logs, fail-fast and exit contract passed.");

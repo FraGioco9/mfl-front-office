@@ -1,3 +1,5 @@
+import { runDomainValidators } from "./validation/domain-runner.mjs";
+
 const validators = [
   "validate-eval-ownership.mjs",
   "validate-evaluation-search-lifecycle.mjs",
@@ -17,14 +19,9 @@ const validators = [
   "validate-progression-email-portrait.mjs",
 ];
 
-for (const validator of validators) {
-  console.log(`[evaluation] ${validator}`);
-  try {
-    await import(new URL(`./${validator}`, import.meta.url));
-  } catch (error) {
-    console.error(`[evaluation] FAILED ${validator}`);
-    throw error;
-  }
-}
-
-console.log(`Evaluation validator domain passed: ${validators.length} validators in one process.`);
+await runDomainValidators({
+  domain: "evaluation",
+  title: "Evaluation",
+  validators,
+  baseUrl: import.meta.url,
+});
