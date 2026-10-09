@@ -57,7 +57,7 @@ for (const entry of coreSourceManifest) {
 const sharedEntry = coreSourceManifest.find(({ domain }) => domain === "shared");
 invariant(
   sharedEntry?.source === "shared-foundations.js"
-    && sharedEntry?.sources?.length === 26
+    && sharedEntry?.sources?.length === 25
     && sharedEntry.sources[0] === "shared-foundations.js"
     && sharedEntry.sources[1] === "shared-session.js"
     && sharedEntry.sources[2] === "shared-routing.js"
@@ -72,18 +72,17 @@ invariant(
     && sharedEntry.sources[11] === "shared-player-first-paint.js"
     && sharedEntry.sources[12] === "shared-watchlist-actions.js"
     && sharedEntry.sources[13] === "shared-player-display.js"
-    && sharedEntry.sources[14] === "shared-player-actions.js"
-    && sharedEntry.sources[15] === "shared-modal-lifecycle.js"
-    && sharedEntry.sources[16] === "shared-global-search.js"
-    && sharedEntry.sources[17] === "shared-wallet-row-classification.js"
-    && sharedEntry.sources[18] === "shared-incremental-routing.js"
-    && sharedEntry.sources[19] === "shared-interaction-bindings.js"
-    && sharedEntry.sources[20] === "shared-startup-lifecycle.js"
-    && sharedEntry.sources[21] === "shared-incremental-navigation.js"
-    && sharedEntry.sources[22] === "shared-route-runtime-gate.js"
-    && sharedEntry.sources[23] === "shared-core-contracts.js"
-    && sharedEntry.sources[24] === "shared-app-startup.js"
-    && sharedEntry.sources[25] === "shared-shell-navigation.js"
+    && sharedEntry.sources[14] === "shared-modal-lifecycle.js"
+    && sharedEntry.sources[15] === "shared-global-search.js"
+    && sharedEntry.sources[16] === "shared-wallet-row-classification.js"
+    && sharedEntry.sources[17] === "shared-incremental-routing.js"
+    && sharedEntry.sources[18] === "shared-interaction-bindings.js"
+    && sharedEntry.sources[19] === "shared-startup-lifecycle.js"
+    && sharedEntry.sources[20] === "shared-incremental-navigation.js"
+    && sharedEntry.sources[21] === "shared-route-runtime-gate.js"
+    && sharedEntry.sources[22] === "shared-core-contracts.js"
+    && sharedEntry.sources[23] === "shared-app-startup.js"
+    && sharedEntry.sources[24] === "shared-shell-navigation.js"
     && sharedEntry.maxUniversalBytes === 355000,
   "Shared core must keep foundations before session before routing before transitions before page lifecycle before Home summary before table state before generic toast core before personal state before data/search before Evaluation lifecycle before Player first-paint/navigation before watchlist actions before Player display/calculation before Player action facades before generic modal lifecycle before Global Search lifecycle before linked-wallet/MFL row classification before universal HTML escaping before incremental routing/cache/request before global interaction bindings before Changelog/startup lifecycle before layout-centered feedback before incremental navigation orchestration before the stable route-runtime gate before explicit core contracts before application startup before shell navigation and retain the explicit 355000-byte universal no-growth ceiling.",
 );
@@ -100,8 +99,16 @@ const sharedDataSearch = await read("./modules/core-sources/shared-data-search.j
 const sharedEvaluationLifecycle = await read("./modules/core-sources/shared-evaluation-lifecycle.js");
 const sharedPlayerFirstPaint = await read("./modules/core-sources/shared-player-first-paint.js");
 const sharedWatchlistActions = await read("./modules/core-sources/shared-watchlist-actions.js");
-const sharedPlayerDisplay = await read("./modules/core-sources/shared-player-display.js");
-const sharedPlayerActions = await read("./modules/core-sources/shared-player-actions.js");
+const combinedPlayerDisplay = await read("./modules/core-sources/shared-player-display.js");
+const playerActionsBoundary = "\n\nasync function copyPlayerId(id) {";
+const playerActionsIndex = combinedPlayerDisplay.indexOf(playerActionsBoundary);
+invariant(
+  playerActionsIndex > 0
+    && combinedPlayerDisplay.indexOf(playerActionsBoundary, playerActionsIndex + playerActionsBoundary.length) === -1,
+  "Shared Player display and action facades must retain exactly one lexical ownership boundary.",
+);
+const sharedPlayerDisplay = combinedPlayerDisplay.slice(0, playerActionsIndex);
+const sharedPlayerActions = combinedPlayerDisplay.slice(playerActionsIndex + 2);
 const sharedModalLifecycle = await read("./modules/core-sources/shared-modal-lifecycle.js");
 const sharedGlobalSearch = await read("./modules/core-sources/shared-global-search.js");
 const sharedWalletAndHtml = await read("./modules/core-sources/shared-wallet-row-classification.js");
@@ -204,6 +211,14 @@ invariant(
 );
 invariant(
   sharedPlayerActions.startsWith("async function copyPlayerId(id) {")
+    && sharedPlayerActions.includes("await navigator.clipboard.writeText(String(id));")
+    && sharedPlayerActions.includes('const content = document.createElement("span");')
+    && sharedPlayerActions.includes('content.className = "toastPlayerIdContent";')
+    && sharedPlayerActions.includes('content.textContent = `Player ID ${id} copied.`;')
+    && sharedPlayerActions.includes("showToast(content);")
+    && sharedPlayerActions.includes('showToast("Could not copy player ID.");')
+    && sharedPlayerActions.includes("const owner = window.__mflRenderPlayerPageOwner;")
+    && sharedPlayerActions.includes('throw new Error("Player route core is not loaded.");')
     && sharedPlayerActions.replace(/\s*$/, "").endsWith("  return owner(playerId);\n}"),
   "Shared Player action facades must own cross-route Player ID copying and the stable Player render delegate.",
 );
