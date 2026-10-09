@@ -48,7 +48,7 @@ excludes(buildCore, "app-core-route-chunks", "The canonical build must not depen
 excludes(buildCore, "app-core-build-normalizer", "The canonical build must not depend on the retired build normalizer.");
 invariant(
   coreSourceByDomain.shared?.source === "shared-foundations.js"
-    && coreSourceByDomain.shared?.sources?.length === 27
+    && coreSourceByDomain.shared?.sources?.length === 26
     && coreSourceByDomain.shared.sources[1] === "shared-session.js"
     && coreSourceByDomain.shared.sources[2] === "shared-routing.js"
     && coreSourceByDomain.shared.sources[3] === "shared-transitions.js"
@@ -66,15 +66,14 @@ invariant(
     && coreSourceByDomain.shared.sources[15] === "shared-modal-lifecycle.js"
     && coreSourceByDomain.shared.sources[16] === "shared-global-search.js"
     && coreSourceByDomain.shared.sources[17] === "shared-wallet-row-classification.js"
-    && coreSourceByDomain.shared.sources[18] === "shared-html-escaping.js"
-    && coreSourceByDomain.shared.sources[19] === "shared-incremental-routing.js"
-    && coreSourceByDomain.shared.sources[20] === "shared-interaction-bindings.js"
-    && coreSourceByDomain.shared.sources[21] === "shared-startup-lifecycle.js"
-    && coreSourceByDomain.shared.sources[22] === "shared-incremental-navigation.js"
-    && coreSourceByDomain.shared.sources[23] === "shared-route-runtime-gate.js"
-    && coreSourceByDomain.shared.sources[24] === "shared-core-contracts.js"
-    && coreSourceByDomain.shared.sources[25] === "shared-app-startup.js"
-    && coreSourceByDomain.shared.sources[26] === "shared-shell-navigation.js"
+    && coreSourceByDomain.shared.sources[18] === "shared-incremental-routing.js"
+    && coreSourceByDomain.shared.sources[19] === "shared-interaction-bindings.js"
+    && coreSourceByDomain.shared.sources[20] === "shared-startup-lifecycle.js"
+    && coreSourceByDomain.shared.sources[21] === "shared-incremental-navigation.js"
+    && coreSourceByDomain.shared.sources[22] === "shared-route-runtime-gate.js"
+    && coreSourceByDomain.shared.sources[23] === "shared-core-contracts.js"
+    && coreSourceByDomain.shared.sources[24] === "shared-app-startup.js"
+    && coreSourceByDomain.shared.sources[25] === "shared-shell-navigation.js"
     && coreSourceByDomain.shared?.runtime === "app-core-runtime.js",
   "The core manifest must generate the shared runtime from its ordered canonical fragments.",
 );
