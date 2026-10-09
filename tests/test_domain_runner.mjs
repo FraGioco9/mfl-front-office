@@ -331,9 +331,9 @@ const expectedSlotOrder = Object.freeze([
 
 const allSource = await readFile(new URL("../validate-all.mjs", import.meta.url), "utf8");
 assert.deepEqual(Object.keys(domainSuites).sort(), Object.keys(expectedValidators).sort(), "the manifest must cover exactly eleven domains");
-// The test no longer opens any validate-domain-*.mjs wrapper.  The golden
-// inventory, prefix and title metadata are intentionally independent from
-// the manifest, so a mistaken manifest edit cannot rewrite expected behavior.
+// The golden inventory below does not depend on wrapper contents. Later CLI
+// parity fixtures inspect entrypoints, but never derive expected metadata from
+// them; manifest and legacy regressions retain independent golden contracts.
 assert.deepEqual(Object.keys(expectedDomainOutput).sort(), Object.keys(expectedValidators).sort());
 for (const [domain, expected] of Object.entries(expectedValidators)) {
   const suite = domainSuites[domain];
@@ -548,4 +548,101 @@ assert.match(invalidHelper.stderr, /Unknown validation domain: cut04-unknown-dom
 
 console.log("SIM-09A CUT-04.3C: legacy Club/Stats CLI, extra argv, golden order/logs, status and failure propagation parity passed.");
 
-console.log("SIM-09A CUT-04.1: independent 214-validator/11-domain golden inventory, exact 63-slot ordering, output and failure contracts passed without reading legacy wrappers.");
+// CUT-04.3D: isolated executable parity for the other nine historic CLI paths.
+// The 214-validator golden inventory above is independent of these wrapper
+// sources: this section reads wrappers only AFTER validating the golden contract.
+const remainingDomainIds = Object.keys(expectedValidators).filter((id) => id !== "club" && id !== "stats");
+assert.equal(remainingDomainIds.length, 9, "exactly nine CLI wrappers must be piloted");
+const cliFixtureRoot = await mkdtemp(join(tmpdir(), "mfl-cut04-cli-parity-"));
+try {
+  await mkdir(join(cliFixtureRoot, "validation"));
+  // Isolate child processes from real validators and production data. The
+  // fixture exercises the actual wrapper text, Node argv/cwd and import path.
+  const fixtureRunner = [
+    "export async function runDomainValidators({ domain, title, validators, baseUrl }) {",
+    '  const expected = JSON.parse(process.env.MFL_CUT04_EXPECTED);',
+    '  if (domain !== expected.prefix || title !== expected.title || JSON.stringify(validators) !== JSON.stringify(expected.validators)) throw new Error("golden metadata mismatch");',
+    '  console.log("CUT04_CONTEXT " + JSON.stringify({ argv: process.argv.slice(1), cwd: process.cwd(), urls: validators.map((v) => new URL("./" + v, baseUrl).href) }));',
+    '  for (const validator of validators) {',
+    '    console.log("[" + domain + "] " + validator);',
+    '    if (validator === process.env.MFL_CUT04_FAIL_AT) {',
+    '      console.error("[" + domain + "] FAILED " + validator);',
+    '      throw new Error("CUT04 synthetic failure");',
+    '    }',
+    '  }',
+    '  console.log(title + " validator domain passed: " + validators.length + " validators in one process.");',
+    '}',
+  ].join("\n") + "\n";
+  const fixtureDispatcher = [
+    'import { runDomainValidators } from "./domain-runner.mjs";',
+    "export async function runDomain(id) {",
+    '  const expected = JSON.parse(process.env.MFL_CUT04_EXPECTED);',
+    '  if (id !== expected.id) throw new Error("Unexpected CLI domain: " + id);',
+    "  await runDomainValidators({ domain: expected.prefix, title: expected.title,",
+    '    validators: expected.validators, baseUrl: new URL("../", import.meta.url) });',
+    "}",
+  ].join("\n") + "\n";
+  await writeFile(join(cliFixtureRoot, "validation", "domain-runner.mjs"), fixtureRunner);
+  await writeFile(join(cliFixtureRoot, "validation", "run-domain.mjs"), fixtureDispatcher);
+
+  for (const id of remainingDomainIds) {
+    const filename = "validate-domain-" + id + ".mjs";
+    const source = await readFile(new URL("../" + filename, import.meta.url), "utf8");
+    const expectedThinSource = [
+      'import { runDomain } from "./validation/run-domain.mjs";',
+      "",
+      "// Keep the legacy CLI path, argv, and process boundary while sharing the manifest.",
+      'await runDomain("' + id + '");',
+      "",
+    ].join("\n");
+    assert.equal(source, expectedThinSource, id + ": keep the exact standalone CLI path and same-process delegation");
+    const expected = { id, ...expectedDomainOutput[id], validators: expectedValidators[id] };
+    const fixturePath = join(cliFixtureRoot, filename);
+    // Independent reconstruction of the actual previous wrapper contract.
+    const legacySource = [
+      'import { runDomainValidators } from "./validation/domain-runner.mjs";',
+      "const validators = " + JSON.stringify(expected.validators) + ";",
+      "await runDomainValidators({ domain: " + JSON.stringify(expected.prefix) +
+        ", title: " + JSON.stringify(expected.title) + ", validators, baseUrl: import.meta.url });",
+      "",
+    ].join("\n");
+
+    const scenarios = [
+      { name: "normal", args: [], failAt: "" },
+      { name: "extra argv", args: ["--cut04-legacy-extra", "fixture-value"], failAt: "" },
+      { name: "fail-fast", args: ["--cut04-legacy-extra"], failAt: expected.validators[1] },
+    ];
+    for (const scenario of scenarios) {
+      const runOptions = {
+        cwd: cliFixtureRoot, encoding: "utf8", timeout: 15_000, maxBuffer: 512 * 1024,
+        env: { ...process.env, MFL_CUT04_EXPECTED: JSON.stringify(expected), MFL_CUT04_FAIL_AT: scenario.failAt },
+      };
+      await writeFile(fixturePath, legacySource);
+      const baseline = spawnSync(process.execPath, [fixturePath, ...scenario.args], runOptions);
+      await writeFile(fixturePath, source);
+      const current = spawnSync(process.execPath, [fixturePath, ...scenario.args], runOptions);
+      const label = id + " / " + scenario.name;
+      assert.equal(baseline.error, undefined, label + ": legacy subprocess must start");
+      assert.equal(current.error, undefined, label + ": delegated subprocess must start");
+      assert.equal(current.signal, baseline.signal, label + ": termination signal parity");
+      assert.equal(current.status, baseline.status, label + ": exit status parity");
+      assert.equal(current.stdout, baseline.stdout, label + ": ordered output, argv, cwd, import URLs and titles");
+      if (scenario.failAt) {
+        assert.notEqual(current.status, 0, label + ": error must propagate as nonzero exit");
+        assert.equal(current.stderr.split("\n")[0], baseline.stderr.split("\n")[0], label + ": same failure marker");
+        assert.match(current.stderr, /CUT04 synthetic failure/, label + ": exception propagates");
+        assert.doesNotMatch(current.stdout, /validator domain passed/, label + ": no success summary on failure");
+        assert.equal(current.stdout.includes(expected.validators[2]), false, label + ": no validator after failure");
+      } else {
+        assert.equal(current.status, 0, label + ": success exit code");
+        assert.equal(current.stderr, baseline.stderr, label + ": stderr parity");
+        assert.equal(current.stderr, "", label + ": no unexpected stderr");
+      }
+    }
+  }
+} finally {
+  await rm(cliFixtureRoot, { recursive: true, force: true });
+}
+console.log("SIM-09A CUT-04.3D: nine preserved legacy CLI paths pass independent golden subprocess parity for argv, ordered logs, import URLs and success/fail-fast.");
+
+console.log("SIM-09A CUT-04.1: independent 214-validator/11-domain golden inventory, exact 63-slot ordering, output and failure contracts passed without deriving golden expectations from wrapper contents.");
