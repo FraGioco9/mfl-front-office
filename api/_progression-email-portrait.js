@@ -1,7 +1,6 @@
 const { PassThrough } = require("node:stream");
 const PImage = require("pureimage");
-const { createPortraitCloseUp } = require("./_portrait-close-up");
-const { loadPlayerPortraitBitmap, playerPortraitUrl } = require("./_player-portrait");
+const { createPortraitCloseUp, loadPlayerPortraitBitmap, playerPortraitUrl } = require("./_player-portrait");
 
 const PORTRAIT_CROP_HEIGHT_PX = 400;
 const PROGRESSION_EMAIL_PORTRAIT_HEIGHT_PX = 216;
