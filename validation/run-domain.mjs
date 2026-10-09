@@ -22,6 +22,10 @@ if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) 
     console.error("Usage: node validation/run-domain.mjs <domain-id>");
     process.exitCode = 2;
   } else {
-    await runDomain(args[0]);
+    // Legacy one-file runners had no positional args. A domain ID in argv[2]
+    // can be mistaken for a CLI argument by imported validator dependencies.
+    const domainId = args[0];
+    process.argv.splice(2);
+    await runDomain(domainId);
   }
 }

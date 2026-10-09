@@ -320,6 +320,11 @@ assert.match(allSource, /spawn\(\s*process\.execPath,\s*validatorCommand\(valida
 
 const dispatcherSource = await readFile(new URL("../validation/run-domain.mjs", import.meta.url), "utf8");
 assert.match(dispatcherSource, /baseUrl:\s*new URL\("\.\.\/",\s*import\.meta\.url\)/, "dispatcher imports must resolve from the repository root");
+assert.match(
+  dispatcherSource,
+  /process\.argv\.splice\(2\);[\s\S]*await runDomain\(domainId\)/,
+  "dispatcher must clear the CLI domain ID before importing validators so scripts inspecting argv[2] behave as in legacy one-file runners",
+);
 const dispatcherPath = fileURLToPath(new URL("../validation/run-domain.mjs", import.meta.url));
 const invalidDomain = spawnSync(process.execPath, [dispatcherPath, "not-a-domain"], {
   cwd: fileURLToPath(new URL("../", import.meta.url)),
