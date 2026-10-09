@@ -57,7 +57,7 @@ for (const entry of coreSourceManifest) {
 const sharedEntry = coreSourceManifest.find(({ domain }) => domain === "shared");
 invariant(
   sharedEntry?.source === "shared-foundations.js"
-    && sharedEntry?.sources?.length === 27
+    && sharedEntry?.sources?.length === 26
     && sharedEntry.sources[0] === "shared-foundations.js"
     && sharedEntry.sources[1] === "shared-session.js"
     && sharedEntry.sources[2] === "shared-routing.js"
@@ -76,15 +76,14 @@ invariant(
     && sharedEntry.sources[15] === "shared-modal-lifecycle.js"
     && sharedEntry.sources[16] === "shared-global-search.js"
     && sharedEntry.sources[17] === "shared-wallet-row-classification.js"
-    && sharedEntry.sources[18] === "shared-html-escaping.js"
-    && sharedEntry.sources[19] === "shared-incremental-routing.js"
-    && sharedEntry.sources[20] === "shared-interaction-bindings.js"
-    && sharedEntry.sources[21] === "shared-startup-lifecycle.js"
-    && sharedEntry.sources[22] === "shared-incremental-navigation.js"
-    && sharedEntry.sources[23] === "shared-route-runtime-gate.js"
-    && sharedEntry.sources[24] === "shared-core-contracts.js"
-    && sharedEntry.sources[25] === "shared-app-startup.js"
-    && sharedEntry.sources[26] === "shared-shell-navigation.js"
+    && sharedEntry.sources[18] === "shared-incremental-routing.js"
+    && sharedEntry.sources[19] === "shared-interaction-bindings.js"
+    && sharedEntry.sources[20] === "shared-startup-lifecycle.js"
+    && sharedEntry.sources[21] === "shared-incremental-navigation.js"
+    && sharedEntry.sources[22] === "shared-route-runtime-gate.js"
+    && sharedEntry.sources[23] === "shared-core-contracts.js"
+    && sharedEntry.sources[24] === "shared-app-startup.js"
+    && sharedEntry.sources[25] === "shared-shell-navigation.js"
     && sharedEntry.maxUniversalBytes === 355000,
   "Shared core must keep foundations before session before routing before transitions before page lifecycle before Home summary before table state before generic toast core before personal state before data/search before Evaluation lifecycle before Player first-paint/navigation before watchlist actions before Player display/calculation before Player action facades before generic modal lifecycle before Global Search lifecycle before linked-wallet/MFL row classification before universal HTML escaping before incremental routing/cache/request before global interaction bindings before Changelog/startup lifecycle before layout-centered feedback before incremental navigation orchestration before the stable route-runtime gate before explicit core contracts before application startup before shell navigation and retain the explicit 355000-byte universal no-growth ceiling.",
 );
@@ -105,8 +104,16 @@ const sharedPlayerDisplay = await read("./modules/core-sources/shared-player-dis
 const sharedPlayerActions = await read("./modules/core-sources/shared-player-actions.js");
 const sharedModalLifecycle = await read("./modules/core-sources/shared-modal-lifecycle.js");
 const sharedGlobalSearch = await read("./modules/core-sources/shared-global-search.js");
-const sharedWalletRowClassification = await read("./modules/core-sources/shared-wallet-row-classification.js");
-const sharedHtmlEscaping = await read("./modules/core-sources/shared-html-escaping.js");
+const sharedWalletAndHtml = await read("./modules/core-sources/shared-wallet-row-classification.js");
+const htmlEscapingBoundary = "\n\nfunction escapeHtml(value) {";
+const htmlEscapingIndex = sharedWalletAndHtml.indexOf(htmlEscapingBoundary);
+invariant(
+  htmlEscapingIndex > 0
+    && sharedWalletAndHtml.indexOf(htmlEscapingBoundary, htmlEscapingIndex + htmlEscapingBoundary.length) === -1,
+  "Shared wallet-row and HTML escaping owners must retain exactly one explicit lexical boundary.",
+);
+const sharedWalletRowClassification = sharedWalletAndHtml.slice(0, htmlEscapingIndex);
+const sharedHtmlEscaping = sharedWalletAndHtml.slice(htmlEscapingIndex + 2);
 const sharedIncrementalRouting = await read("./modules/core-sources/shared-incremental-routing.js");
 const sharedInteractionBindings = await read("./modules/core-sources/shared-interaction-bindings.js");
 const sharedStartupLifecycle = await read("./modules/core-sources/shared-startup-lifecycle.js");
@@ -223,6 +230,13 @@ invariant(
 );
 invariant(
   sharedHtmlEscaping.startsWith("function escapeHtml(value) {")
+    && [
+      ".replaceAll(\"&\", \"&amp;\")",
+      ".replaceAll(\"<\", \"&lt;\")",
+      ".replaceAll(\">\", \"&gt;\")",
+      ".replaceAll('\"', \"&quot;\")",
+      ".replaceAll(\"'\", \"&#39;\")",
+    ].every((step) => sharedHtmlEscaping.includes(step))
     && sharedHtmlEscaping.replace(/\s*$/, "").endsWith('.replaceAll("\'", "&#39;");\n}')
     && !sharedHtmlEscaping.includes("csvEscape"),
   "Shared HTML escaping must own the universal escapeHtml primitive without retaining the unused CSV helper.",
