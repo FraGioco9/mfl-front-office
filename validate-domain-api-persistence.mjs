@@ -1,44 +1,4 @@
-import { runDomainValidators } from "./validation/domain-runner.mjs";
+import { runDomain } from "./validation/run-domain.mjs";
 
-const validators = [
-  "validate-shared-api-logic.mjs",
-  "validate-request-body-limits.mjs",
-  "validate-wallet-proof.mjs",
-  "validate-wallet-challenge.mjs",
-  "validate-wallet-session.mjs",
-  "validate-wallet-session-integration.mjs",
-  "validate-wallet-auth-rate-limit.mjs",
-  "validate-wallet-mutation-origin.mjs",
-  "validate-csp-report-only.mjs",
-  "validate-vercel-security-headers.mjs",
-  "validate-csp-legacy-script-hashes.mjs",
-  "validate-csp-next-nonce.mjs",
-  "validate-csp-legacy-eval-elimination.mjs",
-  "validate-wallet-permission-cache.mjs",
-  "validate-data-read-cache-policy.mjs",
-  "validate-public-page-cache-policy.mjs",
-  "validate-database-stats-ownership.mjs",
-  "validate-my-clubs-data.mjs",
-  "validate-supabase-persistence.mjs",
-  "validate-supabase-private-grants.mjs",
-  "validate-wallet-core.mjs",
-  "validate-wallet-preferences-lifecycle.mjs",
-  "validate-wallet-preference-write-scoping.mjs",
-  "validate-evaluation-share-expiry.mjs",
-  "validate-evaluation-share-preview.mjs",
-  "validate-planner-persistence.mjs",
-  "validate-shared-link-boundaries.mjs",
-  "validate-share-api-fixtures.mjs",
-  "validate-auth-boundary.mjs",
-  "validate-evaluation-preview-portrait.mjs",
-  "validate-evaluation-preview-rarity-accent.mjs",
-  "validate-evaluation-preview-shell-path.mjs",
-  "validate-bug-report.mjs",
-];
-
-await runDomainValidators({
-  domain: "api/persistence",
-  title: "API/persistence",
-  validators,
-  baseUrl: import.meta.url,
-});
+// Keep the legacy CLI path, argv, and process boundary while sharing the manifest.
+await runDomain("api-persistence");

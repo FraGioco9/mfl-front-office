@@ -1,41 +1,4 @@
-import { runDomainValidators } from "./validation/domain-runner.mjs";
+import { runDomain } from "./validation/run-domain.mjs";
 
-const validators = [
-  "validate-css-priority.mjs",
-  "validate-runtime-style-ownership.mjs",
-  "validate-sidebar-lifecycle-ownership.mjs",
-  "validate-dropdown-style-ownership.mjs",
-  "validate-dropdown-foundations.mjs",
-  "validate-dropdown-trigger-open-highlight.mjs",
-  "validate-filter-popup-interactions.mjs",
-  "validate-active-filter-control.mjs",
-  "validate-table-hover-scroll.mjs",
-  "validate-control-style-ownership.mjs",
-  "validate-toast-positioning.mjs",
-  "validate-ui-foundations.mjs",
-  "validate-behavior-foundations.mjs",
-  "validate-shadow-foundations.mjs",
-  "validate-ui-foundations-ownership.mjs",
-  "validate-evaluation-mfl-usd-focus.mjs",
-  "validate-css-ownership-consolidation.mjs",
-  "validate-global-escape-ownership.mjs",
-  "validate-motion-ownership.mjs",
-  "validate-modal-entrance-lifecycle.mjs",
-  "validate-dialog-foundations.mjs",
-  "validate-z-index-ownership.mjs",
-  "validate-nationality-flag-tooltips.mjs",
-  "validate-checkbox-style.mjs",
-  "validate-account-button-icon.mjs",
-  "validate-theme-icons.mjs",
-  "validate-footer-redesign.mjs",
-  "validate-footer-creator-alignment.mjs",
-  "validate-footer-loading-stability.mjs",
-  "validate-privacy-page.mjs",
-];
-
-await runDomainValidators({
-  domain: "shared-ui",
-  title: "Shared UI",
-  validators,
-  baseUrl: import.meta.url,
-});
+// Keep the legacy CLI path, argv, and process boundary while sharing the manifest.
+await runDomain("shared-ui");
