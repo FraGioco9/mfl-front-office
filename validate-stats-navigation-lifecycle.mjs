@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { readCanonicalCoreSource } from "./validate-core-sources.mjs";
+import { domainSuites } from "./validation/domain-suites.mjs";
 
 const source = await Promise.all([
   Promise.resolve(readCanonicalCoreSource("shared")),
@@ -38,6 +39,9 @@ if (stateRuntime.includes("interaction-loading") || stateRuntime.includes('docum
 }
 if (
   !validators.includes('"validate-domain-stats.mjs"')
+  || !validators.includes('"validate-domain-stats.mjs": "stats"')
+  || !validators.includes('"validation/run-domain.mjs"')
+  || !domainSuites.stats.validators.includes("validate-stats-animation-owner.mjs")
   || !statsDomainValidators.includes('"validate-stats-animation-owner.mjs"')
 ) {
   throw new Error("The post-#184 single Stats animation ownership validation must remain active through the Stats domain suite.");

@@ -70,6 +70,18 @@ const validators = [
   "validate-accessibility-navigation-lifecycle.mjs",
 ];
 
+// CUT-02: keep legacy slot labels/order; only Club and Stats use the new CLI.
+const cutoverDomains = Object.freeze({
+  "validate-domain-stats.mjs": "stats",
+  "validate-domain-club.mjs": "club",
+});
+
+const validatorCommand = (validator) => (
+  Object.hasOwn(cutoverDomains, validator)
+    ? [resolve(siteRoot, "validation/run-domain.mjs"), cutoverDomains[validator]]
+    : [resolve(siteRoot, validator)]
+);
+
 const requestedConcurrency = Number.parseInt(process.env.MFL_VALIDATION_CONCURRENCY || "4", 10);
 const concurrency = Math.max(
   1,
@@ -82,7 +94,7 @@ function runValidator(validator) {
   return new Promise((resolveResult) => {
     const child = spawn(
       process.execPath,
-      [resolve(siteRoot, validator)],
+      validatorCommand(validator),
       {
         cwd: siteRoot,
         stdio: ["ignore", "pipe", "pipe"],
