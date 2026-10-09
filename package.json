@@ -9,7 +9,7 @@
     "build:styles": "node build-styles.mjs",
     "build:html": "node build-html.mjs",
     "build:responsive": "node build-responsive.mjs",
-    "build:legacy": "npm run build:html && npm run build:responsive && npm run build:core && npm run build:styles",
+    "build:legacy": "npm run build:html && npm run build:core && npm run build:styles",
     "build:public": "node prepare-next-runtime.mjs",
     "build": "npm run build:legacy && npm run build:public && next build --webpack",
     "start": "next start -p 4000",
