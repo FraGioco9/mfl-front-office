@@ -1,3 +1,5 @@
+import { runDomainValidators } from "./validation/domain-runner.mjs";
+
 const validators = [
   "validate-loading-ownership.mjs",
   "validate-data-shaped-loading-foundation.mjs",
@@ -25,14 +27,9 @@ const validators = [
   "validate-performance-capture.mjs",
 ];
 
-for (const validator of validators) {
-  console.log(`[routing/loading] ${validator}`);
-  try {
-    await import(new URL(`./${validator}`, import.meta.url));
-  } catch (error) {
-    console.error(`[routing/loading] FAILED ${validator}`);
-    throw error;
-  }
-}
-
-console.log(`Routing/loading validator domain passed: ${validators.length} validators in one process.`);
+await runDomainValidators({
+  domain: "routing/loading",
+  title: "Routing/loading",
+  validators,
+  baseUrl: import.meta.url,
+});
