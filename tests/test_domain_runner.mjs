@@ -488,4 +488,64 @@ try {
   await rm(scratch, { recursive: true, force: true });
 }
 
+// CUT-04.3C: executable parity against an INDEPENDENT golden reconstruction of
+// the pre-cutover entrypoint. Neither the golden inventory nor this baseline
+// reads the actual Club/Stats wrapper source files.
+const cliRoot = fileURLToPath(new URL("../", import.meta.url));
+for (const domain of ["club", "stats"]) {
+  const wrapperUrl = new URL("../validate-domain-" + domain + ".mjs", import.meta.url);
+  const wrapperPath = fileURLToPath(wrapperUrl);
+  const expected = expectedDomainOutput[domain];
+  const validators = expectedValidators[domain];
+
+  for (const extraArgs of [[], ["--cut04-legacy-extra"]]) {
+    const legacyProgram = [
+      "import { runDomainValidators } from " + JSON.stringify(helperUrl) + ";",
+      // The legacy filename and positional argv remain observable to imports.
+      "process.argv = [process.execPath, " + JSON.stringify(wrapperPath) +
+        ", ..." + JSON.stringify(extraArgs) + "];",
+      "await runDomainValidators({ domain: " + JSON.stringify(expected.prefix) +
+        ", title: " + JSON.stringify(expected.title) +
+        ", validators: " + JSON.stringify(validators) +
+        ", baseUrl: new URL(" + JSON.stringify(wrapperUrl.href) + ") });",
+    ].join("\n");
+    const options = { cwd: cliRoot, encoding: "utf8", timeout: 90_000, maxBuffer: 16 * 1024 * 1024 };
+    const legacy = spawnSync(process.execPath, ["--input-type=module", "--eval", legacyProgram], options);
+    const current = spawnSync(process.execPath, [wrapperPath, ...extraArgs], options);
+    const label = domain + (extraArgs.length ? " with legacy extra argv" : " with no args");
+    assert.equal(legacy.error, undefined, label + ": reference process must start");
+    assert.equal(current.error, undefined, label + ": wrapper process must start");
+    assert.equal(current.signal, legacy.signal, label + ": same termination signal");
+    assert.equal(current.status, legacy.status, label + ": same exit status");
+    if (extraArgs.length === 0) assert.equal(current.status, 0, label + ": success required");
+    assert.equal(current.stdout, legacy.stdout, label + ": ordered log output must match");
+    if (legacy.status === 0) {
+      assert.equal(current.stderr, legacy.stderr, label + ": no new warnings/errors");
+      assert.equal(current.stderr, "", label + ": zero stderr on successful validation");
+      assert.match(current.stdout, new RegExp(expected.title + " validator domain passed: " + validators.length + " validators in one process\\."));
+    } else {
+      // Node's stack trace contains a different physical entrypoint in the
+      // golden --eval child. Preserve the observable failure prefix instead.
+      assert.match(current.stderr, /FAILED|Error:/, label + ": failure must remain visible");
+      assert.match(legacy.stderr, /FAILED|Error:/, label + ": reference failure must remain visible");
+    }
+  }
+}
+
+// runDomain is the same awaited helper for both thin entrypoints: a rejected
+// domain propagates as a nonzero process exit rather than being swallowed.
+const invalidProgram = [
+  "import { runDomain } from " +
+    JSON.stringify(new URL("../validation/run-domain.mjs", import.meta.url).href) + ";",
+  'await runDomain("cut04-unknown-domain");',
+].join("\n");
+const invalidHelper = spawnSync(process.execPath, ["--input-type=module", "--eval", invalidProgram], {
+  cwd: cliRoot, encoding: "utf8", timeout: 15_000,
+});
+assert.equal(invalidHelper.error, undefined);
+assert.notEqual(invalidHelper.status, 0);
+assert.match(invalidHelper.stderr, /Unknown validation domain: cut04-unknown-domain/);
+
+console.log("SIM-09A CUT-04.3C: legacy Club/Stats CLI, extra argv, golden order/logs, status and failure propagation parity passed.");
+
 console.log("SIM-09A CUT-04.1: independent 214-validator/11-domain golden inventory, exact 63-slot ordering, output and failure contracts passed without reading legacy wrappers.");
