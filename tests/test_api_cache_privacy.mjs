@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
+import { domainSuites } from "../validation/domain-suites.mjs";
 
 const require = createRequire(import.meta.url);
 const {
@@ -135,7 +136,6 @@ const [
   evaluationPreviewImage,
   operationalHealth,
   shareFixture,
-  apiPersistenceDomain,
 ] = await Promise.all([
   read("../api/_handler-planner-share.js"),
   read("../api/_handler-evaluation-share.js"),
@@ -143,7 +143,6 @@ const [
   read("../api/_handler-evaluation-preview-image.js"),
   read("../api/_handler-operational-health.js"),
   read("../validate-share-api-fixtures.mjs"),
-  read("../validate-domain-api-persistence.mjs"),
 ]);
 
 for (const [name, source] of [
@@ -175,7 +174,7 @@ assert(
   "The share fixture must retain the revoke-after-read regression.",
 );
 assert(
-  apiPersistenceDomain.includes('"validate-share-api-fixtures.mjs"'),
+  domainSuites["api-persistence"].validators.includes("validate-share-api-fixtures.mjs"),
   "The share revoke fixture must remain part of the aggregate API persistence gate.",
 );
 
