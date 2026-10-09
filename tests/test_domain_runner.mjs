@@ -147,6 +147,66 @@ const expectedValidators = {
     "validate-client-performance-timing.mjs",
     "validate-performance-capture.mjs",
   ],
+  "shared-ui": [
+    "validate-css-priority.mjs",
+    "validate-runtime-style-ownership.mjs",
+    "validate-sidebar-lifecycle-ownership.mjs",
+    "validate-dropdown-style-ownership.mjs",
+    "validate-dropdown-foundations.mjs",
+    "validate-dropdown-trigger-open-highlight.mjs",
+    "validate-filter-popup-interactions.mjs",
+    "validate-active-filter-control.mjs",
+    "validate-table-hover-scroll.mjs",
+    "validate-control-style-ownership.mjs",
+    "validate-toast-positioning.mjs",
+    "validate-ui-foundations.mjs",
+    "validate-behavior-foundations.mjs",
+    "validate-shadow-foundations.mjs",
+    "validate-ui-foundations-ownership.mjs",
+    "validate-evaluation-mfl-usd-focus.mjs",
+    "validate-css-ownership-consolidation.mjs",
+    "validate-global-escape-ownership.mjs",
+    "validate-motion-ownership.mjs",
+    "validate-modal-entrance-lifecycle.mjs",
+    "validate-dialog-foundations.mjs",
+    "validate-z-index-ownership.mjs",
+    "validate-nationality-flag-tooltips.mjs",
+    "validate-checkbox-style.mjs",
+    "validate-account-button-icon.mjs",
+    "validate-theme-icons.mjs",
+    "validate-footer-redesign.mjs",
+    "validate-footer-creator-alignment.mjs",
+    "validate-footer-loading-stability.mjs",
+    "validate-privacy-page.mjs",
+  ],
+  "table": [
+    "validate-table-route-core.mjs",
+    "validate-pager-current-page.mjs",
+    "validate-pager-cached-route-restore.mjs",
+    "validate-single-page-pager-render-commit.mjs",
+    "validate-table-column-layout.mjs",
+    "validate-table-foundations.mjs",
+    "validate-table-progression-spacing.mjs",
+    "validate-table-row-vertical-centering.mjs",
+    "validate-table-header-typography.mjs",
+    "validate-mobile-sticky-name-column.mjs",
+    "validate-table-filter-selection-lifecycle.mjs",
+    "validate-filtered-empty-recovery.mjs",
+    "validate-empty-onboarding.mjs",
+    "validate-table-url-state.mjs",
+    "validate-listing-column.mjs",
+    "validate-marketplace-state-freshness.mjs",
+    "validate-table-count-fast-path.mjs",
+    "validate-player-table-actions.mjs",
+    "validate-player-table-action-menu-rerender.mjs",
+    "validate-player-table-action-menu-scroll.mjs",
+    "validate-selection-action-menu-readiness.mjs",
+    "validate-table-sort-session.mjs",
+    "validate-progression-sorting.mjs",
+    "validate-header-selection-loading.mjs",
+    "validate-new-player-icon.mjs",
+    "validate-progression-joined-agency-filter.mjs",
+  ],
 };
 
 const allSource = await readFile(new URL("../validate-all.mjs", import.meta.url), "utf8");
@@ -158,19 +218,21 @@ for (const [domain, expected] of Object.entries(expectedValidators)) {
   assert.deepEqual(listed, expected, domain + " must retain the original validator list and order");
   assert.match(source, /runDomainValidators\(/, domain + " must use the shared executor");
   assert.match(source, /baseUrl:\s*import\.meta\.url/, domain + " must preserve relative imports");
-  if (["evaluation", "responsive-ui", "route-features", "routing-loading"].includes(domain)) {
+  if (["evaluation", "responsive-ui", "route-features", "routing-loading", "shared-ui", "table"].includes(domain)) {
     const contract = {
       evaluation: ["evaluation", "Evaluation"],
       "responsive-ui": ["responsive-ui", "Responsive UI"],
       "route-features": ["route-features", "Route-features"],
       "routing-loading": ["routing/loading", "Routing/loading"],
+      "shared-ui": ["shared-ui", "Shared UI"],
+      table: ["table", "Table"],
     }[domain];
     assert.ok(source.includes('domain: "' + contract[0] + '"'), domain + " must retain the original log prefix");
     assert.ok(source.includes('title: "' + contract[1] + '"'), domain + " must retain the original success summary");
   }
   assert.match(allSource, new RegExp('"validate-domain-' + domain + '\\.mjs"'), domain + " must stay in validate-all");
 }
-assert.equal(Object.values(expectedValidators).flat().length, 125);
+assert.equal(Object.values(expectedValidators).flat().length, 181);
 
 const helperUrl = new URL("../validation/domain-runner.mjs", import.meta.url).href;
 const scratch = await mkdtemp(join(tmpdir(), "mfl-sim08-domain-runner-"));
@@ -232,4 +294,4 @@ try {
   await rm(scratch, { recursive: true, force: true });
 }
 
-console.log("SIM-08: eight domains (125 validators), nested imports, shared-process ordering, logs, fail-fast and exit contract passed.");
+console.log("SIM-08: ten domains (181 validators), nested imports, shared-process ordering, logs, fail-fast and exit contract passed.");
