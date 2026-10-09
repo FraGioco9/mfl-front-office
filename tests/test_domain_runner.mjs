@@ -632,7 +632,7 @@ try {
         assert.equal(current.stderr.split("\n")[0], baseline.stderr.split("\n")[0], label + ": same failure marker");
         assert.match(current.stderr, /CUT04 synthetic failure/, label + ": exception propagates");
         assert.doesNotMatch(current.stdout, /validator domain passed/, label + ": no success summary on failure");
-        assert.equal(current.stdout.includes(expected.validators[2]), false, label + ": no validator after failure");
+        assert.equal(current.stdout.includes("[" + expected.prefix + "] " + expected.validators[2]), false, label + ": no validator after failure");
       } else {
         assert.equal(current.status, 0, label + ": success exit code");
         assert.equal(current.stderr, baseline.stderr, label + ": stderr parity");
