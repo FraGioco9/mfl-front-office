@@ -1,3 +1,5 @@
+import { runDomainValidators } from "./validation/domain-runner.mjs";
+
 const validators = [
   "validate-shared-api-logic.mjs",
   "validate-request-body-limits.mjs",
@@ -34,14 +36,9 @@ const validators = [
   "validate-bug-report.mjs",
 ];
 
-for (const validator of validators) {
-  console.log(`[api/persistence] ${validator}`);
-  try {
-    await import(new URL(`./${validator}`, import.meta.url));
-  } catch (error) {
-    console.error(`[api/persistence] FAILED ${validator}`);
-    throw error;
-  }
-}
-
-console.log(`API/persistence validator domain passed: ${validators.length} validators in one process.`);
+await runDomainValidators({
+  domain: "api/persistence",
+  title: "API/persistence",
+  validators,
+  baseUrl: import.meta.url,
+});
