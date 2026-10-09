@@ -344,12 +344,12 @@ for (const [domain, expected] of Object.entries(expectedValidators)) {
   assert.deepEqual(suite.validators, expected, domain + " manifest must match the independent ordered golden validator list");
   assert.equal(suite.domain, output.prefix, domain + " must preserve the exact log prefix");
   assert.equal(suite.title, output.title, domain + " must preserve the exact success summary");
-  assert.match(allSource, new RegExp('"validate-domain-' + domain + '\\\\.mjs"'), domain + " must retain its legacy scheduler slot label");
+  assert.match(allSource, new RegExp('"validate-domain-' + domain + '\\.mjs"'), domain + " must retain its legacy scheduler slot label");
 }
 // The golden inventory must point to real validator modules, including nested paths.
 const expectedFiles = [...new Set(Object.values(expectedValidators).flat())];
 await Promise.all(expectedFiles.map(async (validator) => {
-  assert.match(validator, /^(?:[a-z0-9-]+\\/)*[a-z0-9-]+\\.mjs$/i, "unexpected validator path: " + validator);
+  assert.match(validator, /^(?:[a-z0-9-]+\/)*[a-z0-9-]+\.mjs$/i, "unexpected validator path: " + validator);
   await access(new URL("../" + validator, import.meta.url));
 }));
 assert.equal(Object.values(expectedValidators).flat().length, 214);
