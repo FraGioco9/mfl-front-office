@@ -119,7 +119,7 @@ jobs:
           import fs from 'node:fs';
           import path from 'node:path';
           const dir=path.join(process.env.RUNNER_TEMP,'cut04-result');
-          const r=JSON.parse(fs.readFileSync(path.join(dir,'cut04-scan.json'),'utf8'));
+          const r=JSON.parse(fs.readFileSync(path.join(dir,'r0b-scan.json'),'utf8'));
           const build=fs.readFileSync(path.join(dir,'next-build-status.txt'),'utf8').trim();
           console.log('CUT04_AUDIT_SUMMARY_START');
           console.log(JSON.stringify({sha:r.sha,files:r.files,rootValidators:r.root_validators,edges:r.edges,evidenceKinds:r.evidenceKindCounts,dynamicSitesFull:r.dynamicSites.length,ambiguousBasename:r.ambiguousBasenameMatches.length,parseWarnings:r.parseWarnings,noDetectedInbound:r.unreferenced_NOT_SAFE,build,externalCliConsumers:'UNKNOWN',deleteCertified:0},null,2));
