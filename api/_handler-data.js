@@ -16,9 +16,9 @@ const {
   searchData,
   summaryData,
   mflStatsData,
+  filterOptionsData,
 } = require("./_data-views");
 const { myClubsData, myClubsCompetitionsData } = require("./_clubs");
-const { filterOptionsData } = require("./_filter-options");
 const { databaseStatsData } = require("./_database-stats");
 const { mflStatsSummaryData } = require("./_mfl-stats-summary");
 

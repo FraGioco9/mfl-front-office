@@ -178,6 +178,107 @@ assert(
   "The share revoke fixture must remain part of the aggregate API persistence gate.",
 );
 
+
+// MERGE-I1: the public data route must preserve conditional revalidation and privacy
+// independently of the SQLite nationality fixture in test_unicode_search_edges.mjs.
+{
+  let generation = "2026-10-05T00:00:00Z";
+  let walletAttempts = 0;
+  let queryAttempts = 0;
+  let failQuery = false;
+  const loggedErrors = [];
+  const filterPayload = () => {
+    queryAttempts += 1;
+    if (failQuery) throw new Error("synthetic SQLite failure");
+    return { nationalities: ["FR", "IT", "it", "Éire"], generatedAt: generation, source: "sqlite-runtime" };
+  };
+  const dataHandler = loadHandler("../api/_handler-data.js", {
+    "../api/_data-auth.js": {
+      ...require("../api/_data-auth.js"),
+      signedWalletFromRequest: async () => { walletAttempts += 1; throw new Error("Unexpected wallet access for public filter-options."); },
+      walletAllowed: async () => { walletAttempts += 1; throw new Error("Unexpected permission lookup."); },
+    },
+    "../api/_database.js": { getGeneratedAt: () => generation },
+    "../api/_data-views.js": { filterOptionsData: filterPayload },
+    "../api/_data-page.js": { pagedData: async () => { throw new Error("Unexpected page data."); } },
+    "../api/_data-cache-policy.js": { publicPageSnapshotEligible: () => false },
+    "../api/_request-log.js": { createRequestLog: () => ({
+      info() {},
+      error(event, fields) { loggedErrors.push({ event, fields }); },
+    }) },
+    "../api/_clubs.js": { myClubsData() {}, myClubsCompetitionsData() {} },
+    "../api/_database-stats.js": { databaseStatsData() {} },
+    "../api/_mfl-stats-summary.js": { mflStatsSummaryData() {} },
+  });
+  async function requestFilter({ url = "/api/data?mode=filter-options", headers = {}, method = "GET" } = {}) {
+    const response = responseFixture();
+    await dataHandler({ method, url, query: { mode: "filter-options" }, headers }, response);
+    return response;
+  }
+  const first = await requestFilter();
+  assert.equal(first.statusCode, 200);
+  assert.deepEqual(JSON.parse(first.body), {
+    nationalities: ["FR", "IT", "it", "Éire"],
+    generatedAt: generation,
+    source: "sqlite-runtime",
+  });
+  assert.equal(first.getHeader("content-type"), "application/json; charset=utf-8");
+  assert.equal(first.getHeader("cache-control"), PUBLIC_REVALIDATE_CACHE_CONTROL);
+  assert.equal(first.getHeader("cdn-cache-control"), "no-store, max-age=0");
+  assert.equal(first.getHeader("vercel-cdn-cache-control"), "no-store, max-age=0");
+  assert.match(first.getHeader("server-timing"), /total;dur=/);
+  const etag = snapshotEtag(generation, "/api/data?mode=filter-options");
+  assert.equal(first.getHeader("etag"), etag);
+  assert.equal(queryAttempts, 1);
+  assert.equal(walletAttempts, 0);
+
+  for (const conditional of [etag, "W/" + etag, '"unrelated", W/' + etag]) {
+    const hit = await requestFilter({ headers: { "if-none-match": conditional } });
+    assert.equal(hit.statusCode, 304);
+    assert.equal(hit.body, "");
+    assert.equal(hit.getHeader("etag"), etag);
+    assert.equal(hit.getHeader("cache-control"), PUBLIC_REVALIDATE_CACHE_CONTROL);
+    assert.equal(hit.getHeader("cdn-cache-control"), "no-store, max-age=0");
+    assert.equal(hit.getHeader("vercel-cdn-cache-control"), "no-store, max-age=0");
+    assert.equal(queryAttempts, 1, "304 must return before any nationality SQL.");
+    assert.equal(walletAttempts, 0, "304 must not authenticate a wallet.");
+  }
+
+  const urlMiss = await requestFilter({
+    url: "/api/data?mode=filter-options&unused=1",
+    headers: { "if-none-match": etag },
+  });
+  assert.equal(urlMiss.statusCode, 200);
+  assert.notEqual(urlMiss.getHeader("etag"), etag, "The exact request URL must participate in ETag identity.");
+  assert.equal(queryAttempts, 2);
+
+  generation = "2026-10-06T00:00:00Z";
+  const generationMiss = await requestFilter({ headers: { "if-none-match": etag } });
+  assert.equal(generationMiss.statusCode, 200);
+  assert.notEqual(generationMiss.getHeader("etag"), etag);
+  assert.equal(JSON.parse(generationMiss.body).generatedAt, generation);
+  assert.equal(queryAttempts, 3);
+
+  const nonGet = await requestFilter({ method: "POST" });
+  assert.equal(nonGet.statusCode, 405);
+  assert.equal(nonGet.getHeader("allow"), "GET");
+  assert.equal(nonGet.getHeader("cache-control"), "no-store");
+  assert.equal(nonGet.getHeader("etag"), undefined);
+  assert.equal(queryAttempts, 3, "Non-GET must not access the filter SQL.");
+
+  failQuery = true;
+  const failed = await requestFilter();
+  assert.equal(failed.statusCode, 500);
+  assert.equal(failed.getHeader("cache-control"), "no-store");
+  assert.equal(failed.getHeader("cdn-cache-control"), "no-store, max-age=0");
+  assert.equal(failed.getHeader("etag"), undefined);
+  assert.match(JSON.parse(failed.body).error, /synthetic SQLite failure/);
+  assert.equal(JSON.parse(failed.body).code, "internal_error");
+  assert.equal(loggedErrors.at(-1)?.event, "query_failed");
+  assert.equal(queryAttempts, 4);
+  assert.equal(walletAttempts, 0);
+}
+
 console.log("API03_CACHE_PRIVACY_PASS " + JSON.stringify({
   conditionalRevalidation: true,
   publicBrowserOnly: true,
