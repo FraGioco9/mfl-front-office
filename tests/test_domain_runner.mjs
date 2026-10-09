@@ -278,27 +278,41 @@ for (const [domain, expected] of Object.entries(expectedValidators)) {
 assert.equal(Object.values(expectedValidators).flat().length, 214);
 assert.equal(Object.values(domainSuites).flatMap((suite) => suite.validators).length, 214);
 
-// CUT-02: only Club and Stats route through the dispatcher; all other slots
-// still execute their original scripts. Preserve the 63 slots and their labels.
+// CUT-03: all eleven domains route through the dispatcher; the other 52
+// standalone slots keep their original scripts, order and log labels.
 const slotNames = Array.from(
   allSource.match(/const validators = \[([\s\S]*?)\];/)?.[1]?.matchAll(/"([^"]+\.mjs)"/g) || [],
   (entry) => entry[1],
 );
 assert.equal(slotNames.length, 63, "validate-all must preserve its 63 ordered slots");
 const cutoverBlock = allSource.match(/const cutoverDomains = Object\.freeze\(\{([\s\S]*?)\}\);/);
-assert.ok(cutoverBlock, "validate-all must declare the CUT-02 dispatcher mapping");
+assert.ok(cutoverBlock, "validate-all must declare the CUT-03 dispatcher mapping");
 const cutoverEntries = Array.from(
   cutoverBlock[1].matchAll(/"([^"]+\.mjs)":\s*"([^"]+)"/g),
   (entry) => [entry[1], entry[2]],
 );
+const expectedDomainEntries = Object.keys(expectedValidators).map((id) => [
+  "validate-domain-" + id + ".mjs",
+  id,
+]);
+assert.equal(cutoverEntries.length, 11, "CUT-03 must dispatch eleven domain suites");
 assert.deepEqual(
   Object.fromEntries(cutoverEntries),
-  { "validate-domain-stats.mjs": "stats", "validate-domain-club.mjs": "club" },
-  "CUT-02 must dispatch exactly Club and Stats (not the other nine domains)",
+  Object.fromEntries(expectedDomainEntries),
+  "every declared domain must be dispatched exactly once, with the correct ID",
 );
 assert.deepEqual(
   cutoverEntries.map(([slot]) => slot).sort(),
-  ["validate-domain-club.mjs", "validate-domain-stats.mjs"],
+  expectedDomainEntries.map(([slot]) => slot).sort(),
+  "no standalone script may be routed through the domain dispatcher",
+);
+assert.ok(cutoverEntries.every(([slot, id]) =>
+  slotNames.includes(slot) && Object.hasOwn(domainSuites, id)
+), "every domain command must resolve to an existing legacy slot and manifest suite");
+assert.equal(
+  slotNames.filter((slot) => !Object.hasOwn(Object.fromEntries(cutoverEntries), slot)).length,
+  52,
+  "all 52 standalone scripts must retain their own child processes",
 );
 assert.match(allSource, /Object\.hasOwn\(cutoverDomains,\s*validator\)/);
 assert.match(allSource, /resolve\(siteRoot,\s*"validation\/run-domain\.mjs"\)/);
@@ -386,4 +400,4 @@ try {
   await rm(scratch, { recursive: true, force: true });
 }
 
-console.log("SIM-09A CUT-02: only Club/Stats use the dispatcher, 63 slots and 214 validator contracts preserved.");
+console.log("SIM-09A CUT-03: eleven domains use the dispatcher, 52 standalone slots and 214 validator contracts preserved.");

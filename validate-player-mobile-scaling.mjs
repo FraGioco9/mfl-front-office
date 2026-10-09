@@ -1,7 +1,8 @@
 import { readValidationText } from "./validation-text.mjs";
+import { domainSuites } from "./validation/domain-suites.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
-const [responsive, styles, bootstrap, staticUi, player, sharedTableUi, scrollbars, appConfig, responsiveDomain, routeDomain] = await Promise.all([
+const [responsive, styles, bootstrap, staticUi, player, sharedTableUi, scrollbars, appConfig] = await Promise.all([
   read("./responsive.css"),
   read("./styles-base.css"),
   read("./bootstrap.js"),
@@ -10,8 +11,6 @@ const [responsive, styles, bootstrap, staticUi, player, sharedTableUi, scrollbar
   read("./shared-table-ui-runtime.js"),
   read("./scrollbars.css"),
   read("./modules/app-config.js"),
-  read("./validate-domain-responsive-ui.mjs"),
-  read("./validate-domain-route-features.mjs"),
 ]);
 
 const invariant = (condition, message) => { if (!condition) throw new Error(message); };
@@ -265,8 +264,8 @@ for (const required of [
 
 invariant(!sharedTableUi.includes("function renderedViewItems("), "Horizontal cue overflow detection must not reintroduce per-child rendered-item layout scans.");
 invariant(!sharedTableUi.includes("function viewContentWidth("), "Horizontal cue overflow detection must use native scroll geometry instead of per-child width measurement.");
-invariant(responsiveDomain.includes('"validate-player-mobile-scaling.mjs"'), "Player mobile regression must live in the responsive validator domain.");
-invariant(!routeDomain.includes('"validate-player-mobile-scaling.mjs"'), "Player mobile regression must not remain in the route-feature domain.");
+invariant(domainSuites["responsive-ui"].validators.includes("validate-player-mobile-scaling.mjs"), "Player mobile regression must live in the responsive validator domain.");
+invariant(!domainSuites["route-features"].validators.includes("validate-player-mobile-scaling.mjs"), "Player mobile regression must not remain in the route-feature domain.");
 invariant(!player.includes("!important"), "Player mobile scaling must not use !important.");
 invariant(!player.includes('matchMedia("(max-width:'), "Player sizing must stay CSS-owned without runtime viewport branches.");
 invariant(!sharedTableUi.includes("setViewScrollButtonVisible(button, false);\n    setViewScrollButtonVisible(leftButton, false);\n    const overflowing"), "Horizontal view cues must not be transiently hidden before every direction recomputation, otherwise arrows/fades visibly reappear after Player hydration or view switches.");

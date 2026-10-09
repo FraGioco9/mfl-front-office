@@ -16,7 +16,6 @@ const source = await Promise.all([
 const runtime = await readFile(new URL("./modules/app-core-runtime.js", import.meta.url), "utf8");
 const stateRuntime = await readFile(new URL("./database-stats-state-runtime.js", import.meta.url), "utf8");
 const validators = await readFile(new URL("./validate-all.mjs", import.meta.url), "utf8");
-const statsDomainValidators = await readFile(new URL("./validate-domain-stats.mjs", import.meta.url), "utf8");
 
 for (const retiredOwner of ["normalizeStatsNavigationLifecycle", "statsNavigationArtifacts", "app-core-build-normalizer"]) {
   if (source.includes(retiredOwner) || runtime.includes(retiredOwner)) {
@@ -42,7 +41,6 @@ if (
   || !validators.includes('"validate-domain-stats.mjs": "stats"')
   || !validators.includes('"validation/run-domain.mjs"')
   || !domainSuites.stats.validators.includes("validate-stats-animation-owner.mjs")
-  || !statsDomainValidators.includes('"validate-stats-animation-owner.mjs"')
 ) {
   throw new Error("The post-#184 single Stats animation ownership validation must remain active through the Stats domain suite.");
 }

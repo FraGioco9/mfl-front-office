@@ -70,10 +70,20 @@ const validators = [
   "validate-accessibility-navigation-lifecycle.mjs",
 ];
 
-// CUT-02: keep legacy slot labels/order; only Club and Stats use the new CLI.
+// CUT-03: keep all 63 legacy slot labels, but dispatch every domain suite
+// via the shared CLI (one child process per domain).
 const cutoverDomains = Object.freeze({
+  "validate-domain-build-generated.mjs": "build-generated",
+  "validate-domain-route-features.mjs": "route-features",
+  "validate-domain-release-deployment.mjs": "release-deployment",
+  "validate-domain-api-persistence.mjs": "api-persistence",
+  "validate-domain-shared-ui.mjs": "shared-ui",
+  "validate-domain-responsive-ui.mjs": "responsive-ui",
+  "validate-domain-routing-loading.mjs": "routing-loading",
+  "validate-domain-evaluation.mjs": "evaluation",
   "validate-domain-stats.mjs": "stats",
   "validate-domain-club.mjs": "club",
+  "validate-domain-table.mjs": "table",
 });
 
 const validatorCommand = (validator) => (
