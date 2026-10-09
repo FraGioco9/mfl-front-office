@@ -17,7 +17,7 @@ const {
 const {
   PORTRAIT_CROP_HEIGHT_PX,
   createPortraitCloseUp,
-} = require("./api/_portrait-close-up.js");
+} = require("./api/_player-portrait.js");
 const {
   GLOW_PADDING_PX,
   GLOW_BLUR_EXTENT_PX,
@@ -154,6 +154,45 @@ assert(
     && croppedPortrait.data[croppedRightOffset + 3] === 255,
   "The close-up crop must retain the source image's right edge instead of cropping the width.",
 );
+
+// I7: the canonical owner must retain byte-identical top-row RGBA crop behavior.
+assert(createPortraitCloseUp(null) === null, "Null portraits must not create a crop.");
+assert(createPortraitCloseUp({ width: 0, height: 10, data: new Uint8Array(0) }) === null,
+  "Zero-width portraits must be rejected.");
+assert(createPortraitCloseUp({ width: 2, height: 2, data: [] }) === null,
+  "A portrait without Uint8Array pixels must be rejected.");
+const cropBoundarySource = PImage.make(2, 700);
+cropBoundarySource.data.fill(0);
+for (const [row, rgba] of [
+  [399, [11, 22, 33, 44]],
+  [400, [55, 66, 77, 88]],
+  [499, [101, 102, 103, 104]],
+  [500, [111, 112, 113, 114]],
+]) cropBoundarySource.data.set(rgba, row * cropBoundarySource.width * 4);
+const originalPixels = Buffer.from(cropBoundarySource.data);
+const evaluationCrop = createPortraitCloseUp(cropBoundarySource);
+const progressionCrop = createPortraitCloseUp(cropBoundarySource, 400);
+assert(evaluationCrop?.width === 2 && evaluationCrop.height === 500,
+  "Evaluation must crop exactly the top 500 rows at full width.");
+assert(progressionCrop?.width === 2 && progressionCrop.height === 400,
+  "Progression must crop exactly the top 400 rows at full width.");
+assert(Buffer.from(evaluationCrop.data).equals(originalPixels.subarray(0, 500 * 2 * 4)),
+  "Evaluation top-500 crop must copy the original RGBA bytes exactly.");
+assert(Buffer.from(progressionCrop.data).equals(originalPixels.subarray(0, 400 * 2 * 4)),
+  "Progression top-400 crop must copy the original RGBA bytes exactly.");
+assert(Buffer.from(cropBoundarySource.data).equals(originalPixels),
+  "Cropping must not mutate the source pixel array.");
+assert(createPortraitCloseUp(cropBoundarySource, 400.9)?.height === 400,
+  "Positive fractional crop heights must floor.");
+assert(createPortraitCloseUp(cropBoundarySource, 0)?.height === 500
+  && createPortraitCloseUp(cropBoundarySource, Number.POSITIVE_INFINITY)?.height === 500,
+  "Invalid crop heights must fall back to the default 500px height.");
+assert(createPortraitCloseUp(cropBoundarySource, 0.1)?.height === 1,
+  "Positive subpixel crop heights must clamp to one row.");
+const shortCropSource = PImage.make(2, 300);
+assert(createPortraitCloseUp(shortCropSource)?.height === 300
+  && createPortraitCloseUp(shortCropSource, 400)?.height === 300,
+  "A crop must not exceed source height.");
 
 const scalablePortrait = PImage.make(1000, 500);
 scalablePortrait.data.fill(0);

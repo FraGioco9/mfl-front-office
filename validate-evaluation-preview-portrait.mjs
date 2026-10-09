@@ -77,7 +77,8 @@ assert(
   "The portrait must render before the player name so the name may spill over the image and remain on top.",
 );
 assert(
-  previewCard.includes('require("./_portrait-close-up")')
+  previewCard.includes('const { loadPlayerPortraitBitmap, createPortraitCloseUp } = require("./_player-portrait");')
+    && !previewCard.includes('require("./_portrait-close-up")')
     && previewCard.includes("const portrait = createPortraitCloseUp(source) || source;")
     && previewCard.includes("fitPortraitDrawGeometry(portrait, bounds, glowColor)")
     && previewCard.includes("portraitGlowTopOffsetPx(source, px(height), silhouetteMetrics)")

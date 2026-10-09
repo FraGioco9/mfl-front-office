@@ -2,8 +2,7 @@ const { PassThrough, Readable } = require("node:stream");
 const path = require("node:path");
 const PImage = require("pureimage");
 const { formatEvaluationPreviewCurrency } = require("./_evaluation-preview-value");
-const { loadPlayerPortraitBitmap } = require("./_player-portrait");
-const { createPortraitCloseUp } = require("./_portrait-close-up");
+const { loadPlayerPortraitBitmap, createPortraitCloseUp } = require("./_player-portrait");
 const {
   portraitSilhouetteMetrics,
   portraitGlowTopOffsetPx,
