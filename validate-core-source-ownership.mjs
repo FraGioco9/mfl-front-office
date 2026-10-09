@@ -57,7 +57,7 @@ for (const entry of coreSourceManifest) {
 const sharedEntry = coreSourceManifest.find(({ domain }) => domain === "shared");
 invariant(
   sharedEntry?.source === "shared-foundations.js"
-    && sharedEntry?.sources?.length === 28
+    && sharedEntry?.sources?.length === 27
     && sharedEntry.sources[0] === "shared-foundations.js"
     && sharedEntry.sources[1] === "shared-session.js"
     && sharedEntry.sources[2] === "shared-routing.js"
@@ -80,12 +80,11 @@ invariant(
     && sharedEntry.sources[19] === "shared-incremental-routing.js"
     && sharedEntry.sources[20] === "shared-interaction-bindings.js"
     && sharedEntry.sources[21] === "shared-startup-lifecycle.js"
-    && sharedEntry.sources[22] === "shared-layout-center.js"
-    && sharedEntry.sources[23] === "shared-incremental-navigation.js"
-    && sharedEntry.sources[24] === "shared-route-runtime-gate.js"
-    && sharedEntry.sources[25] === "shared-core-contracts.js"
-    && sharedEntry.sources[26] === "shared-app-startup.js"
-    && sharedEntry.sources[27] === "shared-shell-navigation.js"
+    && sharedEntry.sources[22] === "shared-incremental-navigation.js"
+    && sharedEntry.sources[23] === "shared-route-runtime-gate.js"
+    && sharedEntry.sources[24] === "shared-core-contracts.js"
+    && sharedEntry.sources[25] === "shared-app-startup.js"
+    && sharedEntry.sources[26] === "shared-shell-navigation.js"
     && sharedEntry.maxUniversalBytes === 355000,
   "Shared core must keep foundations before session before routing before transitions before page lifecycle before Home summary before table state before generic toast core before personal state before data/search before Evaluation lifecycle before Player first-paint/navigation before watchlist actions before Player display/calculation before Player action facades before generic modal lifecycle before Global Search lifecycle before linked-wallet/MFL row classification before universal HTML escaping before incremental routing/cache/request before global interaction bindings before Changelog/startup lifecycle before layout-centered feedback before incremental navigation orchestration before the stable route-runtime gate before explicit core contracts before application startup before shell navigation and retain the explicit 355000-byte universal no-growth ceiling.",
 );
@@ -111,7 +110,10 @@ const sharedHtmlEscaping = await read("./modules/core-sources/shared-html-escapi
 const sharedIncrementalRouting = await read("./modules/core-sources/shared-incremental-routing.js");
 const sharedInteractionBindings = await read("./modules/core-sources/shared-interaction-bindings.js");
 const sharedStartupLifecycle = await read("./modules/core-sources/shared-startup-lifecycle.js");
-const sharedLayoutCenter = await read("./modules/core-sources/shared-layout-center.js");
+// The layout-centering no-op retains its exact lexical boundary inside the startup owner.
+const layoutCenterBoundary = sharedStartupLifecycle.lastIndexOf("\n\nfunction syncLayoutCenter() {");
+const sharedStartupOnly = layoutCenterBoundary >= 0 ? sharedStartupLifecycle.slice(0, layoutCenterBoundary) : "";
+const sharedLayoutCenter = layoutCenterBoundary >= 0 ? sharedStartupLifecycle.slice(layoutCenterBoundary + 2) : "";
 const sharedIncrementalNavigation = await read("./modules/core-sources/shared-incremental-navigation.js");
 const sharedRouteRuntimeGate = await read("./modules/core-sources/shared-route-runtime-gate.js");
 const sharedCoreContracts = await read("./modules/core-sources/shared-core-contracts.js");
@@ -248,16 +250,19 @@ invariant(
     && sharedStartupLifecycle.includes("async function startApp() {")
     && sharedStartupLifecycle.includes("setupChangelogSections();")
     && sharedStartupLifecycle.includes("await initialRouteRuntimeReadyPromise;")
-    && sharedStartupLifecycle.replace(/\s*$/, "").endsWith("});\n}"),
+    && sharedStartupOnly.replace(/\s*$/, "").endsWith("});\n}"),
   "Shared startup lifecycle must own Changelog section setup and the canonical startApp definition through background startup convergence.",
 );
 invariant(
-  sharedLayoutCenter.startsWith("function syncLayoutCenter() {")
+  layoutCenterBoundary > 0
+    && sharedStartupLifecycle.match(/function syncLayoutCenter\(\) \{/g)?.length === 1
+    && sharedLayoutCenter.replace(/\s*$/, "") === "function syncLayoutCenter() {\n  // Horizontal toast centering is CSS-owned from the canonical pinned-sidebar layout.\n  // Selection positioning remains owned by selection-stack-runtime.\n}"
+    && sharedLayoutCenter.startsWith("function syncLayoutCenter() {")
     && sharedLayoutCenter.replace(/\s*$/, "").endsWith("}")
     && !sharedLayoutCenter.includes("getBoundingClientRect")
     && !sharedLayoutCenter.includes("MutationObserver")
     && !sharedLayoutCenter.includes("setIncrementalPage"),
-  "Shared layout-center compatibility boundary must remain non-blocking and must not own synchronous geometry reads or mutation observers.",
+  "Shared startup-owned layout-center compatibility no-op must remain lexically terminal, unchanged, and free of synchronous geometry reads or mutation observers.",
 );
 invariant(
   sharedIncrementalNavigation.startsWith("/* Session-cached incremental route data and destination-first loading */")
@@ -334,7 +339,7 @@ invariant(
     && !sharedHtmlEscaping.includes("function clubRouteTargetFromPath")
     && !sharedIncrementalRouting.includes("let pendingViewButtonPointer")
     && !sharedInteractionBindings.includes("function setupChangelogSections")
-    && !sharedStartupLifecycle.includes("function syncLayoutCenter")
+    && sharedStartupOnly.indexOf("function syncLayoutCenter") === -1
     && !sharedLayoutCenter.includes("setIncrementalPage")
     && !sharedIncrementalNavigation.includes("function setPageWithRouteRuntime")
     && !sharedRouteRuntimeGate.includes("function tableHeaderContext")

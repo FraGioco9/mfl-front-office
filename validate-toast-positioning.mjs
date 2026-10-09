@@ -3,7 +3,9 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8").replace(/\r\n?/g, "\n");
 
-const layoutCenter = read("./modules/core-sources/shared-layout-center.js");
+const startupLifecycle = read("./modules/core-sources/shared-startup-lifecycle.js");
+const layoutCenterBoundary = startupLifecycle.lastIndexOf("\n\nfunction syncLayoutCenter() {");
+const layoutCenter = layoutCenterBoundary >= 0 ? startupLifecycle.slice(layoutCenterBoundary + 2) : "";
 const toastCore = read("./modules/core-sources/shared-toast-core.js");
 const selectionStack = read("./selection-stack-runtime.js");
 const stylesBase = read("./styles-base.css");
@@ -12,7 +14,9 @@ const responsive = read("./responsive.css");
 const session = read("./modules/core-sources/shared-session.js");
 
 assert.ok(
-  layoutCenter.startsWith("function syncLayoutCenter() {")
+  layoutCenterBoundary > 0
+    && layoutCenter.replace(/\s*$/, "") === "function syncLayoutCenter() {\n  // Horizontal toast centering is CSS-owned from the canonical pinned-sidebar layout.\n  // Selection positioning remains owned by selection-stack-runtime.\n}"
+    && layoutCenter.startsWith("function syncLayoutCenter() {")
     && !layoutCenter.includes("getBoundingClientRect")
     && !layoutCenter.includes("MutationObserver")
     && !layoutCenter.includes('setProperty("--toast-center-x"')
