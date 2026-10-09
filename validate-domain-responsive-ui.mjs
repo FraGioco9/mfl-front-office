@@ -1,3 +1,5 @@
+import { runDomainValidators } from "./validation/domain-runner.mjs";
+
 const validators = [
   "validate-responsive-layout.mjs",
   "validate-responsive-reflow.mjs",
@@ -24,14 +26,9 @@ const validators = [
   "validate-changelog-responsive-scaling.mjs",
 ];
 
-for (const validator of validators) {
-  console.log(`[responsive-ui] ${validator}`);
-  try {
-    await import(new URL(`./${validator}`, import.meta.url));
-  } catch (error) {
-    console.error(`[responsive-ui] FAILED ${validator}`);
-    throw error;
-  }
-}
-
-console.log(`Responsive UI validator domain passed: ${validators.length} validators in one process.`);
+await runDomainValidators({
+  domain: "responsive-ui",
+  title: "Responsive UI",
+  validators,
+  baseUrl: import.meta.url,
+});
