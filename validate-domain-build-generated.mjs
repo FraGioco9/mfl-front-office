@@ -1,3 +1,5 @@
+import { runDomainValidators } from "./validation/domain-runner.mjs";
+
 const validators = [
   "validate-fragment-ownership.mjs",
   "validate-text-reader.mjs",
@@ -14,14 +16,9 @@ const validators = [
   "validate-generated-core-bindings.mjs",
 ];
 
-for (const validator of validators) {
-  console.log(`[build/generated] ${validator}`);
-  try {
-    await import(new URL(`./${validator}`, import.meta.url));
-  } catch (error) {
-    console.error(`[build/generated] FAILED ${validator}`);
-    throw error;
-  }
-}
-
-console.log(`Build/generated validator domain passed: ${validators.length} validators in one process.`);
+await runDomainValidators({
+  domain: "build/generated",
+  title: "Build/generated",
+  validators,
+  baseUrl: import.meta.url,
+});
