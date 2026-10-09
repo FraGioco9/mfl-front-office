@@ -33,9 +33,36 @@ async function worker(){
       pageQueries.push({sql,params:[...params]});
     return baseQueryRows(sql,params);
   };
-  const {pagedData,orderSql}=require("./api/_data-page.js");
+  const {pagedData,orderSql,splitOrderTerms,reverseOrderSql}=require("./api/_data-page.js");
   const {rowsAsArrays}=dbApi;
-  const {reverseOrderSql}=require("./api/_data-page-order.js");
+  // Guard the independent SQL term parser contract, not only fixture-derived query equality.
+  const caseTerm = "CASE WHEN coalesce(name, 'A, B') = 'O''Connor' THEN 1 ELSE 2 END ASC";
+  const quotedTerm = '"a,b" DESC';
+  const backtickTerm = "`c,d` ASC";
+  const complexOrder = [caseTerm, quotedTerm, backtickTerm, "player_id DESC"].join(", ");
+  assert.deepEqual(splitOrderTerms(complexOrder), [caseTerm, quotedTerm, backtickTerm, "player_id DESC"]);
+  assert.equal(reverseOrderSql(complexOrder), [
+    caseTerm.replace(/ ASC$/, " DESC"),
+    '"a,b" ASC',
+    "`c,d` DESC",
+    "player_id ASC",
+  ].join(", "));
+  assert.deepEqual(splitOrderTerms('coalesce("a""b,c", abs(x + y)) ASC, player_id DESC'), [
+    'coalesce("a""b,c", abs(x + y)) ASC',
+    "player_id DESC",
+  ]);
+  assert.equal(reverseOrderSql("coalesce(name, 'x,y'), player_id DESC"),
+    "coalesce(name, 'x,y') DESC, player_id ASC");
+  for (const invalid of [
+    "player_id DESC",
+    "name ASC,, player_id DESC",
+    "coalesce(name, age ASC, player_id DESC",
+    "name ASC), player_id DESC",
+    "name 'unterminated ASC, player_id DESC",
+    "name ASC, player_id ASC",
+  ]) {
+    assert.throws(() => reverseOrderSql(invalid), assert.AssertionError, "Reject invalid SQL order: " + invalid);
+  }
   function reversedTailQuery(sql, parameters, totalRows) {
     const start = sql.lastIndexOf(" ORDER BY ");
     const end = sql.lastIndexOf(" LIMIT ? OFFSET ?");
