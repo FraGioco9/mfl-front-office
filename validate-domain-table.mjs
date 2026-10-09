@@ -1,3 +1,5 @@
+import { runDomainValidators } from "./validation/domain-runner.mjs";
+
 const validators = [
   "validate-table-route-core.mjs",
   "validate-pager-current-page.mjs",
@@ -27,14 +29,9 @@ const validators = [
   "validate-progression-joined-agency-filter.mjs",
 ];
 
-for (const validator of validators) {
-  console.log(`[table] ${validator}`);
-  try {
-    await import(new URL(`./${validator}`, import.meta.url));
-  } catch (error) {
-    console.error(`[table] FAILED ${validator}`);
-    throw error;
-  }
-}
-
-console.log(`Table validator domain passed: ${validators.length} validators in one process.`);
+await runDomainValidators({
+  domain: "table",
+  title: "Table",
+  validators,
+  baseUrl: import.meta.url,
+});
