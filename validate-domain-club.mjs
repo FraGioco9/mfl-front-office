@@ -7,6 +7,7 @@ const validators = [
   "validate-club-route-core.mjs",
   "validate-club-cache-ownership.mjs",
   "validate-club-title-loading.mjs",
+  "validation/club-logo-cold-load-regression.mjs",
 ];
 
 await runDomainValidators({

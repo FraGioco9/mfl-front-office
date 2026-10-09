@@ -206,8 +206,10 @@
   pointer-events: none;
 }
 
+/* The club's own colors are already behind this slot. A solid loading mask
+ * flashes as a white rectangle on cold loads, before its first logo paints. */
 .myClubLogoFrameLoading {
-  background: var(--mfl-loading-placeholder-surface);
+  background: transparent;
 }
 
 .myClubsStatusWrap {

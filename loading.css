@@ -28,6 +28,12 @@ html.mflInitialRouteResolved.mflNavigationPending #progressionPage .viewsScrollB
   user-select: none;
 }
 
+/* Keep the shared Club logo geometry, but do not cover the club colors with
+ * an opaque skeleton before a cold-cache logo request has completed. */
+.clubIdentityLogoSkeleton.mflDataPlaceholder {
+  background: transparent;
+}
+
 .mflTableFlagSkeleton {
   line-height: 0;
   pointer-events: none;
