@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { domainSuites } from "../validation/domain-suites.mjs";
 
 const expectedValidators = {
   "club": [
@@ -245,12 +246,18 @@ const expectedValidators = {
 };
 
 const allSource = await readFile(new URL("../validate-all.mjs", import.meta.url), "utf8");
+assert.deepEqual(Object.keys(domainSuites).sort(), Object.keys(expectedValidators).sort(), "the manifest must cover exactly eleven domains");
 for (const [domain, expected] of Object.entries(expectedValidators)) {
   const source = await readFile(new URL("../validate-domain-" + domain + ".mjs", import.meta.url), "utf8");
   const match = source.match(/const validators = \[([\s\S]*?)\];/);
   assert.ok(match, domain + " must declare an ordered validator array");
   const listed = Array.from(match[1].matchAll(/"([^"]+\.mjs)"/g), (entry) => entry[1]);
   assert.deepEqual(listed, expected, domain + " must retain the original validator list and order");
+  const suite = domainSuites[domain];
+  assert.ok(suite, domain + " must appear in the new manifest");
+  assert.deepEqual(suite.validators, expected, domain + " manifest list and order must match the independent golden inventory");
+  assert.equal(suite.domain, source.match(/domain:\s*"([^"]+)"/)?.[1], domain + " must preserve the log prefix");
+  assert.equal(suite.title, source.match(/title:\s*"([^"]+)"/)?.[1], domain + " must preserve the success message");
   assert.match(source, /runDomainValidators\(/, domain + " must use the shared executor");
   assert.match(source, /baseUrl:\s*import\.meta\.url/, domain + " must preserve relative imports");
   if (["evaluation", "responsive-ui", "route-features", "routing-loading", "shared-ui", "table", "api-persistence"].includes(domain)) {
@@ -269,6 +276,29 @@ for (const [domain, expected] of Object.entries(expectedValidators)) {
   assert.match(allSource, new RegExp('"validate-domain-' + domain + '\\.mjs"'), domain + " must stay in validate-all");
 }
 assert.equal(Object.values(expectedValidators).flat().length, 214);
+assert.equal(Object.values(domainSuites).flatMap((suite) => suite.validators).length, 214);
+
+const dispatcherSource = await readFile(new URL("../validation/run-domain.mjs", import.meta.url), "utf8");
+assert.match(dispatcherSource, /baseUrl:\s*new URL\("\.\.\/",\s*import\.meta\.url\)/, "dispatcher imports must resolve from the repository root");
+const dispatcherPath = fileURLToPath(new URL("../validation/run-domain.mjs", import.meta.url));
+const invalidDomain = spawnSync(process.execPath, [dispatcherPath, "not-a-domain"], {
+  cwd: fileURLToPath(new URL("../", import.meta.url)),
+  encoding: "utf8",
+  timeout: 15_000,
+});
+assert.equal(invalidDomain.status, 2, "unknown domain must fail without running validators");
+assert.equal(invalidDomain.stdout, "");
+assert.match(invalidDomain.stderr, /Usage: node validation\/run-domain\.mjs <domain-id>/);
+const validDomain = spawnSync(process.execPath, [dispatcherPath, "club"], {
+  cwd: fileURLToPath(new URL("../", import.meta.url)),
+  encoding: "utf8",
+  timeout: 45_000,
+});
+assert.equal(validDomain.error, undefined, "dispatcher club smoke must start");
+assert.equal(validDomain.status, 0, validDomain.stderr);
+assert.match(validDomain.stdout, /\[club\] validate-club-entry-workflow\.mjs/);
+assert.match(validDomain.stdout, /Club validator domain passed: 6 validators in one process\./);
+assert.equal(validDomain.stderr, "");
 
 const helperUrl = new URL("../validation/domain-runner.mjs", import.meta.url).href;
 const scratch = await mkdtemp(join(tmpdir(), "mfl-sim08-domain-runner-"));
@@ -330,4 +360,4 @@ try {
   await rm(scratch, { recursive: true, force: true });
 }
 
-console.log("SIM-08: all eleven domains (214 validators), nested imports, shared-process ordering, logs, fail-fast and exit contract passed.");
+console.log("SIM-09A CUT-01: 11 domain manifests (214 validators), dispatcher CLI, nested imports, same-process ordering, logs, fail-fast and exit contract passed.");
