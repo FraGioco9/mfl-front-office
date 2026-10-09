@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -245,36 +245,113 @@ const expectedValidators = {
   ],
 };
 
+// Independent, reviewed golden metadata from the legacy domain contracts.
+// Do not compute expected prefixes/titles from domainSuites or wrapper text.
+const expectedDomainOutput = Object.freeze({
+  "build-generated": Object.freeze({ prefix: "build/generated", title: "Build/generated" }),
+  "route-features": Object.freeze({ prefix: "route-features", title: "Route-features" }),
+  "release-deployment": Object.freeze({ prefix: "release/deployment", title: "Release/deployment" }),
+  "api-persistence": Object.freeze({ prefix: "api/persistence", title: "API/persistence" }),
+  "shared-ui": Object.freeze({ prefix: "shared-ui", title: "Shared UI" }),
+  "responsive-ui": Object.freeze({ prefix: "responsive-ui", title: "Responsive UI" }),
+  "routing-loading": Object.freeze({ prefix: "routing/loading", title: "Routing/loading" }),
+  "evaluation": Object.freeze({ prefix: "evaluation", title: "Evaluation" }),
+  "stats": Object.freeze({ prefix: "stats", title: "Stats" }),
+  "club": Object.freeze({ prefix: "club", title: "Club" }),
+  "table": Object.freeze({ prefix: "table", title: "Table" }),
+});
+
+// Preserve all 63 original scheduler positions (11 domains, 52 standalone).
+// An explicit golden list detects accidental reordering, not just count drift.
+const expectedSlotOrder = Object.freeze([
+  "validate-domain-build-generated.mjs",
+  "validate-domain-route-features.mjs",
+  "validate-domain-release-deployment.mjs",
+  "tests/test_cleanup_unused_branches.mjs",
+  "tests/test_ci_quality_scope.mjs",
+  "tests/test_domain_runner.mjs",
+  "tests/test_planner_concurrency_edges.mjs",
+  "tests/test_offline_retry.mjs",
+  "tests/test_wallet_preferences_multidevice.mjs",
+  "tests/test_missing_value_semantics.mjs",
+  "tests/test_private_data_retention.mjs",
+  "tests/test_schema_drift_inventory.mjs",
+  "tests/test_planner_capacity.mjs",
+  "tests/test_api_error_retry.mjs",
+  "tests/test_api_cache_privacy.mjs",
+  "tests/test_unicode_search_edges.mjs",
+  "tests/test_repository_workflow_docs.mjs",
+  "tests/test_request_observability.mjs",
+  "tests/test_operational_health_monitor.mjs",
+  "tests/test_release_preflight.mjs",
+  "tests/test_vercel_next_routing.mjs",
+  "validate-domain-api-persistence.mjs",
+  "validate-domain-shared-ui.mjs",
+  "validate-domain-responsive-ui.mjs",
+  "validate-domain-routing-loading.mjs",
+  "validate-domain-evaluation.mjs",
+  "validate-domain-stats.mjs",
+  "validate-domain-club.mjs",
+  "validate-domain-table.mjs",
+  "validate-marketplace-overlay.mjs",
+  "validation/listing-cache-freshness.mjs",
+  "validation/database-generation-regression.mjs",
+  "validation/database-resume-identity.mjs",
+  "validate-table-payload-projection.mjs",
+  "validate-contract-clauses.mjs",
+  "validate-data-client-runtime-ownership.mjs",
+  "validate-site-date-picker.mjs",
+  "validate-local-development.mjs",
+  "validate-public-projection.mjs",
+  "validate-user-help-guide.mjs",
+  "validate-pitch-background.mjs",
+  "validate-planner-depth.mjs",
+  "validate-planner-plan-state.mjs",
+  "validate-microcopy.mjs",
+  "validate-typography.mjs",
+  "validate-overlay-scroll.mjs",
+  "validate-icon-color-states.mjs",
+  "validate-entity-http.mjs",
+  "validate-history-scroll.mjs",
+  "validate-navigation-state.mjs",
+  "validate-shareable-urls.mjs",
+  "validate-performance-foundations.mjs",
+  "validate-global-search-boundary.mjs",
+  "validate-exact-name-lookup.mjs",
+  "validate-filtered-listing-price.mjs",
+  "validate-core-type-diagnostic-baseline.mjs",
+  "validate-typing-boundaries.mjs",
+  "validate-runtime-dependency-map.mjs",
+  "validate-shared-formatters.mjs",
+  "validate-generated-ownership.mjs",
+  "validate-api-wrapper-contract.mjs",
+  "validate-dependency-lock.mjs",
+  "validate-accessibility-navigation-lifecycle.mjs",
+]);
+
 const allSource = await readFile(new URL("../validate-all.mjs", import.meta.url), "utf8");
 assert.deepEqual(Object.keys(domainSuites).sort(), Object.keys(expectedValidators).sort(), "the manifest must cover exactly eleven domains");
+// The test no longer opens any validate-domain-*.mjs wrapper.  The golden
+// inventory, prefix and title metadata are intentionally independent from
+// the manifest, so a mistaken manifest edit cannot rewrite expected behavior.
+assert.deepEqual(Object.keys(expectedDomainOutput).sort(), Object.keys(expectedValidators).sort());
 for (const [domain, expected] of Object.entries(expectedValidators)) {
-  const source = await readFile(new URL("../validate-domain-" + domain + ".mjs", import.meta.url), "utf8");
-  const match = source.match(/const validators = \[([\s\S]*?)\];/);
-  assert.ok(match, domain + " must declare an ordered validator array");
-  const listed = Array.from(match[1].matchAll(/"([^"]+\.mjs)"/g), (entry) => entry[1]);
-  assert.deepEqual(listed, expected, domain + " must retain the original validator list and order");
   const suite = domainSuites[domain];
-  assert.ok(suite, domain + " must appear in the new manifest");
-  assert.deepEqual(suite.validators, expected, domain + " manifest list and order must match the independent golden inventory");
-  assert.equal(suite.domain, source.match(/domain:\s*"([^"]+)"/)?.[1], domain + " must preserve the log prefix");
-  assert.equal(suite.title, source.match(/title:\s*"([^"]+)"/)?.[1], domain + " must preserve the success message");
-  assert.match(source, /runDomainValidators\(/, domain + " must use the shared executor");
-  assert.match(source, /baseUrl:\s*import\.meta\.url/, domain + " must preserve relative imports");
-  if (["evaluation", "responsive-ui", "route-features", "routing-loading", "shared-ui", "table", "api-persistence"].includes(domain)) {
-    const contract = {
-      evaluation: ["evaluation", "Evaluation"],
-      "responsive-ui": ["responsive-ui", "Responsive UI"],
-      "route-features": ["route-features", "Route-features"],
-      "routing-loading": ["routing/loading", "Routing/loading"],
-      "shared-ui": ["shared-ui", "Shared UI"],
-      table: ["table", "Table"],
-      "api-persistence": ["api/persistence", "API/persistence"],
-    }[domain];
-    assert.ok(source.includes('domain: "' + contract[0] + '"'), domain + " must retain the original log prefix");
-    assert.ok(source.includes('title: "' + contract[1] + '"'), domain + " must retain the original success summary");
-  }
-  assert.match(allSource, new RegExp('"validate-domain-' + domain + '\\.mjs"'), domain + " must stay in validate-all");
+  const output = expectedDomainOutput[domain];
+  assert.ok(suite && output, domain + " must have a manifest suite and golden output contract");
+  assert.equal(Object.isFrozen(suite), true, domain + " manifest suite must be immutable");
+  assert.equal(Object.isFrozen(suite.validators), true, domain + " validators must be immutable");
+  assert.deepEqual(suite.validators, expected, domain + " manifest must match the independent ordered golden validator list");
+  assert.equal(suite.domain, output.prefix, domain + " must preserve the exact log prefix");
+  assert.equal(suite.title, output.title, domain + " must preserve the exact success summary");
+  assert.match(allSource, new RegExp('"validate-domain-' + domain + '\\.mjs"'), domain + " must retain its legacy scheduler slot label");
 }
+// The golden inventory must point to real validator modules, including nested paths.
+const expectedFiles = [...new Set(Object.values(expectedValidators).flat())];
+await Promise.all(expectedFiles.map(async (validator) => {
+  assert.match(validator, /^(?:[a-z0-9-]+\/)*[a-z0-9-]+\.mjs$/i, "unexpected validator path: " + validator);
+  await access(new URL("../" + validator, import.meta.url));
+}));
 assert.equal(Object.values(expectedValidators).flat().length, 214);
 assert.equal(Object.values(domainSuites).flatMap((suite) => suite.validators).length, 214);
 
@@ -285,6 +362,7 @@ const slotNames = Array.from(
   (entry) => entry[1],
 );
 assert.equal(slotNames.length, 63, "validate-all must preserve its 63 ordered slots");
+assert.deepEqual(slotNames, expectedSlotOrder, "all 63 scheduler slots must retain exact position and original legacy log heading");
 const cutoverBlock = allSource.match(/const cutoverDomains = Object\.freeze\(\{([\s\S]*?)\}\);/);
 assert.ok(cutoverBlock, "validate-all must declare the CUT-03 dispatcher mapping");
 const cutoverEntries = Array.from(
@@ -317,6 +395,11 @@ assert.equal(
 assert.match(allSource, /Object\.hasOwn\(cutoverDomains,\s*validator\)/);
 assert.match(allSource, /resolve\(siteRoot,\s*"validation\/run-domain\.mjs"\)/);
 assert.match(allSource, /spawn\(\s*process\.execPath,\s*validatorCommand\(validator\)/);
+assert.match(allSource, /const results = new Array\(validators\.length\)/, "keep ordered results independent from concurrency");
+assert.match(allSource, /results\[index\] = await runValidator\(validators\[index\]\)/, "keep result slots indexed");
+assert.match(allSource, /for \(let index = 0; index < validators\.length; index \+= 1\)/, "log output must follow original slot order");
+assert.match(allSource, /failureStatus \|\|= result\.status \|\| 1/, "nonzero validator exits must propagate");
+assert.match(allSource, /if \(failureStatus !== 0\) \{\s*process\.exit\(failureStatus\)/, "scheduler must exit nonzero if any slot fails");
 
 const dispatcherSource = await readFile(new URL("../validation/run-domain.mjs", import.meta.url), "utf8");
 assert.match(dispatcherSource, /baseUrl:\s*new URL\("\.\.\/",\s*import\.meta\.url\)/, "dispatcher imports must resolve from the repository root");
@@ -405,4 +488,4 @@ try {
   await rm(scratch, { recursive: true, force: true });
 }
 
-console.log("SIM-09A CUT-03: eleven domains use the dispatcher, 52 standalone slots and 214 validator contracts preserved.");
+console.log("SIM-09A CUT-04.1: independent 214-validator/11-domain golden inventory, exact 63-slot ordering, output and failure contracts passed without reading legacy wrappers.");
