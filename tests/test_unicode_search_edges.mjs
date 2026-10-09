@@ -69,13 +69,14 @@ function createSearchFixture() {
   const insertAgent = db.prepare("INSERT INTO runtime_agents VALUES (?, ?, ?, ?)");
   insertAgent.run("0xabc", "José Agent", 3, backendNormalize("José Agent"));
 
+  const events = [];
   const mocks = {
     "./_database": {
       PUBLIC_COLUMNS: [],
       SEARCH_PLAYER_COLUMNS: ["player_id", "name", "overall", "age", "nationality", "positions", "retirement_years", "player_seasons", "active_contract_revenue_share"],
-      getGeneratedAt: () => "2026-10-05T00:00:00Z",
+      getGeneratedAt: () => { events.push({ type: "generatedAt" }); return "2026-10-05T00:00:00Z"; },
       normalizeSearchText: backendNormalize,
-      queryRows: (sql, parameters = []) => db.prepare(sql).all(...parameters),
+      queryRows: (sql, parameters = []) => { events.push({ type: "query", sql }); return db.prepare(sql).all(...parameters); },
       queryOne: (sql, parameters = []) => db.prepare(sql).get(...parameters) || null,
       selectList: (columns) => columns.map((column) => "\"" + column + "\"").join(", "),
       rowsAsArrays: (rows, columns) => rows.map((row) => columns.map((column) => row[column] ?? null)),
@@ -103,7 +104,7 @@ function createSearchFixture() {
   };
   vm.createContext(sandbox);
   vm.runInContext(dataViewsSource, sandbox, { filename: "api/_data-views.js" });
-  return { db, searchData: sandbox.module.exports.searchData };
+  return { db, searchData: sandbox.module.exports.searchData, filterOptionsData: sandbox.module.exports.filterOptionsData, views: Object.keys(sandbox.module.exports), events };
 }
 
 const normalizeCases = [
@@ -185,4 +186,47 @@ test("malformed encoded Player paths fail safe instead of throwing during route 
   assert.equal(routeSandbox.decodeRoutePartSafely("Nicol%C3%B2"), "Nicolò");
 });
 
-console.log("EDGE-02 Unicode/diacritic/homonym/search-encoding fixtures verified.");
+
+test("MERGE-I1 preserves SQL DISTINCT, NOCASE, NULL/empty/Unicode and CommonJS exports", () => {
+  const fixture = createSearchFixture();
+  try {
+    assert.deepEqual(
+      fixture.views.sort(),
+      ["bootstrapData", "filterOptionsData", "mflStatsData", "searchData", "summaryData"],
+      "Existing CommonJS view exports must remain available alongside filterOptionsData.",
+    );
+    const insert = fixture.db.prepare("INSERT INTO players (player_id, nationality) VALUES (?, ?)");
+    let playerId = 1000;
+    for (const nationality of [null, "", " ", "   ", "\t", "IT", "it", "  IT  ", "Éire", "éire", "Österreich", "🇮🇹"]) {
+      insert.run(String(playerId++), nationality);
+    }
+    const expectedSql = [
+      "SELECT DISTINCT CAST(nationality AS TEXT) AS nationality",
+      "     FROM players",
+      "     WHERE nationality IS NOT NULL",
+      "       AND trim(CAST(nationality AS TEXT)) <> ''",
+      "     ORDER BY nationality COLLATE NOCASE",
+    ].join("\n");
+    const result = fixture.filterOptionsData();
+    const data = Array.from(result.nationalities);
+    const queryEvents = fixture.events.filter((entry) => entry.type === "query");
+    assert.equal(queryEvents.length, 1);
+    assert.equal(queryEvents[0].sql, expectedSql, "Keep the original exact SQLite SQL, including DISTINCT and COLLATE NOCASE.");
+    assert.deepEqual(fixture.events.slice(-2).map((entry) => entry.type), ["query", "generatedAt"]);
+    assert.deepEqual(data, fixture.db.prepare(expectedSql).all().map((row) => String(row.nationality)));
+    for (const value of ["IT", "it", "  IT  ", "Éire", "éire", "Österreich", "🇮🇹", "\t"]) {
+      assert.ok(data.includes(value), "The original SQLite values must survive without Unicode/whitespace normalization: " + JSON.stringify(value));
+    }
+    assert.equal(data.includes(""), false);
+    assert.equal(data.includes(" "), false);
+    assert.equal(data.includes("   "), false);
+    assert.equal(data.filter((value) => value === "IT").length, 1, "DISTINCT must retain only one exact-case IT entry.");
+    assert.equal(data.filter((value) => value === "it").length, 1, "NOCASE ordering must not remove distinct-case values.");
+    assert.equal(result.generatedAt, "2026-10-05T00:00:00Z");
+    assert.equal(result.source, "sqlite-runtime");
+  } finally {
+    fixture.db.close();
+  }
+});
+
+console.log("EDGE-02 Unicode/diacritic/homonym/search-encoding and MERGE-I1 SQL fixtures verified.");
