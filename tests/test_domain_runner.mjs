@@ -428,7 +428,7 @@ assert.match(validDomain.stdout, /\[club\] validate-club-entry-workflow\.mjs/);
 assert.match(validDomain.stdout, /Club validator domain passed: 6 validators in one process\./);
 assert.equal(validDomain.stderr, "");
 
-const helperUrl = new URL("../validation/domain-runner.mjs", import.meta.url).href;
+const helperUrl = new URL("../validation/run-domain.mjs", import.meta.url).href;
 const scratch = await mkdtemp(join(tmpdir(), "mfl-sim08-domain-runner-"));
 try {
   await writeFile(join(scratch, "first.mjs"), [
@@ -494,10 +494,8 @@ try {
 const cliFixtureRoot = await mkdtemp(join(tmpdir(), "mfl-cut04-dispatch-"));
 try {
   await mkdir(join(cliFixtureRoot, "validation"), { recursive: true });
-  for (const owner of ["run-domain.mjs", "domain-runner.mjs"]) {
-    await writeFile(join(cliFixtureRoot, "validation", owner),
-      await readFile(new URL("../validation/" + owner, import.meta.url), "utf8"));
-  }
+  await writeFile(join(cliFixtureRoot, "validation", "run-domain.mjs"),
+    await readFile(new URL("../validation/run-domain.mjs", import.meta.url), "utf8"));
   const fixtureSuites = Object.fromEntries(Object.entries(expectedValidators).map(([id, validators]) => [
     id, { domain: expectedDomainOutput[id].prefix, title: expectedDomainOutput[id].title, validators },
   ]));
