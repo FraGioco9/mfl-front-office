@@ -260,8 +260,8 @@ jobs:
           npm run test:a11y:motion
           npm run test:a11y:landmarks
           node validate-mobile-summary-first-paint.mjs
-          node validation/browser-mobile-first-paint-regression.mjs
-          node validation/browser-listing-width-regression.mjs
+          node validation/browser-diagnostics-runner.mjs first-paint
+          node validation/browser-diagnostics-runner.mjs listing-width
           node validation/browser-mobile-table-responsive-resize.mjs
           node validation/browser-long-mobile-table-regression.mjs
           node validation/browser-sticky-name-theme-regression.mjs
@@ -269,7 +269,7 @@ jobs:
           node validation/browser-responsive-shell-breakpoint.mjs
           node validation/browser-intermediate-responsive-extension.mjs
           node validation/browser-routing-phase-runner.mjs mobile
-          node validation/browser-table-header-1374-regression.mjs
+          node validation/browser-diagnostics-runner.mjs header-1374
 
       - name: Commit generated site artifacts
         id: generated
