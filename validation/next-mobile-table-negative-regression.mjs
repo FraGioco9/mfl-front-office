@@ -47,7 +47,7 @@ async function assertNoChromiumLeaks(scope, scenario) {
     [], scenario + " leaked Chromium user-data profiles.");
   if (process.platform !== "linux") return;
   const deadline = Date.now() + 4_000;
-  let leftovers = [];
+  let leftovers;
   do {
     const listing = execFileSync("ps", ["-eo", "args="], { encoding: "utf8" });
     leftovers = listing.split("\n").filter(line =>
