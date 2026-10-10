@@ -57,7 +57,7 @@ for (const entry of coreSourceManifest) {
 const sharedEntry = coreSourceManifest.find(({ domain }) => domain === "shared");
 invariant(
   sharedEntry?.source === "shared-foundations.js"
-    && sharedEntry?.sources?.length === 25
+    && sharedEntry?.sources?.length === 24
     && sharedEntry.sources[0] === "shared-foundations.js"
     && sharedEntry.sources[1] === "shared-session.js"
     && sharedEntry.sources[2] === "shared-routing.js"
@@ -82,7 +82,6 @@ invariant(
     && sharedEntry.sources[21] === "shared-route-runtime-gate.js"
     && sharedEntry.sources[22] === "shared-core-contracts.js"
     && sharedEntry.sources[23] === "shared-app-startup.js"
-    && sharedEntry.sources[24] === "shared-shell-navigation.js"
     && sharedEntry.maxUniversalBytes === 355000,
   "Shared core must keep foundations before session before routing before transitions before page lifecycle before Home summary before table state before generic toast core before personal state before data/search before Evaluation lifecycle before Player first-paint/navigation before watchlist actions before Player display/calculation before Player action facades before generic modal lifecycle before Global Search lifecycle before linked-wallet/MFL row classification before universal HTML escaping before incremental routing/cache/request before global interaction bindings before Changelog/startup lifecycle before layout-centered feedback before incremental navigation orchestration before the stable route-runtime gate before explicit core contracts before application startup before shell navigation and retain the explicit 355000-byte universal no-growth ceiling.",
 );
@@ -131,8 +130,18 @@ const sharedLayoutCenter = layoutCenterBoundary >= 0 ? sharedStartupLifecycle.sl
 const sharedIncrementalNavigation = await read("./modules/core-sources/shared-incremental-navigation.js");
 const sharedRouteRuntimeGate = await read("./modules/core-sources/shared-route-runtime-gate.js");
 const sharedCoreContracts = await read("./modules/core-sources/shared-core-contracts.js");
-const sharedAppStartup = await read("./modules/core-sources/shared-app-startup.js");
-const sharedShellNavigation = await read("./modules/core-sources/shared-shell-navigation.js");
+// Keep startup and shell-navigation ownership independently testable after
+// their canonical physical sources are merged, without altering lexical order.
+const combinedAppStartup = await read("./modules/core-sources/shared-app-startup.js");
+const shellNavigationBoundary = "\n\n;(() => {\n  if (window.__mflFooterSpaNavigationBound) return;";
+const shellNavigationIndex = combinedAppStartup.indexOf(shellNavigationBoundary);
+invariant(
+  shellNavigationIndex > 0
+    && combinedAppStartup.indexOf(shellNavigationBoundary, shellNavigationIndex + shellNavigationBoundary.length) === -1,
+  "Merged application startup must preserve exactly one shell-navigation lexical boundary.",
+);
+const sharedAppStartup = combinedAppStartup.slice(0, shellNavigationIndex);
+const sharedShellNavigation = combinedAppStartup.slice(shellNavigationIndex + 2);
 invariant(
   sharedFoundations.replace(/\s*$/, "").endsWith('const openSelectedLinksButton = document.querySelector("#openSelectedLinksButton");'),
   "Shared foundations must end at the canonical DOM-binding boundary.",
