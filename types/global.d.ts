@@ -251,6 +251,7 @@ interface MflEvaluationDiscountRateRuntime {
 }
 
 interface Window {
+  __mflFooterSpaNavigationBound?: boolean;
   __mflReleaseVersion?: string;
   __mflRelease?: Readonly<{ version: string; description: string }>;
   __mflAssetUrl?: (path: string) => string;
