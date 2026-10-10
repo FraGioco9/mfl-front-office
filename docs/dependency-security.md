@@ -1,6 +1,8 @@
-# Dependency security and lockfile contract
+# DEP-01 — Dependency security and lockfile contract
 
 **Result: Next security baseline updated to 16.3.8.**
+
+Audit date: 2026-10-07.
 
 ## Reviewed baseline
 
@@ -22,7 +24,7 @@ No major/version upgrade is introduced solely for freshness. Dependency changes 
 
 ## Guardrail
 
-`validate-dep01-lock-contract.mjs` verifies:
+`validate-dependency-lock.mjs` verifies:
 
 - package.json ↔ package-lock root dependency parity;
 - Node 22 contract;
