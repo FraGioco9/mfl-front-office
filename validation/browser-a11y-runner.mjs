@@ -86,7 +86,8 @@ async function auditConsumersAndNextTraces() {
       }
       if (path !== "validation/browser-a11y-runner.mjs" && ts.isStringLiteralLike(node)
         && nextTableCliNames.some(name => node.text.includes(name))) nextTableAstConsumers.push(path);
-      if (ts.isStringLiteralLike(node) && node.text === "./next-browser-cdp.mjs") cdpHelperConsumers.push(path);
+      if (path !== "validation/browser-a11y-runner.mjs" && ts.isStringLiteralLike(node)
+        && node.text === "./next-browser-cdp.mjs") cdpHelperConsumers.push(path);
       if (ts.isCallExpression(node)) {
         const isImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
         const isRequire = ts.isIdentifier(node.expression) && node.expression.text === "require";
