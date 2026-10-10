@@ -1,9 +1,10 @@
-import "./build-responsive.mjs";
+import { writeResponsive } from "./build-fragments.mjs";
 import { readFile, writeFile } from "node:fs/promises";
 
 import { createStyleBundle } from "./style-bundle.mjs";
 
 const read = (name) => readFile(new URL(`./${name}`, import.meta.url), "utf8");
+await writeResponsive();
 const bundle = await createStyleBundle(read);
 await writeFile(new URL("./styles-runtime.css", import.meta.url), bundle, "utf8");
 

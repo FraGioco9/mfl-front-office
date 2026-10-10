@@ -6,8 +6,8 @@ The audited files are generated compatibility projections, not abandoned source.
 
 | Generated output | Canonical owner | Writer |
 | --- | --- | --- |
-| `index.html` | `html-sources/manifest.json` + HTML fragments | `build-html.mjs` |
-| `responsive.css` | `responsive-sources/manifest.json` + `.css.inc` fragments | `build-responsive.mjs` |
+| `index.html` | `html-sources/manifest.json` + HTML fragments | `build-fragments.mjs html` (`npm run build:html`) |
+| `responsive.css` | `responsive-sources/manifest.json` + `.css.inc` fragments | `build-fragments.mjs responsive` (`npm run build:responsive`); `build-styles.mjs` calls `writeResponsive()` |
 | `styles-runtime.css` | canonical CSS graph including generated responsive CSS | `build-styles.mjs` / `style-bundle.mjs` |
 | `modules/app-core*-runtime.js` | `modules/core-source-manifest.js` + `modules/core-sources/*` | `build-app-core.mjs` |
 
