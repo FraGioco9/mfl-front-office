@@ -100,6 +100,6 @@ jobs:
         with:
           name: sim-09a-r0b3-main-795-audit
           path: |
-            /tmp/r0b3-report/
-          if-no-files-found: warn
+            ${{ runner.temp }}/r0b3-report/
+          if-no-files-found: error
           retention-days: 30
