@@ -1,0 +1,115 @@
+name: SIM-09A ORPHAN-R1B exact-head dependency and NFT audit
+on:
+  push:
+    branches:
+      - audit/sim-09a-orphan-r1b-783
+    paths:
+      - scripts/audit/orphan-r1b-scan.mjs
+      - .github/workflows/audit-sim09a-orphan-r1b.yml
+      - scripts/audit/orphan-r1b-python.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sim09a-orphan-r1b-audit-783
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    name: AST 783 plus Python shell Next NFT isolated
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPECTED_MAIN_SHA: f9d87424bec5c8c3e3e9c7dbf048888f1a83ce6b
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Checkout audit-only scripts with no persisted credentials
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify audited main SHA and audit-only branch delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git ls-remote origin refs/heads/main | cut -f1)"
+          test "$actual" = "$EXPECTED_MAIN_SHA"
+          git cat-file -e "$EXPECTED_MAIN_SHA^{commit}"
+          files="$(git diff --name-only "$EXPECTED_MAIN_SHA"...HEAD)"
+          printf '%s\n' "$files"
+          test "$files" = "$(printf '%s\n' '.github/workflows/audit-sim09a-orphan-r1b.yml' 'scripts/audit/orphan-r1b-python.py' 'scripts/audit/orphan-r1b-scan.mjs')"
+          mkdir -p "$RUNNER_TEMP/orphan-r1b-report"
+
+      - name: Create detached, temporary pinned-main checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git worktree add --detach "$RUNNER_TEMP/orphan-r1b-main" "$EXPECTED_MAIN_SHA"
+          test "$(git -C "$RUNNER_TEMP/orphan-r1b-main" rev-parse HEAD)" = "$EXPECTED_MAIN_SHA"
+          test -z "$(git -C "$RUNNER_TEMP/orphan-r1b-main" status --porcelain)"
+          echo "ORPHAN_R1B isolated checkout exact-SHA confirmed"
+
+      - name: Prepare parser and Next dependencies in detached checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/orphan-r1b-main"
+          npm ci --ignore-scripts --no-audit --no-fund
+          node -e 'const ts=require("@typescript/typescript6");if(typeof ts.createSourceFile!=="function")process.exit(1)'
+          test -z "$(git status --porcelain)"
+
+      - name: Parse 66 Python files with exact-head Python AST
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile "$GITHUB_WORKSPACE/scripts/audit/orphan-r1b-python.py"
+          python "$GITHUB_WORKSPACE/scripts/audit/orphan-r1b-python.py" "$RUNNER_TEMP/orphan-r1b-main" "$RUNNER_TEMP/orphan-r1b-report"
+
+      - name: Execute AST scan on all 783 tracked main files
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check "$GITHUB_WORKSPACE/scripts/audit/orphan-r1b-scan.mjs"
+          node "$GITHUB_WORKSPACE/scripts/audit/orphan-r1b-scan.mjs" scan "$RUNNER_TEMP/orphan-r1b-main" "$EXPECTED_MAIN_SHA" "$RUNNER_TEMP/orphan-r1b-report"
+          test -f "$RUNNER_TEMP/orphan-r1b-report/orphan-r1b-ast-report.json"
+          test -z "$(git -C "$RUNNER_TEMP/orphan-r1b-main" status --porcelain)"
+
+      - name: Attempt Next.js webpack build in isolated checkout (no live DB or deploy)
+        shell: bash
+        env:
+          MFL_DATABASE_PATH: /tmp/orphan-r1b-no-live-database.db
+        run: |
+          set -uo pipefail
+          cd "$RUNNER_TEMP/orphan-r1b-main"
+          if npm run build > "$RUNNER_TEMP/orphan-r1b-report/orphan-r1b-next-build.log" 2>&1; then
+            echo "SUCCESS" > "$RUNNER_TEMP/orphan-r1b-report/orphan-r1b-next-build-status.txt"
+            echo "Next webpack build succeeded in detached temporary checkout"
+          else
+            echo "FAILED_OR_UNAVAILABLE" > "$RUNNER_TEMP/orphan-r1b-report/orphan-r1b-next-build-status.txt"
+            echo "Next build incomplete; NFT gate remains OPEN"
+            tail -n 50 "$RUNNER_TEMP/orphan-r1b-report/orphan-r1b-next-build.log"
+          fi
+          exit 0
+
+      - name: Collect all Next NFT traces and report dynamic/manifest dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          node "$GITHUB_WORKSPACE/scripts/audit/orphan-r1b-scan.mjs" traces "$RUNNER_TEMP/orphan-r1b-main" "$EXPECTED_MAIN_SHA" "$RUNNER_TEMP/orphan-r1b-report"
+          cat "$RUNNER_TEMP/orphan-r1b-report/orphan-r1b-summary.md" >> "$GITHUB_STEP_SUMMARY"
+          test -f "$RUNNER_TEMP/orphan-r1b-report/orphan-r1b-python-ast.json"
+          test -f "$RUNNER_TEMP/orphan-r1b-report/orphan-r1b-zero-inbound-uncertified.json"
+          test -f "$RUNNER_TEMP/orphan-r1b-report/orphan-r1b-next-traces.json"
+          echo "ORPHAN_R1B reports complete; deletion NOT authorized"
+
+      - name: Publish immutable audit reports as GitHub artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-09a-orphan-r1b-main-783-audit
+          path: |
+            ${{ runner.temp }}/orphan-r1b-report/
+          if-no-files-found: error
+          retention-days: 30
