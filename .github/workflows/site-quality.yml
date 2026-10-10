@@ -222,19 +222,19 @@ jobs:
 
       - name: Recovery browser matrix
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-recovery-regression.mjs
+        run: node validation/browser-matrix-runner.mjs recovery
 
       - name: Saved actions browser matrix
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-saved-actions-regression.mjs
+        run: node validation/browser-matrix-runner.mjs saved-actions
 
       - name: Filter state browser matrix
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-filter-state-regression.mjs
+        run: node validation/browser-matrix-runner.mjs filter-state
 
       - name: Narrow CSS reflow browser matrix
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-narrow-reflow-regression.mjs
+        run: node validation/browser-matrix-runner.mjs narrow-reflow
 
       - name: Browser routing regression
         if: steps.changes.outputs.site == 'true'

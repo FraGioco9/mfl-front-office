@@ -65,8 +65,11 @@ async function auditConsumersAndNextTraces() {
   const suffixes = ["route-audit", "control-semantics", "contrast-regression",
     "live-regression", "reduced-regression", "landmarks-regression"];
   const removed = suffixes.map((suffix, index) => "browser-a11y0" + (index + 1) + "-" + suffix + ".mjs");
-  assert.deepEqual(tracked.filter(path => removed.some(name => path.endsWith("/" + name))), [],
-    "Removed A11Y CLI paths must not exist in the Git index.");
+  const matrixRemoved = ["recovery", "saved-actions", "filter-state", "narrow-reflow"]
+    .map(name => "browser-" + name + "-regression.mjs");
+  const removedRunners = [...removed, ...matrixRemoved];
+  assert.deepEqual(tracked.filter(path => removedRunners.some(name => path.endsWith("/" + name))), [],
+    "Removed A11Y/BROWSER-MATRIX CLI paths must not exist in the Git index.");
   const sourcePaths = tracked.filter(path => /\.(?:cjs|mjs|js|ts|tsx)$/.test(path));
   const references = [];
   let dynamicCalls = 0;
@@ -75,7 +78,7 @@ async function auditConsumersAndNextTraces() {
     const kind = path.endsWith(".tsx") ? ts.ScriptKind.TSX : path.endsWith(".ts") ? ts.ScriptKind.TS : ts.ScriptKind.JS;
     const ast = ts.createSourceFile(path, content, ts.ScriptTarget.Latest, true, kind);
     function visit(node) {
-      if (ts.isStringLiteralLike(node) && removed.some(name => node.text.includes(name))) {
+      if (ts.isStringLiteralLike(node) && removedRunners.some(name => node.text.includes(name))) {
         references.push(path + ":" + ast.getLineAndCharacterOfPosition(node.getStart(ast)).line);
       }
       if (ts.isCallExpression(node)) {
@@ -89,7 +92,14 @@ async function auditConsumersAndNextTraces() {
     }
     visit(ast);
   }
-  assert.deepEqual(references, [], "AST found old A11Y path consumers: " + references.join(", "));
+  assert.deepEqual(references, [], "AST found removed runner path consumers: " + references.join(", "));
+  const textPaths = tracked.filter(path => /\.(?:ya?ml|json|sh|py|md|html|css|inc|toml)$/.test(path));
+  const textReferences = [];
+  for (const path of textPaths) {
+    const content = await readFile(resolve(root, path), "utf8");
+    if (matrixRemoved.some(name => content.includes(name))) textReferences.push(path);
+  }
+  assert.deepEqual(textReferences, [], "Removed BROWSER-MATRIX paths found in non-JS consumers.");
   const packageJson = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
   for (const [index, command] of ["test:a11y", "test:a11y:controls", "test:a11y:contrast",
     "test:a11y:announcements", "test:a11y:motion", "test:a11y:landmarks"].entries()) {
@@ -114,7 +124,9 @@ async function auditConsumersAndNextTraces() {
   for (const path of nftFiles) {
     const trace = JSON.parse(await readFile(path, "utf8"));
     for (const included of trace.files || []) {
-      if (removed.some(name => included.endsWith("/" + name)) || included.endsWith("/browser-a11y-runner.mjs")) {
+      if (removedRunners.some(name => included.endsWith("/" + name))
+        || included.endsWith("/browser-a11y-runner.mjs")
+        || included.endsWith("/browser-matrix-runner.mjs")) {
         nftReferences.push(path + " -> " + included);
       }
     }
@@ -122,6 +134,9 @@ async function auditConsumersAndNextTraces() {
   assert.deepEqual(nftReferences, [], "Test-only A11Y modules appeared in Next production NFT traces.");
   console.log("A11Y AST audit: " + tracked.length + " tracked paths / " + sourcePaths.length
     + " parsed source files / 0 removed-path imports; " + dynamicCalls + " calculated import/require calls (not individually resolved).");
+  console.log("BROWSER-MATRIX AST/NFT audit: " + sourcePaths.length + " JS/TS sources / "
+    + textPaths.length + " auxiliary texts / 0 removed runner paths; " + nftFiles.length
+    + " Next NFT manifests / 0 browser-matrix traces.");
   console.log("A11Y Next NFT audit: " + nftFiles.length + " manifests / 0 test runner references"
     + (nftFiles.length ? "." : "; no production build available."));
 }
