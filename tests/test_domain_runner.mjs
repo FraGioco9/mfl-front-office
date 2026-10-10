@@ -488,161 +488,121 @@ try {
   await rm(scratch, { recursive: true, force: true });
 }
 
-// CUT-04.3C: executable parity against an INDEPENDENT golden reconstruction of
-// the pre-cutover entrypoint. Neither the golden inventory nor this baseline
-// reads the actual Club/Stats wrapper source files.
-const cliRoot = fileURLToPath(new URL("../", import.meta.url));
-for (const domain of ["club", "stats"]) {
-  const wrapperUrl = new URL("../validate-domain-" + domain + ".mjs", import.meta.url);
-  const wrapperPath = fileURLToPath(wrapperUrl);
-  const expected = expectedDomainOutput[domain];
-  const validators = expectedValidators[domain];
-
-  for (const extraArgs of [[], ["--cut04-legacy-extra"]]) {
-    const legacyProgram = [
-      "import { runDomainValidators } from " + JSON.stringify(helperUrl) + ";",
-      // The legacy filename and positional argv remain observable to imports.
-      "process.argv = [process.execPath, " + JSON.stringify(wrapperPath) +
-        ", ..." + JSON.stringify(extraArgs) + "];",
-      "await runDomainValidators({ domain: " + JSON.stringify(expected.prefix) +
-        ", title: " + JSON.stringify(expected.title) +
-        ", validators: " + JSON.stringify(validators) +
-        ", baseUrl: new URL(" + JSON.stringify(wrapperUrl.href) + ") });",
-    ].join("\n");
-    const options = { cwd: cliRoot, encoding: "utf8", timeout: 90_000, maxBuffer: 16 * 1024 * 1024 };
-    const legacy = spawnSync(process.execPath, ["--input-type=module", "--eval", legacyProgram], options);
-    const current = spawnSync(process.execPath, [wrapperPath, ...extraArgs], options);
-    const label = domain + (extraArgs.length ? " with legacy extra argv" : " with no args");
-    assert.equal(legacy.error, undefined, label + ": reference process must start");
-    assert.equal(current.error, undefined, label + ": wrapper process must start");
-    assert.equal(current.signal, legacy.signal, label + ": same termination signal");
-    assert.equal(current.status, legacy.status, label + ": same exit status");
-    if (extraArgs.length === 0) assert.equal(current.status, 0, label + ": success required");
-    assert.equal(current.stdout, legacy.stdout, label + ": ordered log output must match");
-    if (legacy.status === 0) {
-      assert.equal(current.stderr, legacy.stderr, label + ": no new warnings/errors");
-      // Legacy Node/SQLite warnings are allowed only when byte-identical to the baseline.
-      assert.match(current.stdout, new RegExp(expected.title + " validator domain passed: " + validators.length + " validators in one process\\."));
-    } else {
-      // Node's stack trace contains a different physical entrypoint in the
-      // golden --eval child. Preserve the observable failure prefix instead.
-      assert.match(current.stderr, /FAILED|Error:/, label + ": failure must remain visible");
-      assert.match(legacy.stderr, /FAILED|Error:/, label + ": reference failure must remain visible");
-    }
-  }
-}
-
-// runDomain is the same awaited helper for both thin entrypoints: a rejected
-// domain propagates as a nonzero process exit rather than being swallowed.
-const invalidProgram = [
-  "import { runDomain } from " +
-    JSON.stringify(new URL("../validation/run-domain.mjs", import.meta.url).href) + ";",
-  'await runDomain("cut04-unknown-domain");',
-].join("\n");
-const invalidHelper = spawnSync(process.execPath, ["--input-type=module", "--eval", invalidProgram], {
-  cwd: cliRoot, encoding: "utf8", timeout: 15_000,
-});
-assert.equal(invalidHelper.error, undefined);
-assert.notEqual(invalidHelper.status, 0);
-assert.match(invalidHelper.stderr, /Unknown validation domain: cut04-unknown-domain/);
-
-console.log("SIM-09A CUT-04.3C: legacy Club/Stats CLI, extra argv, golden order/logs, status and failure propagation parity passed.");
-
-// CUT-04.3D: isolated executable parity for the other nine historic CLI paths.
-// The 214-validator golden inventory above is independent of these wrapper
-// sources: this section reads wrappers only AFTER validating the golden contract.
-const remainingDomainIds = Object.keys(expectedValidators).filter((id) => id !== "club" && id !== "stats");
-assert.equal(remainingDomainIds.length, 9, "exactly nine CLI wrappers must be piloted");
-const cliFixtureRoot = await mkdtemp(join(tmpdir(), "mfl-cut04-cli-parity-"));
+// CUT-04.4A: keep golden contracts independent of the tracked legacy CLI
+// wrappers. Exercise actual dispatcher/runner sources in an isolated fixture;
+// reconstruct the historic CLI form from golden metadata, not old file bytes.
+const cliFixtureRoot = await mkdtemp(join(tmpdir(), "mfl-cut04-dispatch-"));
 try {
-  await mkdir(join(cliFixtureRoot, "validation"));
-  // Isolate child processes from real validators and production data. The
-  // fixture exercises the actual wrapper text, Node argv/cwd and import path.
-  const fixtureRunner = [
-    "export async function runDomainValidators({ domain, title, validators, baseUrl }) {",
-    '  const expected = JSON.parse(process.env.MFL_CUT04_EXPECTED);',
-    '  if (domain !== expected.prefix || title !== expected.title || JSON.stringify(validators) !== JSON.stringify(expected.validators)) throw new Error("golden metadata mismatch");',
-    '  console.log("CUT04_CONTEXT " + JSON.stringify({ argv: process.argv.slice(1), cwd: process.cwd(), urls: validators.map((v) => new URL("./" + v, baseUrl).href) }));',
-    '  for (const validator of validators) {',
-    '    console.log("[" + domain + "] " + validator);',
-    '    if (validator === process.env.MFL_CUT04_FAIL_AT) {',
-    '      console.error("[" + domain + "] FAILED " + validator);',
-    '      throw new Error("CUT04 synthetic failure");',
-    '    }',
-    '  }',
-    '  console.log(title + " validator domain passed: " + validators.length + " validators in one process.");',
-    '}',
-  ].join("\n") + "\n";
-  const fixtureDispatcher = [
-    'import { runDomainValidators } from "./domain-runner.mjs";',
-    "export async function runDomain(id) {",
-    '  const expected = JSON.parse(process.env.MFL_CUT04_EXPECTED);',
-    '  if (id !== expected.id) throw new Error("Unexpected CLI domain: " + id);',
-    "  await runDomainValidators({ domain: expected.prefix, title: expected.title,",
-    '    validators: expected.validators, baseUrl: new URL("../", import.meta.url) });',
-    "}",
-  ].join("\n") + "\n";
-  await writeFile(join(cliFixtureRoot, "validation", "domain-runner.mjs"), fixtureRunner);
-  await writeFile(join(cliFixtureRoot, "validation", "run-domain.mjs"), fixtureDispatcher);
-
-  for (const id of remainingDomainIds) {
-    const filename = "validate-domain-" + id + ".mjs";
-    const source = await readFile(new URL("../" + filename, import.meta.url), "utf8");
-    const expectedThinSource = [
-      'import { runDomain } from "./validation/run-domain.mjs";',
-      "",
-      "// Keep the legacy CLI path, argv, and process boundary while sharing the manifest.",
-      'await runDomain("' + id + '");',
-      "",
-    ].join("\n");
-    assert.equal(source, expectedThinSource, id + ": keep the exact standalone CLI path and same-process delegation");
-    const expected = { id, ...expectedDomainOutput[id], validators: expectedValidators[id] };
-    const fixturePath = join(cliFixtureRoot, filename);
-    // Independent reconstruction of the actual previous wrapper contract.
-    const legacySource = [
-      'import { runDomainValidators } from "./validation/domain-runner.mjs";',
-      "const validators = " + JSON.stringify(expected.validators) + ";",
-      "await runDomainValidators({ domain: " + JSON.stringify(expected.prefix) +
-        ", title: " + JSON.stringify(expected.title) + ", validators, baseUrl: import.meta.url });",
-      "",
-    ].join("\n");
-
-    const scenarios = [
-      { name: "normal", args: [], failAt: "" },
-      { name: "extra argv", args: ["--cut04-legacy-extra", "fixture-value"], failAt: "" },
-      { name: "fail-fast", args: ["--cut04-legacy-extra"], failAt: expected.validators[1] },
-    ];
-    for (const scenario of scenarios) {
-      const runOptions = {
-        cwd: cliFixtureRoot, encoding: "utf8", timeout: 15_000, maxBuffer: 512 * 1024,
-        env: { ...process.env, MFL_CUT04_EXPECTED: JSON.stringify(expected), MFL_CUT04_FAIL_AT: scenario.failAt },
-      };
-      await writeFile(fixturePath, legacySource);
-      const baseline = spawnSync(process.execPath, [fixturePath, ...scenario.args], runOptions);
-      await writeFile(fixturePath, source);
-      const current = spawnSync(process.execPath, [fixturePath, ...scenario.args], runOptions);
-      const label = id + " / " + scenario.name;
-      assert.equal(baseline.error, undefined, label + ": legacy subprocess must start");
-      assert.equal(current.error, undefined, label + ": delegated subprocess must start");
-      assert.equal(current.signal, baseline.signal, label + ": termination signal parity");
-      assert.equal(current.status, baseline.status, label + ": exit status parity");
-      assert.equal(current.stdout, baseline.stdout, label + ": ordered output, argv, cwd, import URLs and titles");
-      if (scenario.failAt) {
-        assert.notEqual(current.status, 0, label + ": error must propagate as nonzero exit");
-        assert.equal(current.stderr.split("\n")[0], baseline.stderr.split("\n")[0], label + ": same failure marker");
-        assert.match(current.stderr, /CUT04 synthetic failure/, label + ": exception propagates");
-        assert.doesNotMatch(current.stdout, /validator domain passed/, label + ": no success summary on failure");
-        assert.equal(current.stdout.includes("[" + expected.prefix + "] " + expected.validators[2]), false, label + ": no validator after failure");
-      } else {
-        assert.equal(current.status, 0, label + ": success exit code");
-        assert.equal(current.stderr, baseline.stderr, label + ": stderr parity");
-        assert.equal(current.stderr, "", label + ": no unexpected stderr");
-      }
-    }
+  await mkdir(join(cliFixtureRoot, "validation"), { recursive: true });
+  for (const owner of ["run-domain.mjs", "domain-runner.mjs"]) {
+    await writeFile(join(cliFixtureRoot, "validation", owner),
+      await readFile(new URL("../validation/" + owner, import.meta.url), "utf8"));
   }
+  const fixtureSuites = Object.fromEntries(Object.entries(expectedValidators).map(([id, validators]) => [
+    id, { domain: expectedDomainOutput[id].prefix, title: expectedDomainOutput[id].title, validators },
+  ]));
+  await writeFile(join(cliFixtureRoot, "validation", "domain-suites.mjs"),
+    "export const domainSuites = Object.freeze(" + JSON.stringify(fixtureSuites) + ");\n");
+  const fixtureValidators = [...new Set(Object.values(expectedValidators).flat())];
+  assert.equal(fixtureValidators.length, 213, "214 validator invocations, 213 distinct modules");
+  for (const validator of fixtureValidators) {
+    // Fake modules check real process-global ordering, exact URL/argv/cwd.
+    const mock = [
+      "const check = JSON.parse(process.env.MFL_CUT04_EXPECTED);",
+      "const path = " + JSON.stringify(validator) + ";",
+      "const at = check.validators.indexOf(path);",
+      'if (at < 0 || at !== (globalThis.__cut04Step ?? 0)) throw new Error("CUT04 order/context mismatch");',
+      'if (JSON.stringify(process.argv) !== JSON.stringify(check.argv)) throw new Error("CUT04 argv mismatch");',
+      'if (process.cwd() !== check.cwd) throw new Error("CUT04 cwd mismatch");',
+      'if (import.meta.url !== new URL("./" + path, check.baseUrl).href) throw new Error("CUT04 import URL mismatch");',
+      'if (path === check.failAt) throw new Error("CUT04 synthetic failure: " + path);',
+      "globalThis.__cut04Step = at + 1;",
+      'console.log("CUT04_FIXTURE " + path);',
+      "",
+    ].join("\n");
+    await mkdir(join(cliFixtureRoot, ...validator.split("/").slice(0, -1)), { recursive: true });
+    await writeFile(join(cliFixtureRoot, validator), mock);
+  }
+  const dispatcher = join(cliFixtureRoot, "validation", "run-domain.mjs");
+  const baseUrl = pathToFileURL(join(cliFixtureRoot, "fixture-base.mjs")).href;
+  function run(entry, args, id, failAt = "") {
+    const check = { validators: expectedValidators[id], cwd: cliFixtureRoot, baseUrl, failAt,
+      argv: [process.execPath, entry, ...args] };
+    // Real shared CLI removes the domain ID before importing validators.
+    if (entry === dispatcher && args.length === 1 && args[0] === id) {
+      check.argv = [process.execPath, entry];
+    }
+    return spawnSync(process.execPath, [entry, ...args], {
+      cwd: cliFixtureRoot, encoding: "utf8", timeout: 30_000, maxBuffer: 1024 * 1024,
+      env: { ...process.env, MFL_CUT04_EXPECTED: JSON.stringify(check) },
+    });
+  }
+  function goldenOutput(id, failAt = "") {
+    const suite = expectedValidators[id], meta = expectedDomainOutput[id];
+    const end = failAt ? suite.indexOf(failAt) + 1 : suite.length;
+    assert.ok(end > 0, id + ": valid failure target");
+    let stdout = suite.slice(0, end).map((v) =>
+      "[" + meta.prefix + "] " + v + "\n" + (v === failAt ? "" : "CUT04_FIXTURE " + v + "\n")
+    ).join("");
+    if (!failAt) stdout += meta.title + " validator domain passed: " + suite.length + " validators in one process.\n";
+    return stdout;
+  }
+  function success(result, id, label) {
+    assert.equal(result.error, undefined, label + ": process starts");
+    assert.equal(result.signal, null, label + ": no termination signal");
+    assert.equal(result.status, 0, label + ": success status");
+    assert.equal(result.stdout, goldenOutput(id), label + ": golden-ordered stdout");
+    assert.equal(result.stderr, "", label + ": no stderr");
+  }
+  function fails(result, id, failAt, label) {
+    assert.equal(result.error, undefined, label + ": process starts");
+    assert.equal(result.signal, null, label + ": no termination signal");
+    assert.equal(result.status, 1, label + ": failure exit");
+    assert.equal(result.stdout, goldenOutput(id, failAt), label + ": fail-fast stdout");
+    assert.ok(result.stderr.startsWith("[" + expectedDomainOutput[id].prefix +
+      "] FAILED " + failAt + "\n"), label + ": error marker");
+    assert.match(result.stderr, /CUT04 synthetic failure:/, label + ": error propagated");
+    assert.doesNotMatch(result.stdout, /validator domain passed:/, label + ": no success after fail");
+  }
+  function usage(result, label) {
+    assert.equal(result.error, undefined, label + ": process starts");
+    assert.equal(result.signal, null, label + ": no termination signal");
+    assert.equal(result.status, 2, label + ": invalid CLI exit");
+    assert.equal(result.stdout, "", label + ": no validators run");
+    assert.equal(result.stderr, "Usage: node validation/run-domain.mjs <domain-id>\n", label + ": exact usage");
+  }
+  const ids = Object.keys(expectedValidators);
+  assert.equal(ids.length, 11);
+  for (const id of ids) {
+    const historic = join(cliFixtureRoot, "fixture-historic-" + id + ".mjs");
+    await writeFile(historic, 'import { runDomain } from "./validation/run-domain.mjs";\n' +
+      "await runDomain(" + JSON.stringify(id) + ");\n");
+    const failAt = expectedValidators[id][1];
+    assert.ok(failAt, id + ": at least two validators");
+
+    // Three shared-CLI scenarios: normal, invalid extra argv, fail-fast.
+    const current = run(dispatcher, [id], id);
+    const currentFail = run(dispatcher, [id], id, failAt);
+    success(current, id, id + " shared / normal");
+    fails(currentFail, id, failAt, id + " shared / fail-fast");
+    usage(run(dispatcher, [id, "--extra", "fixture-value"], id), id + " shared / extra argv");
+
+    // Three reconstructed historical-CLI scenarios: normal, extra args,
+    // fail-fast. No tracked legacy file is opened or executed.
+    const legacy = run(historic, [], id);
+    const legacyExtra = run(historic, ["--cut04-legacy-extra", "fixture-value"], id);
+    const legacyFail = run(historic, ["--cut04-legacy-extra"], id, failAt);
+    success(legacy, id, id + " historic / normal");
+    success(legacyExtra, id, id + " historic / extra argv");
+    fails(legacyFail, id, failAt, id + " historic / fail-fast");
+    assert.equal(current.stdout, legacy.stdout, id + ": success log parity");
+    assert.equal(currentFail.stdout, legacyFail.stdout, id + ": fail-fast log parity");
+    assert.equal(currentFail.status, legacyFail.status, id + ": failure status parity");
+  }
+  usage(run(dispatcher, [], "club"), "shared / missing ID");
+  usage(run(dispatcher, ["unknown-domain"], "club"), "shared / invalid ID");
 } finally {
   await rm(cliFixtureRoot, { recursive: true, force: true });
 }
-console.log("SIM-09A CUT-04.3D: nine preserved legacy CLI paths pass independent golden subprocess parity for argv, ordered logs, import URLs and success/fail-fast.");
-
+console.log("SIM-09A CUT-04.4A: all 11 dispatcher domains pass synthetic golden CLI/subprocess/argv/log/URL/fail-fast regressions without tracked wrapper dependencies.");
 console.log("SIM-09A CUT-04.1: independent 214-validator/11-domain golden inventory, exact 63-slot ordering, output and failure contracts passed without deriving golden expectations from wrapper contents.");
