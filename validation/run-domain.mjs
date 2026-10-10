@@ -1,6 +1,20 @@
 import { pathToFileURL } from "node:url";
 import { domainSuites } from "./domain-suites.mjs";
-import { runDomainValidators } from "./domain-runner.mjs";
+
+/** Run validators in declared order with unchanged logs, errors and imported module context. */
+export async function runDomainValidators({ domain, title, validators, baseUrl }) {
+  for (const validator of validators) {
+    console.log("[" + domain + "] " + validator);
+    try {
+      await import(new URL("./" + validator, baseUrl));
+    } catch (error) {
+      console.error("[" + domain + "] FAILED " + validator);
+      throw error;
+    }
+  }
+
+  console.log(title + " validator domain passed: " + validators.length + " validators in one process.");
+}
 
 /** One domain per process; the parent validate-all.mjs still owns process isolation. */
 export async function runDomain(domainId) {
