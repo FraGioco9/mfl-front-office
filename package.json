@@ -20,12 +20,12 @@
     "check": "npm run lint && npm run typecheck && npm run build && npm run verify:generated && npm run validate",
     "performance:capture": "node validation/performance-capture.mjs",
     "predev": "node prepare-next-runtime.mjs",
-    "test:a11y": "node validation/browser-a11y01-route-audit.mjs",
-    "test:a11y:controls": "node validation/browser-a11y02-control-semantics.mjs",
-    "test:a11y:contrast": "node validation/browser-a11y03-contrast-regression.mjs",
-    "test:a11y:announcements": "node validation/a11y04-live-announcements.mjs && node validation/browser-a11y04-live-regression.mjs",
-    "test:a11y:motion": "node validation/a11y05-reduced-motion.mjs && node validation/browser-a11y05-reduced-regression.mjs",
-    "test:a11y:landmarks": "node validation/a11y06-landmarks-contract.mjs && node validation/browser-a11y06-landmarks-regression.mjs"
+    "test:a11y": "node validation/browser-a11y-runner.mjs --audit && node validation/browser-a11y-runner.mjs 01",
+    "test:a11y:controls": "node validation/browser-a11y-runner.mjs 02",
+    "test:a11y:contrast": "node validation/browser-a11y-runner.mjs 03",
+    "test:a11y:announcements": "node validation/a11y04-live-announcements.mjs && node validation/browser-a11y-runner.mjs 04",
+    "test:a11y:motion": "node validation/a11y05-reduced-motion.mjs && node validation/browser-a11y-runner.mjs 05",
+    "test:a11y:landmarks": "node validation/a11y06-landmarks-contract.mjs && node validation/browser-a11y-runner.mjs 06"
   },
   "dependencies": {
     "@expo-google-fonts/titillium-web": "0.4.1",
