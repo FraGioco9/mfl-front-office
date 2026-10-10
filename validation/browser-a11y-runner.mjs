@@ -54,6 +54,81 @@ const suites = {
   },
 };
 
+async function auditConsumersAndNextTraces() {
+  const { execFileSync } = await import("node:child_process");
+  const { readdir } = await import("node:fs/promises");
+  const tsModule = await import("typescript");
+  const ts = tsModule.default ?? tsModule;
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+  const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: root })
+    .toString("utf8").split("\0").filter(Boolean);
+  const suffixes = ["route-audit", "control-semantics", "contrast-regression",
+    "live-regression", "reduced-regression", "landmarks-regression"];
+  const removed = suffixes.map((suffix, index) => "browser-a11y0" + (index + 1) + "-" + suffix + ".mjs");
+  assert.deepEqual(tracked.filter(path => removed.some(name => path.endsWith("/" + name))), [],
+    "Removed A11Y CLI paths must not exist in the Git index.");
+  const sourcePaths = tracked.filter(path => /\.(?:cjs|mjs|js|ts|tsx)$/.test(path));
+  const references = [];
+  let dynamicCalls = 0;
+  for (const path of sourcePaths) {
+    const content = await readFile(resolve(root, path), "utf8");
+    const kind = path.endsWith(".tsx") ? ts.ScriptKind.TSX : path.endsWith(".ts") ? ts.ScriptKind.TS : ts.ScriptKind.JS;
+    const ast = ts.createSourceFile(path, content, ts.ScriptTarget.Latest, true, kind);
+    function visit(node) {
+      if (ts.isStringLiteralLike(node) && removed.some(name => node.text.includes(name))) {
+        references.push(path + ":" + ast.getLineAndCharacterOfPosition(node.getStart(ast)).line);
+      }
+      if (ts.isCallExpression(node)) {
+        const isImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
+        const isRequire = ts.isIdentifier(node.expression) && node.expression.text === "require";
+        if ((isImport || isRequire) && node.arguments.length && !ts.isStringLiteralLike(node.arguments[0])) {
+          dynamicCalls += 1;
+        }
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(ast);
+  }
+  assert.deepEqual(references, [], "AST found old A11Y path consumers: " + references.join(", "));
+  const packageJson = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
+  for (const [index, command] of ["test:a11y", "test:a11y:controls", "test:a11y:contrast",
+    "test:a11y:announcements", "test:a11y:motion", "test:a11y:landmarks"].entries()) {
+    assert.ok(packageJson.scripts[command].includes("node validation/browser-a11y-runner.mjs 0" + (index + 1)),
+      "A11Y npm entrypoint drifted: " + command);
+  }
+  const nftFiles = [];
+  async function scanNft(dir) {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const path = resolve(dir, entry.name);
+      if (entry.isDirectory()) await scanNft(path);
+      else if (entry.isFile() && entry.name.endsWith(".nft.json")) nftFiles.push(path);
+    }
+  }
+  try {
+    await scanNft(resolve(root, ".next"));
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  if (process.env.CI) assert.ok(nftFiles.length > 0, "CI must produce Next NFT manifests before the A11Y audit.");
+  const nftReferences = [];
+  for (const path of nftFiles) {
+    const trace = JSON.parse(await readFile(path, "utf8"));
+    for (const included of trace.files || []) {
+      if (removed.some(name => included.endsWith("/" + name)) || included.endsWith("/browser-a11y-runner.mjs")) {
+        nftReferences.push(path + " -> " + included);
+      }
+    }
+  }
+  assert.deepEqual(nftReferences, [], "Test-only A11Y modules appeared in Next production NFT traces.");
+  console.log("A11Y AST audit: " + tracked.length + " tracked paths / " + sourcePaths.length
+    + " parsed source files / 0 removed-path imports; " + dynamicCalls + " calculated import/require calls (not individually resolved).");
+  console.log("A11Y Next NFT audit: " + nftFiles.length + " manifests / 0 test runner references"
+    + (nftFiles.length ? "." : "; no production build available."));
+}
+
+if (process.argv[2] === "--audit" && process.argv.length === 3) {
+  await auditConsumersAndNextTraces();
+} else {
 const suiteId = process.argv[2];
 assert.ok(Object.hasOwn(suites, suiteId) && process.argv.length === 3, "Specify exactly one A11Y suite: 01, 02, 03, 04, 05, or 06.");
 const suite = suites[suiteId];
@@ -126,3 +201,4 @@ if (suiteId === "03") {
   assert.deepEqual(failures, [], "A11Y-03 contrast failures across route/viewport cases: " + failures.join(", "));
 }
 console.log(suite.summary);
+}
