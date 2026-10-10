@@ -159,6 +159,7 @@ async function auditConsumersAndNextTraces() {
 
 if (process.argv[2] === "--audit" && process.argv.length === 3) {
   await auditConsumersAndNextTraces();
+  await import("./next-mobile-table-negative-regression.mjs");
 } else {
 const suiteId = process.argv[2];
 assert.ok(Object.hasOwn(suites, suiteId) && process.argv.length === 3, "Specify exactly one A11Y suite: 01, 02, 03, 04, 05, or 06.");
