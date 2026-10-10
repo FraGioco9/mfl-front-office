@@ -57,7 +57,7 @@ const suites = {
 async function auditConsumersAndNextTraces() {
   const { execFileSync } = await import("node:child_process");
   const { readdir } = await import("node:fs/promises");
-  const tsModule = await import("typescript");
+  const tsModule = await import("@typescript/typescript6");
   const ts = tsModule.default ?? tsModule;
   const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: root })
