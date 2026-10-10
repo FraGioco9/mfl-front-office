@@ -67,7 +67,7 @@ for (const source of traceFiles) {
       sha256: createHash("sha256").update(raw).digest("hex"),
       wrapperMatches: present
     });
-    const dest = join(rawRoot, name);
+    const dest = join(rawRoot, relative(nftRoot, source));
     mkdirSync(dirname(dest), { recursive: true });
     copyFileSync(source, dest);
   } catch (e) {
