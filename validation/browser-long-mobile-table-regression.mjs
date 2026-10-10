@@ -1,3 +1,3 @@
-// Historical CLI kept because external callers have not been ruled out.
-process.env.MFL_BROWSER_RESPONSIVE_COMPAT_MODE = "long-mobile-table";
+// Historical CLI retained until all external consumers are accounted for.
+process.argv.splice(2, Infinity, "long-mobile-table");
 await import("./browser-responsive-contract-runner.mjs");

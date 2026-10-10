@@ -1,3 +1,3 @@
-// Historical CLI kept because external callers have not been ruled out.
-process.env.MFL_BROWSER_RESPONSIVE_COMPAT_MODE = "sticky-name-theme";
+// Historical CLI retained until all external consumers are accounted for.
+process.argv.splice(2, Infinity, "sticky-name-theme");
 await import("./browser-responsive-contract-runner.mjs");

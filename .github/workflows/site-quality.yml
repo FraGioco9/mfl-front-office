@@ -263,8 +263,24 @@ jobs:
           node validation/browser-diagnostics-runner.mjs first-paint
           node validation/browser-diagnostics-runner.mjs listing-width
           node validation/browser-responsive-contract-runner.mjs mobile-resize
-          node validation/browser-responsive-contract-runner.mjs long-mobile-table
-          node validation/browser-responsive-contract-runner.mjs sticky-name-theme
+          # Hostile inherited mode must not override the explicit CLI argument.
+          MFL_BROWSER_RESPONSIVE_COMPAT_MODE=sticky-name-theme node validation/browser-responsive-contract-runner.mjs long-mobile-table
+          MFL_BROWSER_RESPONSIVE_COMPAT_MODE=long-mobile-table node validation/browser-responsive-contract-runner.mjs sticky-name-theme
+          # Invoke historical entrypoints directly, including previously ignored extra argv.
+          MFL_BROWSER_RESPONSIVE_COMPAT_MODE=sticky-name-theme node validation/browser-long-mobile-table-regression.mjs --legacy-ignored-arg
+          test ! -e validation/.browser-long-mobile-table-long-mobile-table.tmp.mjs
+          MFL_BROWSER_RESPONSIVE_COMPAT_MODE=long-mobile-table node validation/browser-sticky-name-theme-regression.mjs --legacy-ignored-arg
+          test ! -e validation/.browser-sticky-name-theme-sticky-theme.tmp.mjs
+          # Negative fixture tests prove subprocess failure propagates and temp files are cleaned.
+          for mode in long-mobile-table sticky-name-theme; do
+            if failure_log="$(MFL_BROWSER_SCENARIOS=__qa_cli_missing_scenario__ node "validation/browser-${mode}-regression.mjs" --legacy-ignored-arg 2>&1)"; then
+              echo "Expected ${mode} CLI to reject an unknown browser scenario." >&2
+              exit 1
+            fi
+            printf '%s\n' "$failure_log" | grep -F "No browser regression scenarios matched MFL_BROWSER_SCENARIOS."
+          done
+          test ! -e validation/.browser-long-mobile-table-long-mobile-table.tmp.mjs
+          test ! -e validation/.browser-sticky-name-theme-sticky-theme.tmp.mjs
           node validation/browser-orientation-regression.mjs
           node validation/browser-responsive-contract-runner.mjs shell-boundary
           node validation/browser-responsive-contract-runner.mjs intermediate
