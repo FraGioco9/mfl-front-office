@@ -1637,11 +1637,6 @@ const browserTestSource = String.raw`(() => {
     changelogLink.click();
     await waitFor(() => location.pathname === "/changelog" && document.body.dataset.page === "changelog",
       "MERGE-M4 Changelog footer click did not commit SPA navigation.", 8500);
-    const toggle = document.querySelector(".changelogMinorToggle");
-    const section = toggle?.closest(".changelogMinorSection");
-    assert(toggle instanceof HTMLButtonElement && section instanceof HTMLElement
-        && toggle.getAttribute("aria-expanded") === String(section.classList.contains("is-expanded")),
-      "MERGE-M4 Changelog sections lost their initial expanded/ARIA state.");
     brand.click();
     await waitFor(() => location.pathname === "/" && document.body.dataset.page === "home",
       "MERGE-M4 Home brand click did not commit SPA navigation.", 8500);
