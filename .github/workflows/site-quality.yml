@@ -238,7 +238,7 @@ jobs:
 
       - name: Browser routing regression
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-routing-responsive-shell.mjs
+        run: node validation/browser-routing-phase-runner.mjs broad
 
       - name: Player to Evaluation rate readiness
         if: steps.changes.outputs.site == 'true'
@@ -246,7 +246,7 @@ jobs:
 
       - name: Planner browser regression
         if: steps.changes.outputs.site == 'true'
-        run: node validation/browser-planner-regression.mjs
+        run: node validation/browser-routing-phase-runner.mjs planner
 
       - name: Consolidated accessibility and responsive regressions
         if: steps.changes.outputs.site == 'true'
@@ -268,7 +268,7 @@ jobs:
           node validation/browser-orientation-regression.mjs
           node validation/browser-responsive-shell-breakpoint.mjs
           node validation/browser-intermediate-responsive-extension.mjs
-          node validation/browser-mobile-route-coverage.mjs
+          node validation/browser-routing-phase-runner.mjs mobile
           node validation/browser-table-header-1374-regression.mjs
 
       - name: Commit generated site artifacts
