@@ -8,6 +8,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 // Split historical names so the AST audit correctly treats only the route
 // compatibility shim as a runtime importer of the canonical runner.
 const directory = dirname(fileURLToPath(import.meta.url));
+const shellCase = { name: "Rendered shell", path: resolve(directory, "next-rendered-shell-browser.mjs"),
+  missing: "Next rendered-shell browser probe requires a target URL.",
+  noChrome: "Next rendered-shell browser probe requires Chrome or Chromium on PATH." };
 const cases = [
   { name: "Table", path: resolve(directory, "next-mobile-table-" + "browser.mjs"),
     missing: "Next mobile table browser probe requires a target URL.",
@@ -43,7 +46,7 @@ async function runFailure(item, args, env, expected) {
 }
 
 async function assertNoChromiumLeaks(scope, scenario) {
-  assert.deepEqual((await readdir(scope)).filter(x => x.startsWith("mfl-next-mobile-table-")),
+  assert.deepEqual((await readdir(scope)).filter(x => x.startsWith("mfl-next-")),
     [], scenario + " leaked Chromium user-data profiles.");
   if (process.platform !== "linux") return;
   const deadline = Date.now() + 4_000;
@@ -62,6 +65,8 @@ const sandbox = await mkdtemp(join(tmpdir(), "mfl-next-table-negative-"));
 try {
   for (const item of cases) await runFailure(item, [], { ...process.env }, item.missing);
   console.log("NEXT-TABLE-01 NEG-01 PASS: 2/2 historical CLI missing-argument failures.");
+  await runFailure(shellCase, [], { ...process.env }, shellCase.missing);
+  console.log("NEXT-CDP-02 NEG-01 PASS: rendered-shell missing-argument failure.");
 
   // An empty PATH defeats every fallback Chrome candidate, regardless of CI image.
   for (const item of cases) {
@@ -70,6 +75,9 @@ try {
       item.noChrome);
   }
   console.log("NEXT-TABLE-01 NEG-02 PASS: 2/2 deterministic Chrome-not-found failures.");
+  await runFailure(shellCase, ["about:blank"],
+    { ...process.env, PATH: "", CHROME_PATH: join(sandbox, "absent-chrome") }, shellCase.noChrome);
+  console.log("NEXT-CDP-02 NEG-02 PASS: rendered-shell Chrome-not-found failure.");
 
   // Node-only WebSocket override: wait for the real Chromium debugging target
   // before forcing connectCdp to fail, without changing either production probe.
@@ -78,12 +86,12 @@ try {
   await writeFile(preload,
     'globalThis.WebSocket = class InjectedCdpFailure { constructor() { throw new Error("' + sentinel + '"); } };\n',
     "utf8");
-  for (const item of cases) {
+  for (const item of [...cases, shellCase]) {
     const profileRoot = await mkdtemp(join(sandbox, "isolated-"));
     try {
       const nodeOptions = [String(process.env.NODE_OPTIONS || "").trim(),
         "--import=" + pathToFileURL(preload).href].filter(Boolean).join(" ");
-      await runFailure(item, ["http://127.0.0.1:4000/"],
+      await runFailure(item, [item === shellCase ? "about:blank" : "http://127.0.0.1:4000/"],
         { ...process.env, TMPDIR: profileRoot, NODE_OPTIONS: nodeOptions }, sentinel);
       await assertNoChromiumLeaks(profileRoot, item.name + " CDP failure");
     } finally {
@@ -91,6 +99,7 @@ try {
     }
   }
   console.log("NEXT-TABLE-01 NEG-03 PASS: 2/2 CDP errors propagated; no leaked Chrome profiles/processes.");
+  console.log("NEXT-CDP-02 NEG-03 PASS: rendered-shell injected CDP error and cleanup.");
 } finally {
   await rm(sandbox, { recursive: true, force: true });
 }

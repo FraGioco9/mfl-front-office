@@ -70,6 +70,7 @@ async function auditConsumersAndNextTraces() {
   const removedRunners = [...removed, ...matrixRemoved];
   const nextTableCliNames = ["next-mobile-table-browser.mjs", "next-mobile-table-route-browser.mjs"];
   const nextTableAstConsumers = [];
+  const cdpHelperConsumers = [];
   assert.deepEqual(tracked.filter(path => removedRunners.some(name => path.endsWith("/" + name))), [],
     "Removed A11Y/BROWSER-MATRIX CLI paths must not exist in the Git index.");
   const sourcePaths = tracked.filter(path => /\.(?:cjs|mjs|js|ts|tsx)$/.test(path));
@@ -85,6 +86,7 @@ async function auditConsumersAndNextTraces() {
       }
       if (path !== "validation/browser-a11y-runner.mjs" && ts.isStringLiteralLike(node)
         && nextTableCliNames.some(name => node.text.includes(name))) nextTableAstConsumers.push(path);
+      if (ts.isStringLiteralLike(node) && node.text === "./next-browser-cdp.mjs") cdpHelperConsumers.push(path);
       if (ts.isCallExpression(node)) {
         const isImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
         const isRequire = ts.isIdentifier(node.expression) && node.expression.text === "require";
@@ -100,6 +102,9 @@ async function auditConsumersAndNextTraces() {
   const textPaths = tracked.filter(path => /\.(?:ya?ml|json|sh|py|md|html|css|inc|toml)$/.test(path));
   assert.deepEqual([...new Set(nextTableAstConsumers)].sort(), ["validation/next-mobile-table-route-browser.mjs"],
     "NEXT-TABLE-01 found unexpected in-repo AST consumers.");
+  assert.deepEqual([...new Set(cdpHelperConsumers)].sort(),
+    ["validation/next-mobile-table-browser.mjs", "validation/next-rendered-shell-browser.mjs"],
+    "NEXT-CDP-02 helper must have exactly two runtime probe consumers.");
   const textReferences = [];
   const nextTableTextConsumers = [];
   for (const path of textPaths) {
@@ -132,6 +137,7 @@ async function auditConsumersAndNextTraces() {
   if (process.env.CI) assert.ok(nftFiles.length > 0, "CI must produce Next NFT manifests before the A11Y audit.");
   const nftReferences = [];
   const nextTableNftReferences = [];
+  const cdpHelperNftReferences = [];
   for (const path of nftFiles) {
     const trace = JSON.parse(await readFile(path, "utf8"));
     for (const included of trace.files || []) {
@@ -142,10 +148,14 @@ async function auditConsumersAndNextTraces() {
       }
       if (nextTableCliNames.some(name => included.replaceAll("\\", "/").endsWith("/" + name)))
         nextTableNftReferences.push(path + " -> " + included);
+      if (included.replaceAll("\\", "/").endsWith("/next-browser-cdp.mjs"))
+        cdpHelperNftReferences.push(path + " -> " + included);
     }
   }
   assert.deepEqual(nftReferences, [], "Test-only A11Y modules appeared in Next production NFT traces.");
   assert.deepEqual(nextTableNftReferences, [], "NEXT-TABLE-01 test-only CLI entered production Next NFT traces.");
+  assert.deepEqual(cdpHelperNftReferences, [], "NEXT-CDP-02 test-only helper entered production Next NFT traces.");
+  console.log("NEXT-CDP-02 AST/NFT audit: 2 helper consumers / " + nftFiles.length + " Next NFT manifests / 0 helper production traces.");
   console.log("NEXT-TABLE-01 AST/NFT audit: 2 historical CLIs / 1 internal import consumer / 1 workflow consumer / "
     + nftFiles.length + " Next NFT manifests / 0 Next Table production traces.");
   console.log("A11Y AST audit: " + tracked.length + " tracked paths / " + sourcePaths.length
