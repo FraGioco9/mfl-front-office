@@ -20,7 +20,7 @@
     "check": "npm run lint && npm run typecheck && npm run build && npm run verify:generated && npm run validate",
     "performance:capture": "node validation/performance-capture.mjs",
     "predev": "node prepare-next-runtime.mjs",
-    "test:a11y": "node validation/browser-a11y-runner.mjs 01",
+    "test:a11y": "node validation/browser-a11y-runner.mjs --audit && node validation/browser-a11y-runner.mjs 01",
     "test:a11y:controls": "node validation/browser-a11y-runner.mjs 02",
     "test:a11y:contrast": "node validation/browser-a11y-runner.mjs 03",
     "test:a11y:announcements": "node validation/a11y04-live-announcements.mjs && node validation/browser-a11y-runner.mjs 04",
