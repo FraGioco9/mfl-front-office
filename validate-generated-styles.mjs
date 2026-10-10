@@ -10,15 +10,14 @@ import { readValidationText } from "./validation-text.mjs";
 const read = (path) => readValidationText(path, import.meta.url);
 const [
   runtimeStyles, index, responsive, packageSource, vercelIgnore,
-  htmlBuilder, responsiveBuilder, stylesBuilder, releaseSource,
+  fragmentWriter, stylesBuilder, releaseSource,
 ] = await Promise.all([
   read("./styles-runtime.css"),
   read("./index.html"),
   read("./responsive.css"),
   read("./package.json"),
   read("./.vercelignore"),
-  read("./build-html.mjs"),
-  read("./build-responsive.mjs"),
+  read("./build-fragments.mjs"),
   read("./build-styles.mjs"),
   read("./release.json"),
 ]);
@@ -26,49 +25,65 @@ const [
 const scripts = JSON.parse(packageSource).scripts;
 const steps = (command) => String(command || "").split(/\s*&&\s*/).map((step) => step.trim());
 
-function assertBuildPipeline(scriptMap, htmlSource, responsiveSource, stylesSource) {
-  // Validate the actual dependency ordering rather than an obsolete JSON text literal.
+function assertBuildPipeline(scriptMap, fragmentSource, stylesSource) {
   assert.deepEqual(steps(scriptMap["build:legacy"]), [
     "npm run build:html", "npm run build:core", "npm run build:styles",
   ], "HTML must precede core/release projections, then CSS bundling; do not assemble responsive twice.");
   assert.deepEqual(steps(scriptMap.build), [
     "npm run build:legacy", "npm run build:public", "next build --webpack",
-  ], "The full build must project the generated outputs before Next.");
+  ], "The full build must project generated outputs before Next.");
   for (const [name, command] of [
-    ["build:html", "node build-html.mjs"],
-    ["build:responsive", "node build-responsive.mjs"],
+    ["build:html", "node build-fragments.mjs html"],
+    ["build:responsive", "node build-fragments.mjs responsive"],
     ["build:core", "node build-app-core.mjs"],
     ["build:styles", "node build-styles.mjs"],
   ]) {
     assert.equal(scriptMap[name], command, `Preserve standalone ${name} CLI ownership.`);
   }
-  assert.match(htmlSource, /writeGeneratedFragmentFile\(new URL\("\.\/index\.html"/,
-    "Keep the standalone HTML writer and its output path.");
-  assert.match(responsiveSource, /writeGeneratedFragmentFile\(new URL\("\.\/responsive\.css"/,
-    "Keep the standalone responsive writer and its output path.");
-  assert.match(stylesSource, /^import "\.\/build-responsive\.mjs";$/m,
-    "The styles builder must run responsive generation before bundling.");
-  assert.match(stylesSource, /createStyleBundle\(read\)/,
-    "The styles builder must continue flattening the CSS dependency graph.");
+  assert.ok(fragmentSource.includes("export async function writeHtml()")
+    && fragmentSource.includes('new URL("./index.html", import.meta.url)')
+    && fragmentSource.includes('new URL("./html-sources/", import.meta.url)')
+    && fragmentSource.includes('".html"'), "Keep standalone HTML writer and output path.");
+  assert.ok(fragmentSource.includes("export async function writeResponsive()")
+    && fragmentSource.includes('new URL("./responsive.css", import.meta.url)')
+    && fragmentSource.includes('new URL("./responsive-sources/", import.meta.url)')
+    && fragmentSource.includes('".css.inc"'), "Keep standalone responsive writer and output path.");
+  assert.ok(fragmentSource.includes('if (invokedPath === import.meta.url)')
+    && fragmentSource.includes('pathToFileURL(resolve(process.argv[1])).href')
+    && fragmentSource.includes('else throw new Error("Usage: node build-fragments.mjs <html|responsive>")'),
+  "The fragment CLI must reject invalid modes without side effects on ESM imports.");
+  assert.ok(stylesSource.includes('import { writeResponsive } from "./build-fragments.mjs";')
+    && stylesSource.includes("await writeResponsive();")
+    && stylesSource.indexOf("await writeResponsive();") < stylesSource.indexOf("createStyleBundle(read)"),
+    "The styles builder must await responsive generation before bundling.");
 }
 
-// The positive contract and negative mutations catch duplicated or reordered
-// assembly, a removed standalone command, and a removed CSS builder import.
-assertBuildPipeline(scripts, htmlBuilder, responsiveBuilder, stylesBuilder);
+// Keep both positive and negative contract coverage: order, standalone commands,
+// CSS refresh, source ownership, import guard and unknown CLI mode.
+assertBuildPipeline(scripts, fragmentWriter, stylesBuilder);
 assert.throws(() => assertBuildPipeline({
   ...scripts,
   "build:legacy": "npm run build:html && npm run build:responsive && npm run build:core && npm run build:styles",
-}, htmlBuilder, responsiveBuilder, stylesBuilder), /HTML must precede core/);
+}, fragmentWriter, stylesBuilder), /HTML must precede core/);
 assert.throws(() => assertBuildPipeline({
   ...scripts,
   "build:legacy": "npm run build:core && npm run build:html && npm run build:styles",
-}, htmlBuilder, responsiveBuilder, stylesBuilder), /HTML must precede core/);
+}, fragmentWriter, stylesBuilder), /HTML must precede core/);
 assert.throws(() => assertBuildPipeline({
   ...scripts, "build:responsive": "",
-}, htmlBuilder, responsiveBuilder, stylesBuilder), /Preserve standalone build:responsive/);
+}, fragmentWriter, stylesBuilder), /Preserve standalone build:responsive/);
 assert.throws(() => assertBuildPipeline(
-  scripts, htmlBuilder, responsiveBuilder, stylesBuilder.replace('import "./build-responsive.mjs";', ""),
-), /must run responsive generation/);
+  scripts, fragmentWriter, stylesBuilder.replace("await writeResponsive();", ""),
+), /must await responsive generation/);
+assert.throws(() => assertBuildPipeline(
+  scripts, fragmentWriter.replace("export async function writeResponsive()", "async function writeResponsive()"), stylesBuilder,
+), /Keep standalone responsive writer/);
+assert.throws(() => assertBuildPipeline(
+  scripts, fragmentWriter.replace('if (invokedPath === import.meta.url)', 'if (true)'), stylesBuilder,
+), /without side effects on ESM imports/);
+assert.throws(() => assertBuildPipeline(
+  scripts, fragmentWriter.replace('else throw new Error("Usage: node build-fragments.mjs <html|responsive>")', 'else return;'), stylesBuilder,
+), /reject invalid modes/);
 
 // Compare the complete generated UTF-8 bytes with canonical manifest-order
 // outputs, including post-build release/first-paint and flattened CSS content.

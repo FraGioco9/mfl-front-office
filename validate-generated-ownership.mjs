@@ -2,10 +2,9 @@ import { invariant } from "./validation/assertions.mjs";
 import { readValidationText } from "./validation-text.mjs";
 
 const read = path => readValidationText(path, import.meta.url);
-const [pkg, buildHtml, buildResponsive, buildStyles, buildCore, prepare, legacyAssets, gitignore, docs] = await Promise.all([
+const [pkg, fragmentWriter, buildStyles, buildCore, prepare, legacyAssets, gitignore, docs] = await Promise.all([
   read("./package.json"),
-  read("./build-html.mjs"),
-  read("./build-responsive.mjs"),
+  read("./build-fragments.mjs"),
   read("./build-styles.mjs"),
   read("./build-app-core.mjs"),
   read("./prepare-next-runtime.mjs"),
@@ -14,8 +13,25 @@ const [pkg, buildHtml, buildResponsive, buildStyles, buildCore, prepare, legacyA
   read("./docs/generated-ownership.md"),
 ]);
 
-invariant(buildHtml.includes('writeGeneratedFragmentFile(new URL("./index.html"'), "index.html must retain build-html ownership.");
-invariant(buildResponsive.includes('writeGeneratedFragmentFile(new URL("./responsive.css"'), "responsive.css must retain build-responsive ownership.");
+invariant(
+  fragmentWriter.includes("export async function writeHtml()")
+    && fragmentWriter.includes('new URL("./index.html", import.meta.url)')
+    && fragmentWriter.includes('new URL("./html-sources/", import.meta.url)'),
+  "HTML must retain the canonical fragment writer and index.html output.",
+);
+invariant(
+  fragmentWriter.includes("export async function writeResponsive()")
+    && fragmentWriter.includes('new URL("./responsive.css", import.meta.url)')
+    && fragmentWriter.includes('new URL("./responsive-sources/", import.meta.url)')
+    && fragmentWriter.includes("if (invokedPath === import.meta.url)"),
+  "Responsive must retain the canonical writer, output and side-effect-free import guard.",
+);
+invariant(
+  buildStyles.includes('import { writeResponsive } from "./build-fragments.mjs";')
+    && buildStyles.includes("await writeResponsive();")
+    && buildStyles.indexOf("await writeResponsive();") < buildStyles.indexOf("createStyleBundle(read)"),
+  "CSS must await the responsive writer before bundling.",
+);
 invariant(buildStyles.includes('writeFile(new URL("./styles-runtime.css"'), "styles-runtime.css must retain build-styles ownership.");
 invariant(buildCore.includes("for (const entry of coreSourceManifest)") && buildCore.includes("writeFileIfChanged(runtimePath"), "app-core runtimes must remain manifest-generated.");
 

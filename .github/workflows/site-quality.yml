@@ -82,7 +82,7 @@ jobs:
           set -euo pipefail
           # The parser-time CSP snapshot must match canonical HTML before Next loads its config.
           # Generated files remain CI-owned and are committed only after full validation.
-          node build-html.mjs
+          node build-fragments.mjs html
           node validate-vercel-security-headers.mjs
           node scripts/ci/create-next-sqlite-smoke-fixture.cjs "$MFL_DATABASE_PATH"
           npm run dev > /tmp/mfl-next-dev.log 2>&1 &
@@ -358,7 +358,7 @@ jobs:
           WALLET_CHALLENGE_ORIGIN: http://127.0.0.1:4000
         run: |
           # Regenerate the source-owned first-paint HTML before Next checks its CSP hash inventory.
-          node build-html.mjs
+          node build-fragments.mjs html
           node scripts/ci/create-next-sqlite-smoke-fixture.cjs $env:MFL_DATABASE_PATH
           $stdout = Join-Path $env:RUNNER_TEMP "mfl-next-dev.stdout.log"
           $stderr = Join-Path $env:RUNNER_TEMP "mfl-next-dev.stderr.log"
