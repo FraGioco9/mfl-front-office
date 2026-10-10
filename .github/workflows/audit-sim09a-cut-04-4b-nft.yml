@@ -1,0 +1,107 @@
+name: SIM-09A CUT-04.4B NFT exact-head isolated audit
+
+on:
+  push:
+    branches:
+      - audit/sim-09a-cut-04-4b-nft-1253
+    paths:
+      - scripts/audit/scan-cut-04-4b-nft.mjs
+      - .github/workflows/audit-sim09a-cut-04-4b-nft.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sim-09a-cut-04-4b-nft-exact-head
+  cancel-in-progress: false
+
+jobs:
+  nft:
+    name: Isolated PR HEAD Next NFT (30 traces)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPECTED_MAIN_SHA: fe2c832ebedbcd4337195968542ca375fcf1b707
+      EXPECTED_PR_HEAD: 16e44b3896e0f691cd8c27eaed4028fa89a68fee
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Checkout only audit scripts without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify main and PR refs and audit-only diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$EXPECTED_MAIN_SHA"
+          test "$(git ls-remote origin refs/heads/sim-09a-cut-04-4b-delete-11-wrappers | cut -f1)" = "$EXPECTED_PR_HEAD"
+          git cat-file -e "$EXPECTED_MAIN_SHA^{commit}"
+          git cat-file -e "$EXPECTED_PR_HEAD^{commit}"
+          test "$(git rev-parse "$EXPECTED_PR_HEAD^")" = "$EXPECTED_MAIN_SHA"
+          changed="$(git diff --name-only "$EXPECTED_PR_HEAD"...HEAD)"
+          expected="$(printf '%s\n' '.github/workflows/audit-sim09a-cut-04-4b-nft.yml' 'scripts/audit/scan-cut-04-4b-nft.mjs')"
+          printf '%s\n' "$changed"
+          test "$changed" = "$expected"
+          mkdir -p "$RUNNER_TEMP/cut04-nft-report"
+          printf 'Audit-only diff and refs verified\n'
+
+      - name: Create isolated detached checkout of exact PR HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          git worktree add --detach "$RUNNER_TEMP/cut04-pr-head" "$EXPECTED_PR_HEAD"
+          test "$(git -C "$RUNNER_TEMP/cut04-pr-head" rev-parse HEAD)" = "$EXPECTED_PR_HEAD"
+          test -z "$(git -C "$RUNNER_TEMP/cut04-pr-head" status --porcelain)"
+          count="$(git -C "$RUNNER_TEMP/cut04-pr-head" ls-files | wc -l | tr -d ' ')"
+          test "$count" = "784"
+          echo "Pinned worktree and 784-file inventory confirmed"
+
+      - name: Install Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install site dependencies without lifecycle scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/cut04-pr-head"
+          npm ci --ignore-scripts --no-audit --no-fund
+          test -z "$(git status --porcelain)"
+
+      - name: Build Next webpack in detached checkout and verify generated parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/cut04-pr-head"
+          export MFL_DATABASE_PATH="$RUNNER_TEMP/cut04-audit-only.db"
+          npm run build > "$RUNNER_TEMP/cut04-nft-report/next-build.log" 2>&1 || {
+            tail -n 75 "$RUNNER_TEMP/cut04-nft-report/next-build.log"
+            exit 1
+          }
+          npm run verify:generated >> "$RUNNER_TEMP/cut04-nft-report/next-build.log" 2>&1
+          echo "Next webpack build and generated artifacts parity succeeded"
+
+      - name: Inspect all Next file traces, assert 0 legacy wrapper paths, export raw NFT
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check "$GITHUB_WORKSPACE/scripts/audit/scan-cut-04-4b-nft.mjs"
+          node "$GITHUB_WORKSPACE/scripts/audit/scan-cut-04-4b-nft.mjs" \
+            "$RUNNER_TEMP/cut04-pr-head" \
+            "$RUNNER_TEMP/cut04-nft-report" \
+            "$EXPECTED_PR_HEAD" \
+            "$EXPECTED_MAIN_SHA"
+          cat "$RUNNER_TEMP/cut04-nft-report/cut-04-4b-nft-summary.md" >> "$GITHUB_STEP_SUMMARY"
+          echo "Next NFT exact-HEAD audit PASS"
+
+      - name: Publish report, build log and raw NFT trace artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-09a-cut04-4b-nft-pr1253-exact-head
+          path: ${{ runner.temp }}/cut04-nft-report/
+          if-no-files-found: error
+          retention-days: 30
