@@ -262,12 +262,12 @@ jobs:
           node validate-mobile-summary-first-paint.mjs
           node validation/browser-diagnostics-runner.mjs first-paint
           node validation/browser-diagnostics-runner.mjs listing-width
-          node validation/browser-mobile-table-responsive-resize.mjs
+          node validation/browser-responsive-contract-runner.mjs mobile-resize
           node validation/browser-long-mobile-table-regression.mjs
           node validation/browser-sticky-name-theme-regression.mjs
           node validation/browser-orientation-regression.mjs
-          node validation/browser-responsive-shell-breakpoint.mjs
-          node validation/browser-intermediate-responsive-extension.mjs
+          node validation/browser-responsive-contract-runner.mjs shell-boundary
+          node validation/browser-responsive-contract-runner.mjs intermediate
           node validation/browser-routing-phase-runner.mjs mobile
           node validation/browser-diagnostics-runner.mjs header-1374
 
