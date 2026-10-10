@@ -99,9 +99,6 @@ try {
     if (suiteId === "02") env.MFL_A11Y02_ROUTE = item.route;
     if (suiteId === "03") env.MFL_A11Y03_ROUTE = item.route;
     if (suiteId === "06") env.MFL_A11Y06_ROUTE = item.route;
-    if (suiteId === "01" || suiteId === "03" || suiteId === "06") {
-      env.MFL_UX03_BROWSER_VIEWPORT = item.phone && item.scenario === "planner" ? "phone" : "desktop";
-    }
 
     const code = await new Promise((done, reject) => {
       const child = spawn(process.execPath, [temporary], {
