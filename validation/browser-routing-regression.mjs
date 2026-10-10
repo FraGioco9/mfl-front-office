@@ -1620,6 +1620,35 @@ const browserTestSource = String.raw`(() => {
     }
   }
 
+  // MERGE-M4: exercise the actual delegated footer and brand links, rather than
+  // calling setPage directly, while keeping changelog expansion behavior untouched.
+  async function assertShellNavigationClickMatrix() {
+    assert(window.__mflFooterSpaNavigationBound === true,
+      "MERGE-M4 footer navigation listeners were not installed.");
+    const privacyLink = document.querySelector('.siteFooterDetails a[data-page="privacy"]');
+    const changelogLink = document.querySelector('.siteFooterDetails a[data-page="changelog"]');
+    const brand = document.querySelector('.brandLink[data-page="home"]');
+    assert(privacyLink instanceof HTMLAnchorElement && changelogLink instanceof HTMLAnchorElement
+        && brand instanceof HTMLAnchorElement,
+      "MERGE-M4 footer/brand navigation links must retain their native anchor semantics.");
+    privacyLink.click();
+    await waitFor(() => location.pathname === "/privacy" && document.body.dataset.page === "privacy",
+      "MERGE-M4 Privacy footer click did not commit SPA navigation.", 8500);
+    changelogLink.click();
+    await waitFor(() => location.pathname === "/changelog" && document.body.dataset.page === "changelog",
+      "MERGE-M4 Changelog footer click did not commit SPA navigation.", 8500);
+    const toggle = document.querySelector(".changelogMinorToggle");
+    const section = toggle?.closest(".changelogMinorSection");
+    assert(toggle instanceof HTMLButtonElement && section instanceof HTMLElement
+        && toggle.getAttribute("aria-expanded") === String(section.classList.contains("is-expanded")),
+      "MERGE-M4 Changelog sections lost their initial expanded/ARIA state.");
+    brand.click();
+    await waitFor(() => location.pathname === "/" && document.body.dataset.page === "home",
+      "MERGE-M4 Home brand click did not commit SPA navigation.", 8500);
+    assert(window.__mflFooterSpaNavigationBound === true,
+      "MERGE-M4 footer listener guard changed after SPA navigation.");
+  }
+
   function assertNav03Navigation(label = "route") {
     const current = String(document.body.dataset.page || "").toLowerCase();
     const sidebarPage = current === "mflstats" ? "mfl" : current;
@@ -3010,6 +3039,7 @@ const browserTestSource = String.raw`(() => {
       JSON.stringify(spaState) === JSON.stringify(directState),
       scenario + " direct refresh and SPA navigation did not converge to the same canonical state.",
     );
+    if (scenario === "database" && innerWidth > 900) await assertShellNavigationClickMatrix();
     assert(errors.length === 0, "Console/runtime errors occurred: " + errors.join(" | "));
     finish("passed", scenario + ": direct refresh and SPA navigation converged with canonical timing and no runtime errors.");
   }
