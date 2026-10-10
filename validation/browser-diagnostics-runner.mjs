@@ -1,14 +1,9 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readBrowserSource, replaceBrowserScenarios, withBrowserFixture, runBrowserFixture } from "./browser-fixture.mjs";
 
 const mode = process.argv[2];
 assert.ok(process.argv.length === 3 && ["first-paint", "listing-width", "header-1374"].includes(mode),
   "Specify one browser diagnostic: first-paint, listing-width or header-1374.");
-const validationDirectory = dirname(fileURLToPath(import.meta.url));
-const sourcePath = resolve(validationDirectory, "browser-routing-regression.mjs");
 const specs = {
   "first-paint": {
     temporary: ".browser-mobile-first-paint-regression.tmp.mjs",
@@ -30,8 +25,7 @@ const specs = {
   },
 };
 const spec = specs[mode];
-const temporaryPath = resolve(validationDirectory, spec.temporary);
-const source = await readFile(sourcePath, "utf8");
+const source = await readBrowserSource();
 let diagnosticSource = source;
 
 if (mode === "first-paint") {
@@ -244,23 +238,10 @@ const geometryProbe = geometryMarker + String.raw`    if (viewportWidth === 1374
 diagnosticSource = source.replace(geometryMarker, geometryProbe);
 }
 
-const scenariosPattern = /const regressionScenarios = Object\.freeze\(\[[\s\S]*?\n\]\);\n\nconst server =/u;
-assert.match(diagnosticSource, scenariosPattern, "Browser regression scenario list must remain discoverable.");
-diagnosticSource = diagnosticSource.replace(scenariosPattern, spec.scenarios);
+diagnosticSource = replaceBrowserScenarios(diagnosticSource, spec.scenarios,
+  "Browser regression scenario list must remain discoverable.");
 
-await writeFile(temporaryPath, diagnosticSource, "utf8");
-try {
-  const status = await new Promise((resolveStatus, rejectStatus) => {
-    const child = spawn(process.execPath, [temporaryPath], {
-      cwd: resolve(validationDirectory, ".."),
-      stdio: "inherit",
-    });
-    child.once("error", rejectStatus);
-    child.once("close", resolveStatus);
-  });
-  assert.equal(status, 0, spec.failure);
-} finally {
-  await rm(temporaryPath, { force: true });
-}
+await withBrowserFixture(diagnosticSource, spec.temporary,
+  temporaryPath => runBrowserFixture(temporaryPath, spec.failure));
 
 console.log(spec.success);
