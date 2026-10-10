@@ -1,20 +1,15 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readBrowserSource, replaceBrowserScenarios, withBrowserFixture, runBrowserFixture } from "./browser-fixture.mjs";
 
 const mode = process.argv[2];
 assert.ok(process.argv.length === 3 && ["broad", "planner", "mobile"].includes(mode),
   "Specify one browser routing phase: broad, planner or mobile.");
-const validationDirectory = dirname(fileURLToPath(import.meta.url));
-const sourcePath = resolve(validationDirectory, "browser-routing-regression.mjs");
-const temporaryPath = resolve(validationDirectory, {
+const temporaryName = {
   broad: ".browser-routing-responsive-shell.tmp.mjs",
   planner: ".browser-planner-regression.tmp.mjs",
   mobile: ".browser-mobile-route-coverage.tmp.mjs",
-}[mode]);
-let diagnosticSource = await readFile(sourcePath, "utf8");
+}[mode];
+let diagnosticSource = await readBrowserSource();
 
 if (mode === "broad") {
   const compactShellContract = 'if (viewportWidth <= 1366 && selector.startsWith(".stats")) {';
@@ -22,10 +17,7 @@ if (mode === "broad") {
     "Broad routing regression must consume exactly one canonical compact-shell breakpoint contract.");
 }
 if (mode === "mobile") {
-  const scenariosPattern = /const regressionScenarios = Object\.freeze\(\[[\s\S]*?\n\]\);\n\nconst server =/u;
-  assert.match(diagnosticSource, scenariosPattern, "Browser routing scenario list must remain discoverable.");
-  diagnosticSource = diagnosticSource.replace(
-    scenariosPattern,
+  diagnosticSource = replaceBrowserScenarios(diagnosticSource,
     `const regressionScenarios = Object.freeze([
   ["database-phone", "/database/attributes", 520, 844],
   ["database-compact-380", "/database/attributes", 380, 800],
@@ -36,21 +28,11 @@ if (mode === "mobile") {
 ]);
 
 const server =`,
-  );
+    "Browser routing scenario list must remain discoverable.");
 }
 
-await writeFile(temporaryPath, diagnosticSource, "utf8");
-async function runPhase(env, failureMessage) {
-  const status = await new Promise((resolveStatus, rejectStatus) => {
-    const options = { cwd: resolve(validationDirectory, ".."), stdio: "inherit" };
-    if (env) options.env = env;
-    const child = spawn(process.execPath, [temporaryPath], options);
-    child.once("error", rejectStatus);
-    child.once("close", resolveStatus);
-  });
-  assert.equal(status, 0, failureMessage);
-}
-try {
+await withBrowserFixture(diagnosticSource, temporaryName, async (temporaryPath) => {
+  const runPhase = (env, failureMessage) => runBrowserFixture(temporaryPath, failureMessage, env);
   if (mode === "broad") {
     await runPhase({
       ...process.env,
@@ -83,9 +65,7 @@ try {
   } else {
     await runPhase(undefined, "Compact mobile route browser coverage failed.");
   }
-} finally {
-  await rm(temporaryPath, { force: true });
-}
+});
 if (mode === "broad") {
   console.log("Broad browser routing regression passed with the 1366px compact-shell contract.");
 } else if (mode === "planner") {
