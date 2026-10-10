@@ -1,0 +1,105 @@
+name: SIM-09A CUT-04.4B R0B3 isolated dependency audit
+on:
+  push:
+    branches:
+      - audit/sim09a-r0b3-795
+    paths:
+      - scripts/audit/sim-09a-cut-04-4b-r0b3.mjs
+      - .github/workflows/audit-sim09a-r0b3.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sim09a-r0b3-audit-795
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    name: AST 795 + Next NFT (isolated)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPECTED_MAIN_SHA: fe2c832ebedbcd4337195968542ca375fcf1b707
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Checkout audit-only scripts with no persisted credentials
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify audited main SHA and audit-only branch delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git ls-remote origin refs/heads/main | cut -f1)"
+          test "$actual" = "$EXPECTED_MAIN_SHA"
+          git cat-file -e "$EXPECTED_MAIN_SHA^{commit}"
+          files="$(git diff --name-only "$EXPECTED_MAIN_SHA"...HEAD)"
+          printf '%s\n' "$files"
+          test "$files" = "$(printf '%s\n' '.github/workflows/audit-sim09a-r0b3.yml' 'scripts/audit/sim-09a-cut-04-4b-r0b3.mjs')"
+          mkdir -p "$RUNNER_TEMP/r0b3-report"
+
+      - name: Create detached, temporary pinned-main checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git worktree add --detach "$RUNNER_TEMP/r0b3-main" "$EXPECTED_MAIN_SHA"
+          test "$(git -C "$RUNNER_TEMP/r0b3-main" rev-parse HEAD)" = "$EXPECTED_MAIN_SHA"
+          test -z "$(git -C "$RUNNER_TEMP/r0b3-main" status --porcelain)"
+          echo "R0B3 isolated checkout exact-SHA confirmed"
+
+      - name: Prepare parser and Next dependencies in detached checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/r0b3-main"
+          npm ci --ignore-scripts --no-audit --no-fund
+          node -e 'const ts=require("@typescript/typescript6");if(typeof ts.createSourceFile!=="function")process.exit(1)'
+          test -z "$(git status --porcelain)"
+
+      - name: Execute AST scan on all 795 tracked main files
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check "$GITHUB_WORKSPACE/scripts/audit/sim-09a-cut-04-4b-r0b3.mjs"
+          node "$GITHUB_WORKSPACE/scripts/audit/sim-09a-cut-04-4b-r0b3.mjs" scan "$RUNNER_TEMP/r0b3-main" "$EXPECTED_MAIN_SHA" "$RUNNER_TEMP/r0b3-report"
+          test -f "$RUNNER_TEMP/r0b3-report/r0b3-ast-report.json"
+          test -z "$(git -C "$RUNNER_TEMP/r0b3-main" status --porcelain)"
+
+      - name: Attempt Next.js webpack build in isolated checkout (no live DB or deploy)
+        shell: bash
+        env:
+          MFL_DATABASE_PATH: /tmp/r0b3-no-live-database.db
+        run: |
+          set -uo pipefail
+          cd "$RUNNER_TEMP/r0b3-main"
+          if npm run build > "$RUNNER_TEMP/r0b3-report/r0b3-next-build.log" 2>&1; then
+            echo "SUCCESS" > "$RUNNER_TEMP/r0b3-report/r0b3-next-build-status.txt"
+            echo "Next webpack build succeeded in detached temporary checkout"
+          else
+            echo "FAILED_OR_UNAVAILABLE" > "$RUNNER_TEMP/r0b3-report/r0b3-next-build-status.txt"
+            echo "Next build incomplete; NFT gate remains OPEN"
+            tail -n 50 "$RUNNER_TEMP/r0b3-report/r0b3-next-build.log"
+          fi
+          exit 0
+
+      - name: Collect actual Next NFT traces and wrapper references
+        shell: bash
+        run: |
+          set -euo pipefail
+          node "$GITHUB_WORKSPACE/scripts/audit/sim-09a-cut-04-4b-r0b3.mjs" traces "$RUNNER_TEMP/r0b3-main" "$EXPECTED_MAIN_SHA" "$RUNNER_TEMP/r0b3-report"
+          cat "$RUNNER_TEMP/r0b3-report/r0b3-summary.md" >> "$GITHUB_STEP_SUMMARY"
+          test -f "$RUNNER_TEMP/r0b3-report/r0b3-next-traces.json"
+          echo "R0B3 reports complete; deletion NOT authorized"
+
+      - name: Publish immutable audit reports as GitHub artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-09a-r0b3-main-795-audit
+          path: |
+            /tmp/r0b3-report/
+          if-no-files-found: warn
+          retention-days: 30
