@@ -16,11 +16,11 @@ const {
   searchData,
   summaryData,
   mflStatsData,
+  mflStatsSummaryData,
   filterOptionsData,
 } = require("./_data-views");
 const { myClubsData, myClubsCompetitionsData } = require("./_clubs");
 const { databaseStatsData } = require("./_database-stats");
-const { mflStatsSummaryData } = require("./_mfl-stats-summary");
 
 const PUBLIC_SNAPSHOT_MODES = new Set([
   "bootstrap",

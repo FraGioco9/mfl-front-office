@@ -3,11 +3,10 @@ import { readFile } from "node:fs/promises";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 
-const [dataPage, dataQuery, dataViews, mflStatsSummary, sharedIncrementalRouting, mflStatsCore, styles, stylesBase, controls, responsive, dropdowns, scrollbars, bootstrapCore, controlInteractions, filterControls] = await Promise.all([
+const [dataPage, dataQuery, dataViews, sharedIncrementalRouting, mflStatsCore, styles, stylesBase, controls, responsive, dropdowns, scrollbars, bootstrapCore, controlInteractions, filterControls] = await Promise.all([
   read("./api/_data-page.js"),
   read("./api/_data-query.js"),
   read("./api/_data-views.js"),
-  read("./api/_mfl-stats-summary.js"),
   read("./modules/core-sources/shared-incremental-routing.js"),
   read("./modules/core-sources/mfl-stats.js"),
   read("./styles.css"),
@@ -70,15 +69,15 @@ invariant(
   "Normal MFL Stats must derive totals from its complete row set, while mfl-stats-all must prefer the precomputed snapshot total and retain a live COUNT(*) fallback for older databases.",
 );
 invariant(
-  mflStatsSummary.includes('tableExists("runtime_mfl_stats_summary")')
-    && mflStatsSummary.includes("precomputedMflStatsSummaryRows()")
-    && mflStatsSummary.includes("liveMflStatsSummaryRows()")
-    && mflStatsSummary.includes('"sqlite-runtime-precomputed-mfl-stats-summary"'),
+  dataViews.includes('tableExists("runtime_mfl_stats_summary")')
+    && dataViews.includes("precomputedMflStatsSummaryRows()")
+    && dataViews.includes("liveMflStatsSummaryRows()")
+    && dataViews.includes('"sqlite-runtime-precomputed-mfl-stats-summary"'),
   "MFL Stats summary must prefer the precomputed runtime aggregate while retaining the live older-snapshot fallback.",
 );
 invariant(
-  mflStatsSummary.includes("FROM runtime_mfl_stats_summary")
-    && mflStatsSummary.includes("ORDER BY overall, age, category"),
+  dataViews.includes("FROM runtime_mfl_stats_summary")
+    && dataViews.includes("ORDER BY overall, age, category"),
   "The precomputed MFL Stats summary read must stay a compact deterministic ordered scan.",
 );
 
