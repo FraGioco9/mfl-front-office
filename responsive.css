@@ -467,67 +467,6 @@ html:not(.mflInitialRouteResolved):is(
     width: 100%;
   }
 
-  .menuRail {
-    position: absolute;
-    inset: auto auto 8px 50%;
-    z-index: var(--mfl-z-navigation-mobile);
-    width: min(720px, calc(100% - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)));
-    height: var(--mobile-nav-height);
-    min-height: var(--mobile-nav-height);
-    padding: 4px;
-    overflow: visible;
-    border: 1px solid color-mix(in srgb, var(--border-strong) 72%, transparent);
-    border-radius: 16px;
-    background: color-mix(in srgb, var(--surface) 88%, transparent);
-    box-shadow: var(--mfl-shadow-mobile-navigation);
-    backdrop-filter: blur(14px);
-    transform: translateX(-50%);
-  }
-
-  .menuButton {
-    display: none;
-  }
-
-  .sidebar {
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-    gap: 2px;
-    width: 100%;
-    min-height: 0;
-    height: 48px;
-    margin: 0;
-    padding: 0;
-    overflow: visible;
-  }
-
-  .sidebarGrid {
-    display: contents;
-  }
-
-  .menuRail .navButton {
-    display: flex;
-    flex: 1 1 0;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: auto;
-    min-width: 0;
-    height: 48px;
-    margin: 0;
-    gap: 2px;
-    padding: 4px 2px;
-    overflow: visible;
-    border-color: transparent;
-    border-radius: 12px;
-    background: transparent;
-    color: var(--text-soft);
-    line-height: 1;
-    text-align: center;
-    white-space: nowrap;
-    -webkit-tap-highlight-color: transparent;
-  }
-
   .menuRail .navButton .navEmoji {
     flex: 0 0 var(--mfl-icon-size-navigation);
     width: var(--mfl-icon-size-navigation);
@@ -2426,6 +2365,70 @@ html:not(.mflInitialRouteResolved):is(
   }
 }
 
+/* Shared bottom-navigation chrome for the exact <=900px and 901-1366px intervals. */
+@media (max-width: 900px), (min-width: 901px) and (max-width: 1366px) {
+  .menuRail {
+    position: absolute;
+    inset: auto auto 8px 50%;
+    z-index: var(--mfl-z-navigation-mobile);
+    width: min(720px, calc(100% - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    height: var(--mobile-nav-height);
+    min-height: var(--mobile-nav-height);
+    padding: 4px;
+    overflow: visible;
+    border: 1px solid color-mix(in srgb, var(--border-strong) 72%, transparent);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    box-shadow: var(--mfl-shadow-mobile-navigation);
+    backdrop-filter: blur(14px);
+    transform: translateX(-50%);
+  }
+
+  .menuButton {
+    display: none;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 2px;
+    width: 100%;
+    min-height: 0;
+    height: 48px;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .sidebarGrid {
+    display: contents;
+  }
+
+  .menuRail .navButton {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 0;
+    height: 48px;
+    margin: 0;
+    gap: 2px;
+    padding: 4px 2px;
+    overflow: visible;
+    border-color: transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-soft);
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
 /* Compact application shell for the intermediate 901-1366px range.
  * Content-specific phone layouts remain owned by the existing <=900/520/380 layers.
  */
@@ -2575,67 +2578,6 @@ html:not(.mflInitialRouteResolved):is(
   .appShell {
     --sidebar-offset: 0px;
     position: relative;
-  }
-
-  .menuRail {
-    position: absolute;
-    inset: auto auto 8px 50%;
-    z-index: var(--mfl-z-navigation-mobile);
-    width: min(720px, calc(100% - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)));
-    height: var(--mobile-nav-height);
-    min-height: var(--mobile-nav-height);
-    padding: 4px;
-    overflow: visible;
-    border: 1px solid color-mix(in srgb, var(--border-strong) 72%, transparent);
-    border-radius: 16px;
-    background: color-mix(in srgb, var(--surface) 88%, transparent);
-    box-shadow: var(--mfl-shadow-mobile-navigation);
-    backdrop-filter: blur(14px);
-    transform: translateX(-50%);
-  }
-
-  .menuButton {
-    display: none;
-  }
-
-  .sidebar {
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-    gap: 2px;
-    width: 100%;
-    min-height: 0;
-    height: 48px;
-    margin: 0;
-    padding: 0;
-    overflow: visible;
-  }
-
-  .sidebarGrid {
-    display: contents;
-  }
-
-  .menuRail .navButton {
-    display: flex;
-    flex: 1 1 0;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: auto;
-    min-width: 0;
-    height: 48px;
-    margin: 0;
-    gap: 2px;
-    padding: 4px 2px;
-    overflow: visible;
-    border-color: transparent;
-    border-radius: 12px;
-    background: transparent;
-    color: var(--text-soft);
-    line-height: 1;
-    text-align: center;
-    white-space: nowrap;
-    -webkit-tap-highlight-color: transparent;
   }
 
   .menuRail .navButton .navEmoji {
