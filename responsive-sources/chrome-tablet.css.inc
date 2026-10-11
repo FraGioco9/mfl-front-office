@@ -344,28 +344,6 @@ html:not(.mflInitialRouteResolved):is(
     filter: brightness(0.9);
   }
 
-  body > .topbar {
-    grid-template-columns: minmax(0, 1fr) 44px auto;
-    grid-template-areas: "brand search controls";
-    column-gap: 6px;
-    row-gap: 0;
-    height: auto;
-    min-height: 0;
-    padding: 10px 12px;
-  }
-
-  .topbar > :first-child {
-    grid-area: brand;
-    min-width: 0;
-  }
-
-  .topbar h1 {
-    overflow: hidden;
-    font-size: 22px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .topbar .searchButton {
     grid-area: search;
     display: inline-flex;
@@ -408,26 +386,6 @@ html:not(.mflInitialRouteResolved):is(
     height: 22px;
   }
 
-  .searchShortcut {
-    display: none;
-  }
-
-  .headerControls {
-    grid-area: controls;
-    min-width: 0;
-    gap: 6px;
-    justify-content: flex-end;
-  }
-
-  .topbar .stats {
-    display: none;
-  }
-
-  .accountMenu {
-    width: 44px;
-    flex: 0 0 44px;
-  }
-
   #accountButton {
     width: 44px;
     height: 44px;
@@ -436,28 +394,9 @@ html:not(.mflInitialRouteResolved):is(
     padding: 0;
   }
 
-  #accountButton > span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    border: 0;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-
   #accountButton .accountButtonIcon {
     width: 20px;
     height: 20px;
-  }
-
-  #accountDropdown {
-    left: auto;
-    right: 0;
-    width: min(190px, calc(100vw - 24px));
-    transform-origin: top right;
   }
 
   .appShell {
