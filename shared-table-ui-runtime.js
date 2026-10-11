@@ -363,33 +363,6 @@
     max-height: var(--mfl-responsive-table-checkbox-size);
     background-size: var(--mfl-responsive-table-checkbox-check-width) var(--mfl-responsive-table-checkbox-check-height);
   }
-  #progressionPage .playerTableScroller .playerTableActionsButton {
-    width: var(--mfl-responsive-table-action-size);
-    min-width: var(--mfl-responsive-table-action-size);
-    max-width: var(--mfl-responsive-table-action-size);
-    height: var(--mfl-responsive-table-action-size);
-    min-height: var(--mfl-responsive-table-action-size);
-    max-height: var(--mfl-responsive-table-action-size);
-  }
-  #progressionPage .playerTableScroller .playerTableActionsButton svg {
-    width: var(--mfl-responsive-table-action-icon-size);
-    height: var(--mfl-responsive-table-action-icon-size);
-  }
-  #progressionPage .playerTableScroller .flagImage {
-    width: var(--mfl-responsive-table-flag-size);
-    height: var(--mfl-responsive-table-flag-size);
-  }
-  #progressionPage .playerTableScroller .playerNoteIcon {
-    font-size: var(--mfl-responsive-table-note-icon-size);
-  }
-  #progressionPage .playerTableScroller .listingCellContent {
-    width: var(--mfl-responsive-table-listing-content-size);
-    min-width: var(--mfl-responsive-table-listing-content-size);
-    max-width: var(--mfl-responsive-table-listing-content-size);
-    height: var(--mfl-responsive-table-listing-content-size);
-    min-height: var(--mfl-responsive-table-listing-content-size);
-    max-height: var(--mfl-responsive-table-listing-content-size);
-  }
   #progressionPage .playerTableScroller .listingCellIcon {
     flex-basis: var(--mfl-responsive-table-listing-icon-size);
     width: var(--mfl-responsive-table-listing-icon-size);
@@ -400,9 +373,6 @@
     width: var(--mfl-responsive-table-rarity-size);
     height: var(--mfl-responsive-table-rarity-size);
     margin-right: 3px;
-  }
-  #progressionPage .playerTableScroller .sortArrow {
-    transform: none;
   }
 }
 @media (max-width: 380px) {
