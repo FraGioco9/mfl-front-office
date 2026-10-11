@@ -199,7 +199,7 @@ assert(
       walletAllowed: async () => { walletAttempts += 1; throw new Error("Unexpected permission lookup."); },
     },
     "../api/_database.js": { getGeneratedAt: () => generation },
-    "../api/_data-views.js": { filterOptionsData: filterPayload },
+    "../api/_data-views.js": { filterOptionsData: filterPayload, mflStatsSummaryData() {} },
     "../api/_data-page.js": { pagedData: async () => { throw new Error("Unexpected page data."); } },
     "../api/_data-cache-policy.js": { publicPageSnapshotEligible: () => false },
     "../api/_request-log.js": { createRequestLog: () => ({
@@ -208,7 +208,6 @@ assert(
     }) },
     "../api/_clubs.js": { myClubsData() {}, myClubsCompetitionsData() {} },
     "../api/_database-stats.js": { databaseStatsData() {} },
-    "../api/_mfl-stats-summary.js": { mflStatsSummaryData() {} },
   });
   async function requestFilter({ url = "/api/data?mode=filter-options", headers = {}, method = "GET" } = {}) {
     const response = responseFixture();
