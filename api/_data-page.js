@@ -85,25 +85,9 @@ const TABLE_COMMON_RESPONSE_COLUMNS = Object.freeze([
   "overall",
   "goalkeeping",
 ]);
-const TABLE_CONTRACT_RESPONSE_COLUMNS = Object.freeze([
-  "active_contract_revenue_share",
-  "active_contract_revenue_share_penalty",
-  "active_contract_nb_matches",
-  "active_contract_club_id",
-  "active_contract_club_name",
-  "active_contract_club_division",
-]);
-const TABLE_NEXT_RESPONSE_COLUMNS = Object.freeze([
-  "next_overall",
-  "next_overall_gap",
-  "pace_to_next_overall",
-  "shooting_to_next_overall",
-  "passing_to_next_overall",
-  "dribbling_to_next_overall",
-  "defense_to_next_overall",
-  "physical_to_next_overall",
-  "goalkeeping_to_next_overall",
-]);
+const TABLE_CONTRACT_RESPONSE_COLUMNS = Object.freeze(PLAYER_COLUMNS.filter((column) => column.startsWith("active_contract_")));
+const TABLE_NEXT_RESPONSE_COLUMNS = Object.freeze(PLAYER_COLUMNS.filter((column) =>
+  column === "next_overall" || column === "next_overall_gap" || column.endsWith("_to_next_overall")));
 
 function columnsWithListing(columns) {
   const next = [...columns];
