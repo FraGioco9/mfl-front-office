@@ -3,6 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { reserveTcpPort, waitForPageTarget } from "./next-browser-cdp.mjs";
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:4000";
 const DEFAULT_RUNS = 5;
@@ -321,40 +322,6 @@ function selectedJourneys(journeys) {
     }
     return journey;
   }));
-}
-
-async function reserveTcpPort() {
-  const { createServer } = await import("node:net");
-  const probe = createServer();
-  await new Promise((resolvePromise, rejectPromise) => {
-    probe.once("error", rejectPromise);
-    probe.listen(0, "127.0.0.1", resolvePromise);
-  });
-  const address = probe.address();
-  assert(address && typeof address === "object", "Could not reserve a Chrome debugging port.");
-  const port = address.port;
-  await new Promise((resolvePromise) => probe.close(resolvePromise));
-  return port;
-}
-
-async function waitForPageTarget(port) {
-  const deadline = Date.now() + 15_000;
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${port}/json/list`);
-      if (response.ok) {
-        const targets = await response.json();
-        const target = Array.isArray(targets)
-          ? targets.find((entry) => entry?.type === "page")
-          : null;
-        if (target?.webSocketDebuggerUrl) return target;
-      }
-    } catch {
-      // Chrome may still be starting.
-    }
-    await delay(50);
-  }
-  throw new Error("Chrome debugging target did not become ready.");
 }
 
 async function connectCdp(webSocketUrl) {
