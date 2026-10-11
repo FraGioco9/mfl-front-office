@@ -64,25 +64,8 @@ const PLAYER_COLUMNS = Object.freeze([
   "goalkeeping_to_next_overall",
 ]);
 
-const PROGRESSION_COLUMNS = Object.freeze([
-  "player_id",
-  "overall_prog_all",
-  "pace_prog_all",
-  "shooting_prog_all",
-  "passing_prog_all",
-  "dribbling_prog_all",
-  "defense_prog_all",
-  "physical_prog_all",
-  "goalkeeping_prog_all",
-  "overall_prog_current_season",
-  "pace_prog_current_season",
-  "shooting_prog_current_season",
-  "passing_prog_current_season",
-  "dribbling_prog_current_season",
-  "defense_prog_current_season",
-  "physical_prog_current_season",
-  "goalkeeping_prog_current_season",
-]);
+const PROGRESSION_COLUMNS = Object.freeze(PLAYER_COLUMNS.filter((column) =>
+  column === "player_id" || column.endsWith("_prog_all") || column.endsWith("_prog_current_season")));
 
 const PUBLIC_COLUMNS = Object.freeze(PLAYER_COLUMNS.filter((column) => (
   column === "player_id" || !PROGRESSION_COLUMNS.includes(column)
