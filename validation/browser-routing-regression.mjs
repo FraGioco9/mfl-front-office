@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:http";
-import { createServer as createNetServer } from "node:net";
 import { extname, join, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { reserveTcpPort, waitForPageTarget } from "./next-browser-cdp.mjs";
 
 const siteDirectory = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const generatedAt = "2026-09-09T00:00:00.000Z";
@@ -3780,39 +3780,6 @@ async function createRegressionServer() {
     server.listen(0, "127.0.0.1", resolvePromise);
   });
   return server;
-}
-
-async function reserveTcpPort() {
-  const probe = createNetServer();
-  await new Promise((resolvePromise, rejectPromise) => {
-    probe.once("error", rejectPromise);
-    probe.listen(0, "127.0.0.1", resolvePromise);
-  });
-  const address = probe.address();
-  assert(address && typeof address === "object", "Could not reserve a Chrome debugging port.");
-  const port = address.port;
-  await new Promise((resolvePromise) => probe.close(resolvePromise));
-  return port;
-}
-
-async function waitForPageTarget(port, targetUrl) {
-  const deadline = Date.now() + 15_000;
-  while (Date.now() < deadline) {
-    try {
-      const response = await globalThis.fetch(`http://127.0.0.1:${port}/json/list`);
-      if (response.ok) {
-        const targets = await response.json();
-        const target = Array.isArray(targets)
-          ? targets.find((entry) => entry?.type === "page" && String(entry?.url || "").startsWith(targetUrl))
-          : null;
-        if (target?.webSocketDebuggerUrl) return target;
-      }
-    } catch {
-      // Chrome may not have opened the debugging endpoint yet.
-    }
-    await new Promise((resolvePromise) => setTimeout(resolvePromise, 50));
-  }
-  throw new Error("Chrome debugging target did not become ready.");
 }
 
 async function connectCdp(webSocketUrl) {
