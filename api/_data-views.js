@@ -468,6 +468,6 @@ module.exports = {
   searchData,
   summaryData,
   mflStatsData,
-  mflStatsSummaryData,
   filterOptionsData,
 };
+Object.defineProperty(module.exports, "mflStatsSummaryData", { value: mflStatsSummaryData, writable: true, configurable: true });
