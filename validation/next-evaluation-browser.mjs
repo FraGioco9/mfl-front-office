@@ -1,9 +1,9 @@
 // Real-browser Evaluation interaction smoke against the production Next build.
 // The Site quality job starts the local server; this test never touches Vercel.
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
+import { browserExecutable, reserveTcpPort, waitForPageTarget, connectCdp } from "./next-browser-cdp.mjs";
 import { mkdtemp, rm } from "node:fs/promises";
-import { createServer as createNetServer } from "node:net";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -11,21 +11,13 @@ const base = new URL(process.argv[2] || "http://127.0.0.1:4010/");
 assert(["127.0.0.1", "localhost", "::1", "[::1]"].includes(base.hostname),
   "Evaluation browser smoke must target a local Next build.");
 
-const browser = [
-  process.env.CHROME_PATH, "google-chrome", "google-chrome-stable", "chromium", "chromium-browser",
-].filter(Boolean).find((candidate) => {
-  const result = spawnSync(candidate, ["--version"], { stdio: "ignore" });
-  return !result.error && result.status === 0;
-});
-assert(browser, "Evaluation browser smoke requires Chrome/Chromium.");
-
-const tcp = createNetServer();
-await new Promise((resolve, reject) => {
-  tcp.once("error", reject);
-  tcp.listen(0, "127.0.0.1", resolve);
-});
-const debugPort = tcp.address().port;
-await new Promise((resolve) => tcp.close(resolve));
+let browser;
+try {
+  browser = browserExecutable("Evaluation browser smoke requires Chrome/Chromium.");
+} catch {
+  assert.fail("Evaluation browser smoke requires Chrome/Chromium.");
+}
+const debugPort = await reserveTcpPort();
 const profile = await mkdtemp(join(tmpdir(), "mfl-evaluation-next-browser-"));
 const target = new URL("/evaluation", base).toString();
 const child = spawn(browser, [
@@ -35,46 +27,18 @@ const child = spawn(browser, [
 ], { stdio: ["ignore", "ignore", "pipe"] });
 let stderr = "";
 child.stderr.on("data", (chunk) => { stderr += String(chunk).slice(-4000); });
-let socket;
+let cdp;
 try {
   let page;
-  const deadline = Date.now() + 15000;
-  while (!page && Date.now() < deadline) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${debugPort}/json/list`);
-      if (response.ok) {
-        const tabs = await response.json();
-        page = tabs.find((tab) => tab.type === "page" && tab.url.startsWith(target));
-      }
-    } catch { /* Debug endpoint may not be ready yet. */ }
-    if (!page?.webSocketDebuggerUrl) {
-      page = null;
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
+  try {
+    page = await waitForPageTarget(debugPort, target);
+  } catch {
+    assert.fail(`Could not start Evaluation Chrome: ${stderr}`);
   }
-  assert(page?.webSocketDebuggerUrl, `Could not start Evaluation Chrome: ${stderr}`);
-  socket = new WebSocket(page.webSocketDebuggerUrl);
-  await new Promise((resolve, reject) => {
-    socket.addEventListener("open", resolve, { once: true });
-    socket.addEventListener("error", reject, { once: true });
-  });
-  let sequence = 0;
-  const pending = new Map();
-  socket.addEventListener("message", (event) => {
-    const message = JSON.parse(String(event.data));
-    if (!message.id || !pending.has(message.id)) return;
-    const callback = pending.get(message.id);
-    pending.delete(message.id);
-    if (message.error) callback.reject(new Error(JSON.stringify(message.error)));
-    else callback.resolve(message.result || {});
-  });
-  function send(method, params = {}) {
-    const id = ++sequence;
-    return new Promise((resolve, reject) => {
-      pending.set(id, { resolve, reject });
-      socket.send(JSON.stringify({ id, method, params }));
-    });
-  }
+  if (typeof WebSocket === "undefined") throw new ReferenceError("WebSocket is not defined");
+  if (typeof WebSocket !== "function") throw new TypeError("WebSocket is not a constructor");
+  cdp = await connectCdp(page.webSocketDebuggerUrl, "Node runtime must expose WebSocket for the Chrome DevTools Protocol.");
+  const send = (method, params = {}) => cdp.send(method, params);
   await send("Runtime.enable");
   await send("Page.enable");
   async function readyEvaluation(label) {
@@ -125,7 +89,7 @@ try {
   await readyEvaluation("phone");
   console.log("Compiled Next Evaluation browser interaction passed on desktop and 390px phone.");
 } finally {
-  socket?.close();
+  cdp?.close();
   child.kill("SIGTERM");
   await rm(profile, { force: true, recursive: true, maxRetries: 5, retryDelay: 100 });
 }
