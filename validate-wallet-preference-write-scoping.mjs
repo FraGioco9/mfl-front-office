@@ -1,4 +1,4 @@
-import { readWorkflowSource } from "./validation/workflow-source.mjs";
+import { readWorkflowSource } from "./validation-text.mjs";
 import { readFile, readdir } from "node:fs/promises";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");

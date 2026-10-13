@@ -66,157 +66,8 @@
   }
 }
 
-/* Compact application shell for the intermediate 901-1366px range.
- * Content-specific phone layouts remain owned by the existing <=900/520/380 layers.
- */
-@media (min-width: 901px) and (max-width: 1366px) {
-  :root {
-    --pinned-sidebar-width: 0px;
-    --mobile-nav-height: 58px;
-    --mobile-nav-overlay-clearance: 126px;
-    --mfl-page-gutter-inline: 12px;
-    --mfl-page-inset-block-end: max(calc(var(--mobile-nav-height) + 18px), env(safe-area-inset-bottom));
-  }
-
-  html,
-  body {
-    max-width: 100%;
-  }
-
-  body > .topbar {
-    grid-template-columns: minmax(0, 1fr) 44px auto;
-    grid-template-areas: "brand search controls";
-    column-gap: 6px;
-    row-gap: 0;
-    height: auto;
-    min-height: 0;
-    padding: 10px 12px;
-  }
-
-  .topbar > :first-child {
-    grid-area: brand;
-    min-width: 0;
-  }
-
-  .topbar h1 {
-    overflow: hidden;
-    font-size: 22px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .topbar .searchButton {
-    grid-area: search;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 44px;
-    width: 44px;
-    min-width: 44px;
-    max-width: 44px;
-    height: 44px;
-    min-height: 44px;
-    max-height: 44px;
-    padding: 0;
-    border: 1px solid var(--border-strong);
-    border-radius: 6px;
-    background: var(--surface);
-    color: var(--text);
-    text-align: center;
-  }
-
-  .topbar .searchButton .searchLabel {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--mfl-responsive-shell-search-icon-size);
-    height: var(--mfl-responsive-shell-search-icon-size);
-    gap: 0;
-  }
-
-  .topbar .searchButton .searchLabelText,
-  #accountButton > span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    border: 0;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-
-  .topbar .searchButton .searchIcon {
-    flex: 0 0 var(--mfl-responsive-shell-search-icon-size);
-    width: var(--mfl-responsive-shell-search-icon-size);
-    height: var(--mfl-responsive-shell-search-icon-size);
-  }
-
-  .searchShortcut {
-    display: none;
-  }
-
-  .headerControls {
-    grid-area: controls;
-    min-width: 0;
-    gap: 6px;
-    justify-content: flex-end;
-  }
-
-  .topbar .stats {
-    display: none;
-  }
-
-  .themeButton {
-    flex: 0 0 44px;
-    width: 44px;
-    min-width: 44px;
-    max-width: 44px;
-    height: 44px;
-    min-height: 44px;
-    max-height: 44px;
-    padding: 0;
-    border: 1px solid var(--border-strong);
-    border-radius: 6px;
-    background: var(--surface);
-    color: var(--text);
-  }
-
-  .accountMenu {
-    width: 44px;
-    flex: 0 0 44px;
-  }
-
-  #accountButton {
-    width: 44px;
-    min-width: 44px;
-    max-width: 44px;
-    height: 44px;
-    min-height: 44px;
-    max-height: 44px;
-    overflow: hidden;
-    gap: 0;
-    padding: 0;
-  }
-
-  #accountButton .accountButtonIcon {
-    width: var(--mfl-responsive-shell-account-icon-size);
-    height: var(--mfl-responsive-shell-account-icon-size);
-  }
-
-  #accountDropdown {
-    left: auto;
-    right: 0;
-    width: min(190px, calc(100vw - 24px));
-    transform-origin: top right;
-  }
-
-  .appShell {
-    --sidebar-offset: 0px;
-    position: relative;
-  }
-
+/* Shared bottom-navigation chrome for the exact <=900px and 901-1366px intervals. */
+@media (max-width: 900px), (min-width: 901px) and (max-width: 1366px) {
   .menuRail {
     position: absolute;
     inset: auto auto 8px 50%;
@@ -276,6 +127,169 @@
     text-align: center;
     white-space: nowrap;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  body > .topbar {
+    grid-template-columns: minmax(0, 1fr) 44px auto;
+    grid-template-areas: "brand search controls";
+    column-gap: 6px;
+    row-gap: 0;
+    height: auto;
+    min-height: 0;
+    padding: 10px 12px;
+  }
+
+  .topbar > :first-child {
+    grid-area: brand;
+    min-width: 0;
+  }
+
+  .topbar h1 {
+    overflow: hidden;
+    font-size: 22px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #accountButton > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .searchShortcut {
+    display: none;
+  }
+
+  .headerControls {
+    grid-area: controls;
+    min-width: 0;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+
+  .topbar .stats {
+    display: none;
+  }
+
+  .accountMenu {
+    width: 44px;
+    flex: 0 0 44px;
+  }
+
+  #accountDropdown {
+    left: auto;
+    right: 0;
+    width: min(190px, calc(100vw - 24px));
+    transform-origin: top right;
+  }
+}
+
+/* Compact application shell for the intermediate 901-1366px range.
+ * Content-specific phone layouts remain owned by the existing <=900/520/380 layers.
+ */
+@media (min-width: 901px) and (max-width: 1366px) {
+  :root {
+    --pinned-sidebar-width: 0px;
+    --mobile-nav-height: 58px;
+    --mobile-nav-overlay-clearance: 126px;
+    --mfl-page-gutter-inline: 12px;
+    --mfl-page-inset-block-end: max(calc(var(--mobile-nav-height) + 18px), env(safe-area-inset-bottom));
+  }
+
+  html,
+  body {
+    max-width: 100%;
+  }
+
+  .topbar .searchButton {
+    grid-area: search;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 44px;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    max-height: 44px;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    text-align: center;
+  }
+
+  .topbar .searchButton .searchLabel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--mfl-responsive-shell-search-icon-size);
+    height: var(--mfl-responsive-shell-search-icon-size);
+    gap: 0;
+  }
+
+  .topbar .searchButton .searchLabelText {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .topbar .searchButton .searchIcon {
+    flex: 0 0 var(--mfl-responsive-shell-search-icon-size);
+    width: var(--mfl-responsive-shell-search-icon-size);
+    height: var(--mfl-responsive-shell-search-icon-size);
+  }
+
+  .themeButton {
+    flex: 0 0 44px;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    max-height: 44px;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  #accountButton {
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    max-height: 44px;
+    overflow: hidden;
+    gap: 0;
+    padding: 0;
+  }
+
+  #accountButton .accountButtonIcon {
+    width: var(--mfl-responsive-shell-account-icon-size);
+    height: var(--mfl-responsive-shell-account-icon-size);
+  }
+
+  .appShell {
+    --sidebar-offset: 0px;
+    position: relative;
   }
 
   .menuRail .navButton .navEmoji {

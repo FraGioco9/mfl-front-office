@@ -104,8 +104,8 @@ async function auditConsumersAndNextTraces() {
   assert.deepEqual([...new Set(nextTableAstConsumers)].sort(), ["validation/next-mobile-table-route-browser.mjs"],
     "NEXT-TABLE-01 found unexpected in-repo AST consumers.");
   assert.deepEqual([...new Set(cdpHelperConsumers)].sort(),
-    ["validation/browser-routing-regression.mjs", "validation/next-mobile-table-browser.mjs", "validation/next-rendered-shell-browser.mjs", "validation/performance-capture.mjs"],
-    "NEXT-CDP-02 helper must have exactly four runtime probe consumers.");
+    ["validation/browser-routing-regression.mjs", "validation/next-evaluation-browser.mjs", "validation/next-mobile-table-browser.mjs", "validation/next-rendered-shell-browser.mjs", "validation/performance-capture.mjs"],
+    "NEXT-CDP-02 helper must have exactly five runtime probe consumers.");
   const textReferences = [];
   const nextTableTextConsumers = [];
   for (const path of textPaths) {
@@ -156,7 +156,7 @@ async function auditConsumersAndNextTraces() {
   assert.deepEqual(nftReferences, [], "Test-only A11Y modules appeared in Next production NFT traces.");
   assert.deepEqual(nextTableNftReferences, [], "NEXT-TABLE-01 test-only CLI entered production Next NFT traces.");
   assert.deepEqual(cdpHelperNftReferences, [], "NEXT-CDP-02 test-only helper entered production Next NFT traces.");
-  console.log("NEXT-CDP-02 AST/NFT audit: 4 helper consumers / " + nftFiles.length + " Next NFT manifests / 0 helper production traces.");
+  console.log("NEXT-CDP-02 AST/NFT audit: 5 helper consumers / " + nftFiles.length + " Next NFT manifests / 0 helper production traces.");
   console.log("NEXT-TABLE-01 AST/NFT audit: 2 historical CLIs / 1 internal import consumer / 1 workflow consumer / "
     + nftFiles.length + " Next NFT manifests / 0 Next Table production traces.");
   console.log("A11Y AST audit: " + tracked.length + " tracked paths / " + sourcePaths.length
