@@ -3074,60 +3074,10 @@ html:not(.mflInitialRouteResolved):is(
     min-height: 75px;
   }
 
-  .filterRule > :nth-child(1) {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .filterRule > :nth-child(2) {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .filterRule > :nth-child(5) {
-    position: absolute;
-    top: 18px;
-    right: calc(var(--mfl-filter-edge-gap) - var(--mfl-filter-builder-inline-padding) - var(--mfl-filter-remove-strip));
-    width: var(--mfl-filter-remove-size);
-    min-width: var(--mfl-filter-remove-size);
-    max-width: var(--mfl-filter-remove-size);
-    height: var(--mfl-filter-remove-size);
-    min-height: var(--mfl-filter-remove-size);
-    transform: translateY(-50%);
-  }
-
-  .filterRule > :nth-child(3) {
-    grid-column: 1;
-    grid-row: 2;
-  }
-
-  .filterRule > :nth-child(4) {
-    grid-column: 2;
-    grid-row: 2;
-    min-width: 0;
-  }
-
-
-  .filterRule:first-child > :nth-child(1) {
-    display: none;
-  }
-
-  .filterRule:first-child > :nth-child(2) {
-    grid-column: 1 / 3;
-  }
-
-  .filterRule > :nth-child(3)[hidden] + :nth-child(4) {
-    grid-column: 1 / 3;
-  }
-
   .filterRule > select,
   .filterRule [data-filter-value] {
     min-width: 0;
     max-width: 100%;
-  }
-
-  .filterRule select[hidden] {
-    display: none;
   }
 
   .betweenValue,
