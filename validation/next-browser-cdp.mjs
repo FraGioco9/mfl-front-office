@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { mkdtemp, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { createServer as createNetServer } from "node:net";
 
 export function browserExecutable(failureMessage) {
@@ -83,3 +86,27 @@ export async function connectCdp(webSocketUrl, missingWebSocketMessage) {
   };
 }
 
+
+export async function startChromium({ executable, prefix, target, flags = [], stderrText = true }) {
+  const port = await reserveTcpPort();
+  const profile = await mkdtemp(join(tmpdir(), prefix));
+  const child = spawn(executable, ["--headless=new", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
+    ...flags, `--remote-debugging-port=${port}`, "--remote-debugging-address=127.0.0.1", `--user-data-dir=${profile}`, target],
+    { stdio: ["ignore", "ignore", "pipe"] });
+  let stderr = "";
+  if (stderrText) child.stderr.setEncoding("utf8");
+  child.stderr.on("data", chunk => { stderr += stderrText ? chunk : String(chunk).slice(-4000); });
+  return { port, profile, child, stderr: () => stderr };
+}
+
+export async function stopChromium({ child, cdp, profile, signal = "SIGKILL" }) {
+  cdp?.close();
+  if (signal === "SIGTERM") child.kill("SIGTERM");
+  else if (child.exitCode === null) await new Promise(resolvePromise => {
+    child.once("close", resolvePromise);
+    child.kill("SIGKILL");
+  });
+  await rm(profile, signal === "SIGTERM"
+    ? { force: true, recursive: true, maxRetries: 5, retryDelay: 100 }
+    : { recursive: true, force: true });
+}
