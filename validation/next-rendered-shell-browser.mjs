@@ -1,9 +1,7 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { browserExecutable, reserveTcpPort, waitForPageTarget, connectCdp } from "./next-browser-cdp.mjs";
-import { join, resolve } from "node:path";
-import { tmpdir } from "node:os";
+import { readFile, writeFile } from "node:fs/promises";
+import { browserExecutable, startChromium, stopChromium, waitForPageTarget, connectCdp } from "./next-browser-cdp.mjs";
+import { resolve } from "node:path";
 
 const targetUrl = String(process.argv[2] || "").trim();
 assert(targetUrl, "Next rendered-shell browser probe requires a target URL.");
@@ -159,23 +157,9 @@ async function waitForLegacyAutoRefresh(cdp, {
 
 async function runRenderedShellProbe() {
 const executable = browserExecutable("Next rendered-shell browser probe requires Chrome or Chromium on PATH.");
-const debuggingPort = await reserveTcpPort();
-const userDataDirectory = await mkdtemp(join(tmpdir(), "mfl-next-rendered-shell-"));
-const child = spawn(executable, [
-  "--headless=new",
-  "--no-sandbox",
-  "--disable-gpu",
-  "--disable-dev-shm-usage",
-  "--window-size=1280,900",
-  `--remote-debugging-port=${debuggingPort}`,
-  "--remote-debugging-address=127.0.0.1",
-  `--user-data-dir=${userDataDirectory}`,
-  targetUrl,
-], { stdio: ["ignore", "ignore", "pipe"] });
-
-let stderr = "";
-child.stderr.setEncoding("utf8");
-child.stderr.on("data", (chunk) => { stderr += chunk; });
+const { port: debuggingPort, profile: userDataDirectory, child, stderr: readStderr } = await startChromium({
+  executable, prefix: "mfl-next-rendered-shell-", target: targetUrl, flags: ["--window-size=1280,900"],
+});
 let cdp = null;
 let responsiveSource = null;
 let initialDevAssetToken = "";
@@ -232,7 +216,7 @@ try {
 
   console.log(`Next-rendered shell browser probe passed: ${JSON.stringify({ ...state, refreshTitles, autoRefresh: refreshed })}`);
 } catch (error) {
-  throw new Error(`${error.message}\n${stderr.slice(-2000)}`, { cause: error });
+  throw new Error(`${error.message}\n${readStderr().slice(-2000)}`, { cause: error });
 } finally {
   if (responsiveSource !== null) {
     await writeFile(responsivePath, responsiveSource, "utf8");
@@ -244,14 +228,7 @@ try {
       }).catch(() => null);
     }
   }
-  cdp?.close();
-  if (child.exitCode === null) {
-    await new Promise((resolvePromise) => {
-      child.once("close", resolvePromise);
-      child.kill("SIGKILL");
-    });
-  }
-  await rm(userDataDirectory, { recursive: true, force: true });
+  await stopChromium({ child, cdp, profile: userDataDirectory });
 }
 }
 

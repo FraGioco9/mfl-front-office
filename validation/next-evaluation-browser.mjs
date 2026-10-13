@@ -1,11 +1,7 @@
 // Real-browser Evaluation interaction smoke against the production Next build.
 // The Site quality job starts the local server; this test never touches Vercel.
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { browserExecutable, reserveTcpPort, waitForPageTarget, connectCdp } from "./next-browser-cdp.mjs";
-import { mkdtemp, rm } from "node:fs/promises";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { browserExecutable, startChromium, stopChromium, waitForPageTarget, connectCdp } from "./next-browser-cdp.mjs";
 
 const base = new URL(process.argv[2] || "http://127.0.0.1:4010/");
 assert(["127.0.0.1", "localhost", "::1", "[::1]"].includes(base.hostname),
@@ -17,23 +13,18 @@ try {
 } catch {
   assert.fail("Evaluation browser smoke requires Chrome/Chromium.");
 }
-const debugPort = await reserveTcpPort();
-const profile = await mkdtemp(join(tmpdir(), "mfl-evaluation-next-browser-"));
 const target = new URL("/evaluation", base).toString();
-const child = spawn(browser, [
-  "--headless=new", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
-  "--window-size=1280,900", `--remote-debugging-port=${debugPort}`,
-  "--remote-debugging-address=127.0.0.1", `--user-data-dir=${profile}`, target,
-], { stdio: ["ignore", "ignore", "pipe"] });
-let stderr = "";
-child.stderr.on("data", (chunk) => { stderr += String(chunk).slice(-4000); });
+const { port: debugPort, profile, child, stderr: readStderr } = await startChromium({
+  executable: browser, prefix: "mfl-evaluation-next-browser-", target,
+  flags: ["--window-size=1280,900"], stderrText: false,
+});
 let cdp;
 try {
   let page;
   try {
     page = await waitForPageTarget(debugPort, target);
   } catch {
-    assert.fail(`Could not start Evaluation Chrome: ${stderr}`);
+    assert.fail(`Could not start Evaluation Chrome: ${readStderr()}`);
   }
   if (typeof WebSocket === "undefined") throw new ReferenceError("WebSocket is not defined");
   if (typeof WebSocket !== "function") throw new TypeError("WebSocket is not a constructor");
@@ -89,7 +80,5 @@ try {
   await readyEvaluation("phone");
   console.log("Compiled Next Evaluation browser interaction passed on desktop and 390px phone.");
 } finally {
-  cdp?.close();
-  child.kill("SIGTERM");
-  await rm(profile, { force: true, recursive: true, maxRetries: 5, retryDelay: 100 });
+  await stopChromium({ child, cdp, profile, signal: "SIGTERM" });
 }
