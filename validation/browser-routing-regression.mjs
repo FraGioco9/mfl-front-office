@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, join, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { reserveTcpPort, waitForPageTarget } from "./next-browser-cdp.mjs";
+import { browserExecutable, reserveTcpPort, waitForPageTarget } from "./next-browser-cdp.mjs";
 
 const siteDirectory = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const generatedAt = "2026-09-09T00:00:00.000Z";
@@ -82,34 +82,7 @@ const publicColumns = [
   "active_contract_club_name",
   "active_contract_club_division",
 ];
-const pageColumns = [
-  "player_id",
-  "wallet_address",
-  "wallet_name",
-  "name",
-  "listing_price",
-  "positions",
-  "age",
-  "nationality",
-  "retirement_years",
-  "owned_since",
-  "player_seasons",
-  "overall",
-  "pace",
-  "shooting",
-  "passing",
-  "dribbling",
-  "defense",
-  "physical",
-  "goalkeeping",
-  "height",
-  "preferred_foot",
-  "active_contract_revenue_share",
-  "active_contract_nb_matches",
-  "active_contract_club_id",
-  "active_contract_club_name",
-  "active_contract_club_division",
-];
+const pageColumns = [...publicColumns.slice(0, 4), "listing_price", ...publicColumns.slice(4)];
 
 function rowForColumns(columns) {
   return columns.map((column) => testPlayer[column] ?? null);
@@ -3329,22 +3302,6 @@ const browserTestSource = String.raw`(() => {
   }
 })();`;
 
-function browserExecutable() {
-  const candidates = [
-    process.env.CHROME_PATH,
-    "google-chrome",
-    "google-chrome-stable",
-    "chromium",
-    "chromium-browser",
-  ].filter(Boolean);
-
-  for (const candidate of candidates) {
-    const probe = spawnSync(candidate, ["--version"], { stdio: "ignore" });
-    if (!probe.error && probe.status === 0) return candidate;
-  }
-  throw new Error("Browser routing regression requires Chrome or Chromium on PATH.");
-}
-
 function contentType(pathname) {
   return ({
     ".css": "text/css; charset=utf-8",
@@ -3949,7 +3906,7 @@ const server = await createRegressionServer();
 try {
   const address = server.address();
   assert(address && typeof address === "object", "Browser regression server did not expose a TCP address.");
-  const executable = browserExecutable();
+  const executable = browserExecutable("Browser routing regression requires Chrome or Chromium on PATH.");
 
   const requestedScenarioNames = new Set(
   String(process.env.MFL_BROWSER_SCENARIOS || "")
