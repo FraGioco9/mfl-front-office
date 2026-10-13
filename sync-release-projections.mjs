@@ -375,79 +375,44 @@ export function normalizeIndexPagerLoadingProjection(source) {
   );
 }
 
-export function normalizeIndexFirstPaintConfigProjection(source) {
+function normalizeGeneratedProjection(source, generatedPattern, project, legacyPattern, legacyReplacement, generatedLabel, legacyLabel) {
   const input = String(source || "");
-  const generatedPattern = /^        \/\/ BEGIN GENERATED FIRST-PAINT ROUTE CONFIG[\s\S]*?^        \/\/ END GENERATED FIRST-PAINT ROUTE CONFIG$/gm;
-  const generatedMatches = input.match(generatedPattern) || [];
-  if (generatedMatches.length > 1) {
-    throw new Error(`index first-paint route config projection expected exactly one owned projection, found ${generatedMatches.length}.`);
-  }
-  if (generatedMatches.length === 1) {
-    return input.replace(generatedPattern, firstPaintRouteConfigProjectionSource());
-  }
+  const count = (input.match(generatedPattern) || []).length;
+  if (count > 1) throw new Error(`${generatedLabel} expected exactly one owned projection, found ${count}.`);
+  return count === 1
+    ? input.replace(generatedPattern, project())
+    : replaceExactlyOnce(input, legacyPattern, legacyReplacement(project), legacyLabel);
+}
 
-  return replaceExactlyOnce(
-    input,
-    /^        const TABLE_VIEW_CONFIG = Object\.freeze\(\{[\s\S]*?^        const VIEW_BY_SLUG = Object\.freeze\(\{[\s\S]*?^        \}\);$/gm,
-    firstPaintRouteConfigProjectionSource(),
-    "index legacy first-paint route config projection",
+export function normalizeIndexFirstPaintConfigProjection(source) {
+  return normalizeGeneratedProjection(
+    source, /^        \/\/ BEGIN GENERATED FIRST-PAINT ROUTE CONFIG[\s\S]*?^        \/\/ END GENERATED FIRST-PAINT ROUTE CONFIG$/gm, firstPaintRouteConfigProjectionSource,
+    /^        const TABLE_VIEW_CONFIG = Object\.freeze\(\{[\s\S]*?^        const VIEW_BY_SLUG = Object\.freeze\(\{[\s\S]*?^        \}\);$/gm, (get) => get(),
+    "index first-paint route config projection", "index legacy first-paint route config projection",
   );
 }
 
 export function normalizeIndexMobileTableFirstPaintCascadeProjection(source) {
-  const input = String(source || "");
-  const generatedPattern = /^    <!-- BEGIN GENERATED MOBILE TABLE FIRST PAINT CASCADE -->[\s\S]*?^    <!-- END GENERATED MOBILE TABLE FIRST PAINT CASCADE -->$/gm;
-  const generatedMatches = input.match(generatedPattern) || [];
-  if (generatedMatches.length > 1) {
-    throw new Error(`index mobile table first-paint cascade projection expected exactly one owned projection, found ${generatedMatches.length}.`);
-  }
-  if (generatedMatches.length === 1) {
-    return input.replace(generatedPattern, mobileTableFirstPaintCascadeProjectionSource());
-  }
-
-  return replaceExactlyOnce(
-    input,
-    /^    <link rel="stylesheet" href="\/styles-runtime\.css" data-mfl-responsive-layout="true">$/m,
-    (match) => `${match}\n${mobileTableFirstPaintCascadeProjectionSource()}`,
-    "index mobile table first-paint cascade insertion point",
+  return normalizeGeneratedProjection(
+    source, /^    <!-- BEGIN GENERATED MOBILE TABLE FIRST PAINT CASCADE -->[\s\S]*?^    <!-- END GENERATED MOBILE TABLE FIRST PAINT CASCADE -->$/gm, mobileTableFirstPaintCascadeProjectionSource,
+    /^    <link rel="stylesheet" href="\/styles-runtime\.css" data-mfl-responsive-layout="true">$/m, (get) => (match) => `${match}\n${get()}`,
+    "index mobile table first-paint cascade projection", "index mobile table first-paint cascade insertion point",
   );
 }
 
 export function normalizeIndexMobileWatchlistFirstPaintProjection(source) {
-  const input = String(source || "");
-  const generatedPattern = /^          <!-- BEGIN GENERATED MOBILE WATCHLIST FIRST PAINT -->[\s\S]*?^          <!-- END GENERATED MOBILE WATCHLIST FIRST PAINT -->$/gm;
-  const generatedMatches = input.match(generatedPattern) || [];
-  if (generatedMatches.length > 1) {
-    throw new Error(`index mobile Watchlist first-paint projection expected exactly one owned projection, found ${generatedMatches.length}.`);
-  }
-  if (generatedMatches.length === 1) {
-    return input.replace(generatedPattern, mobileWatchlistFirstPaintProjectionSource());
-  }
-
-  return replaceExactlyOnce(
-    input,
-    /^          <\/section>\n\n          <section class="quickFilters" aria-label="Quick filters">$/m,
-    `          </section>\n${mobileWatchlistFirstPaintProjectionSource()}\n\n          <section class="quickFilters" aria-label="Quick filters">`,
-    "index mobile Watchlist first-paint insertion point",
+  return normalizeGeneratedProjection(
+    source, /^          <!-- BEGIN GENERATED MOBILE WATCHLIST FIRST PAINT -->[\s\S]*?^          <!-- END GENERATED MOBILE WATCHLIST FIRST PAINT -->$/gm, mobileWatchlistFirstPaintProjectionSource,
+    /^          <\/section>\n\n          <section class="quickFilters" aria-label="Quick filters">$/m, (get) => `          </section>\n${get()}\n\n          <section class="quickFilters" aria-label="Quick filters">`,
+    "index mobile Watchlist first-paint projection", "index mobile Watchlist first-paint insertion point",
   );
 }
 
 export function normalizeIndexMflStatsFiltersProjection(source) {
-  const input = String(source || "");
-  const generatedPattern = /^              <!-- BEGIN GENERATED MFL STATS FILTERS -->[\s\S]*?^              <!-- END GENERATED MFL STATS FILTERS -->$/gm;
-  const generatedMatches = input.match(generatedPattern) || [];
-  if (generatedMatches.length > 1) {
-    throw new Error(`index MFL Stats filter projection expected exactly one owned projection, found ${generatedMatches.length}.`);
-  }
-  if (generatedMatches.length === 1) {
-    return input.replace(generatedPattern, mflStatsFilterButtonsProjectionSource());
-  }
-
-  return replaceExactlyOnce(
-    input,
-    /^              <button class="mflStatsFilterButton active" type="button" data-static-value="all">All<\/button>[\s\S]*?^              <button class="mflStatsFilterButton" type="button" data-static-value="common">Common<\/button>$/gm,
-    mflStatsFilterButtonsProjectionSource(),
-    "index legacy MFL Stats filter projection",
+  return normalizeGeneratedProjection(
+    source, /^              <!-- BEGIN GENERATED MFL STATS FILTERS -->[\s\S]*?^              <!-- END GENERATED MFL STATS FILTERS -->$/gm, mflStatsFilterButtonsProjectionSource,
+    /^              <button class="mflStatsFilterButton active" type="button" data-static-value="all">All<\/button>[\s\S]*?^              <button class="mflStatsFilterButton" type="button" data-static-value="common">Common<\/button>$/gm, (get) => get(),
+    "index MFL Stats filter projection", "index legacy MFL Stats filter projection",
   );
 }
 

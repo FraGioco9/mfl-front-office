@@ -8,14 +8,18 @@ const excludes = (source, token, message) => {
   if (source.includes(token)) throw new Error(message);
 };
 
-const [foundations, stylesBase, styles, dropdowns, mobileChrome, docs] = await Promise.all([
+const [foundations, stylesBase, styles, dropdowns, mobileTabletChrome, mobileCompactChrome, docs] = await Promise.all([
   read("./ui-foundations.css"),
   read("./styles-base.css"),
   read("./styles.css"),
   read("./dropdowns.css"),
   read("./responsive-sources/chrome-tablet.css.inc"),
+  read("./responsive-sources/chrome-compact-shell.css.inc"),
   read("./docs/ui-foundations.md"),
 ]);
+
+// Consolidated navigation declarations may reside in either canonical chrome fragment.
+const mobileChrome = `${mobileTabletChrome}\n${mobileCompactChrome}`;
 
 const shadowFoundations = [
   "--mfl-shadow-tooltip: 0 10px 26px rgba(0, 0, 0, 0.28);",

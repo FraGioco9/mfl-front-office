@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readWorkflowSource } from "./validation/workflow-source.mjs";
+import { readWorkflowSource } from "./validation-text.mjs";
 
 const siteRoot = fileURLToPath(new URL(".", import.meta.url));
 const repositoryRoot = siteRoot;
