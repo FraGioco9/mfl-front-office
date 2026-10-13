@@ -3,11 +3,12 @@
  * The existing validate-domain-*.mjs entrypoints remain active until a later cutover.
  * Validator paths are relative to the repository root, not this directory.
  */
+
+function defineDomain(domain, title, validators) {
+  return Object.freeze({ domain, title, validators: Object.freeze(validators) });
+}
 export const domainSuites = Object.freeze({
-  "build-generated": Object.freeze({
-    domain: "build/generated",
-    title: "Build/generated",
-    validators: Object.freeze([
+  "build-generated": defineDomain("build/generated", "Build/generated", [
       "validate-fragment-ownership.mjs",
       "validate-text-reader.mjs",
       "validate-ci-quality-scope.mjs",
@@ -22,11 +23,7 @@ export const domainSuites = Object.freeze({
       "validate-production-core-sources.mjs",
       "validate-generated-core-bindings.mjs",
     ]),
-  }),
-  "route-features": Object.freeze({
-    domain: "route-features",
-    title: "Route-features",
-    validators: Object.freeze([
+  "route-features": defineDomain("route-features", "Route-features", [
       "validate-global-search-results.mjs",
       "validate-global-search-agent-activation.mjs",
       "validate-global-search-open-lifecycle.mjs",
@@ -56,11 +53,7 @@ export const domainSuites = Object.freeze({
       "validate-watchlist-progression-access.mjs",
       "validate-watchlist-selector-navigation.mjs",
     ]),
-  }),
-  "release-deployment": Object.freeze({
-    domain: "release/deployment",
-    title: "Release/deployment",
-    validators: Object.freeze([
+  "release-deployment": defineDomain("release/deployment", "Release/deployment", [
       "validate-release-history.mjs",
       "validate-release-version-source.mjs",
       "validate-release-runtime-ownership.mjs",
@@ -72,11 +65,7 @@ export const domainSuites = Object.freeze({
       "validate-security-boundaries.mjs",
       "validate-operational-health.mjs",
     ]),
-  }),
-  "api-persistence": Object.freeze({
-    domain: "api/persistence",
-    title: "API/persistence",
-    validators: Object.freeze([
+  "api-persistence": defineDomain("api/persistence", "API/persistence", [
       "validate-shared-api-logic.mjs",
       "validate-request-body-limits.mjs",
       "validate-wallet-proof.mjs",
@@ -111,11 +100,7 @@ export const domainSuites = Object.freeze({
       "validate-evaluation-preview-shell-path.mjs",
       "validate-bug-report.mjs",
     ]),
-  }),
-  "shared-ui": Object.freeze({
-    domain: "shared-ui",
-    title: "Shared UI",
-    validators: Object.freeze([
+  "shared-ui": defineDomain("shared-ui", "Shared UI", [
       "validate-css-priority.mjs",
       "validate-runtime-style-ownership.mjs",
       "validate-sidebar-lifecycle-ownership.mjs",
@@ -147,11 +132,7 @@ export const domainSuites = Object.freeze({
       "validate-footer-loading-stability.mjs",
       "validate-privacy-page.mjs",
     ]),
-  }),
-  "responsive-ui": Object.freeze({
-    domain: "responsive-ui",
-    title: "Responsive UI",
-    validators: Object.freeze([
+  "responsive-ui": defineDomain("responsive-ui", "Responsive UI", [
       "validate-responsive-layout.mjs",
       "validate-responsive-reflow.mjs",
       "validate-intermediate-desktop-smoke-layout.mjs",
@@ -176,11 +157,7 @@ export const domainSuites = Object.freeze({
       "validate-mobile-selection-bar-scaling.mjs",
       "validate-changelog-responsive-scaling.mjs",
     ]),
-  }),
-  "routing-loading": Object.freeze({
-    domain: "routing/loading",
-    title: "Routing/loading",
-    validators: Object.freeze([
+  "routing-loading": defineDomain("routing/loading", "Routing/loading", [
       "validate-loading-ownership.mjs",
       "validate-data-shaped-loading-foundation.mjs",
       "validate-home-summary-first-paint.mjs",
@@ -206,11 +183,7 @@ export const domainSuites = Object.freeze({
       "validate-client-performance-timing.mjs",
       "validate-performance-capture.mjs",
     ]),
-  }),
-  "evaluation": Object.freeze({
-    domain: "evaluation",
-    title: "Evaluation",
-    validators: Object.freeze([
+  "evaluation": defineDomain("evaluation", "Evaluation", [
       "validate-eval-ownership.mjs",
       "validate-evaluation-search-lifecycle.mjs",
       "validation/evaluation-safari-result-tap.mjs",
@@ -228,22 +201,14 @@ export const domainSuites = Object.freeze({
       "validate-evaluation-saved-share-icon.mjs",
       "validate-progression-email-portrait.mjs",
     ]),
-  }),
-  "stats": Object.freeze({
-    domain: "stats",
-    title: "Stats",
-    validators: Object.freeze([
+  "stats": defineDomain("stats", "Stats", [
       "validate-database-stats-lazy-runtime.mjs",
       "validate-stats-animation-owner.mjs",
       "validate-stats-navigation-lifecycle.mjs",
       "validate-mfl-stats-first-paint.mjs",
       "validate-mfl-stats-data-scope.mjs",
     ]),
-  }),
-  "club": Object.freeze({
-    domain: "club",
-    title: "Club",
-    validators: Object.freeze([
+  "club": defineDomain("club", "Club", [
       "validate-club-entry-workflow.mjs",
       "validate-club-refresh-startup.mjs",
       "validate-club-sorting.mjs",
@@ -251,11 +216,7 @@ export const domainSuites = Object.freeze({
       "validate-club-cache-ownership.mjs",
       "validate-club-title-loading.mjs",
     ]),
-  }),
-  "table": Object.freeze({
-    domain: "table",
-    title: "Table",
-    validators: Object.freeze([
+  "table": defineDomain("table", "Table", [
       "validate-table-route-core.mjs",
       "validate-pager-current-page.mjs",
       "validate-pager-cached-route-restore.mjs",
@@ -283,5 +244,4 @@ export const domainSuites = Object.freeze({
       "validate-new-player-icon.mjs",
       "validate-progression-joined-agency-filter.mjs",
     ]),
-  }),
 });
