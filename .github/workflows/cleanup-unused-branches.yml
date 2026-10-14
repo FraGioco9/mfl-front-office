@@ -1,9 +1,6 @@
 name: Cleanup unused branches
 
 on:
-  pull_request_target:
-    types:
-      - closed
   push:
     branches:
       - main
@@ -29,7 +26,7 @@ on:
           - "14"
           - "30"
 
-# Two cleanup triggers must never delete remote refs concurrently.
+# Serialize cleanup runs; automatic main pushes are always dry-run.
 concurrency:
   group: cleanup-unused-branches-${{ github.repository }}
   cancel-in-progress: false
@@ -44,7 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          # pull_request_target only executes trusted main; never PR code.
+          # Always run trusted main; never checkout PR code.
           ref: main
           fetch-depth: 0
 
@@ -58,7 +55,7 @@ jobs:
       - name: Delete only old unreferenced remote branches
         env:
           GH_TOKEN: ${{ github.token }}
-          CLEANUP_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+          CLEANUP_DRY_RUN: ${{ github.event_name != 'workflow_dispatch' && 'true' || inputs.dry_run && 'true' || 'false' }}
           CLEANUP_MIN_AGE_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.min_age_days || '14' }}
           CLEANUP_BRANCH_ALLOWLIST: wip-*,wip/*,keep-*,keep/*,release-*,release/*
         run: node scripts/workflows/cleanup-unused-branches.mjs

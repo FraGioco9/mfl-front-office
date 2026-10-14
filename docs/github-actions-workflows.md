@@ -7,7 +7,7 @@ There are **13 workflows** on `main` after the October 2026 repository cleanup.
 
 | Workflow file | Display name | Triggers | Responsibility |
 | --- | --- | --- | --- |
-| `cleanup-unused-branches.yml` | Cleanup unused branches | Closed PR via `pull_request_target`; selected `main` pushes; manual dispatch | Deletes only remote branches that pass the protected cleanup checks. |
+| `cleanup-unused-branches.yml` | Cleanup unused branches | Selected `main` pushes (dry-run only); manual dispatch | Reports eligible remote branches on pushes; deletes only on explicit manual dispatch with `dry_run=false`, retaining protected cleanup checks. |
 | `schema-drift.yml` | Schema drift | Path-filtered pull request; manual dispatch | Isolated schema-drift inventory/restore regression for Supabase-facing changes. |
 | `planner-capacity.yml` | Planner capacity | Path-filtered pull request; manual dispatch | Isolated Planner capacity/schema regression. |
 | `full-database-refresh.yml` | Full database refresh | Manual dispatch | Production database pipeline. The production clock lives in Supabase Cron, which reaches this workflow through `workflow_dispatch`; GitHub does not schedule it directly. |
