@@ -53,7 +53,7 @@ export async function waitForPageTarget(port, targetUrlPrefix = "") {
   throw new Error("Chrome debugging target did not become ready.");
 }
 
-export async function connectCdp(webSocketUrl, missingWebSocketMessage) {
+export async function connectCdp(webSocketUrl, missingWebSocketMessage, defaultTimeoutMs = 0) {
   assert(typeof WebSocket === "function", missingWebSocketMessage);
   const socket = new WebSocket(webSocketUrl);
   await new Promise((resolvePromise, rejectPromise) => {
@@ -68,16 +68,28 @@ export async function connectCdp(webSocketUrl, missingWebSocketMessage) {
     if (!message?.id || !pending.has(message.id)) return;
     const request = pending.get(message.id);
     pending.delete(message.id);
+    if (defaultTimeoutMs) clearTimeout(request.timer);
     if (message.error) request.reject(new Error(JSON.stringify(message.error)));
     else request.resolve(message.result || {});
   });
 
   return {
-    send(method, params = {}) {
+    send(method, params = {}, timeoutMs = defaultTimeoutMs) {
       const id = ++sequence;
       return new Promise((resolvePromise, rejectPromise) => {
-        pending.set(id, { resolve: resolvePromise, reject: rejectPromise });
-        socket.send(JSON.stringify({ id, method, params }));
+        const timer = defaultTimeoutMs ? setTimeout(() => {
+          pending.delete(id);
+          rejectPromise(new Error(`Chrome DevTools request timed out: ${method}`));
+        }, timeoutMs) : null;
+        pending.set(id, { resolve: resolvePromise, reject: rejectPromise, timer });
+        if (!defaultTimeoutMs) return socket.send(JSON.stringify({ id, method, params }));
+        try {
+          socket.send(JSON.stringify({ id, method, params }));
+        } catch (error) {
+          clearTimeout(timer);
+          pending.delete(id);
+          rejectPromise(error);
+        }
       });
     },
     close() {
