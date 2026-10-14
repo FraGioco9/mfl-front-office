@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { browserExecutable, startChromium, stopChromium, waitForPageTarget } from "./next-browser-cdp.mjs";
+import { browserExecutable, connectCdp, startChromium, stopChromium, waitForPageTarget } from "./next-browser-cdp.mjs";
 
 const siteDirectory = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const generatedAt = "2026-09-09T00:00:00.000Z";
@@ -3737,55 +3737,6 @@ async function createRegressionServer() {
   return server;
 }
 
-async function connectCdp(webSocketUrl) {
-  const WebSocketConstructor = globalThis.WebSocket;
-  if (typeof WebSocketConstructor !== "function") {
-    throw new Error("Node runtime does not expose WebSocket for Chrome DevTools Protocol.");
-  }
-  const socket = new WebSocketConstructor(webSocketUrl);
-  await new Promise((resolvePromise, rejectPromise) => {
-    socket.addEventListener("open", resolvePromise, { once: true });
-    socket.addEventListener("error", rejectPromise, { once: true });
-  });
-
-  let sequence = 0;
-  const pending = new Map();
-  socket.addEventListener("message", (event) => {
-    const message = JSON.parse(String(event.data));
-    if (!message?.id || !pending.has(message.id)) return;
-    const { resolve: resolvePromise, reject: rejectPromise, timer } = pending.get(message.id);
-    pending.delete(message.id);
-    clearTimeout(timer);
-    if (message.error) rejectPromise(new Error(JSON.stringify(message.error)));
-    else resolvePromise(message.result || {});
-  });
-
-  function send(method, params = {}, timeoutMs = 10_000) {
-    const id = ++sequence;
-    return new Promise((resolvePromise, rejectPromise) => {
-      const timer = setTimeout(() => {
-        pending.delete(id);
-        rejectPromise(new Error(`Chrome DevTools request timed out: ${method}`));
-      }, timeoutMs);
-      pending.set(id, { resolve: resolvePromise, reject: rejectPromise, timer });
-      try {
-        socket.send(JSON.stringify({ id, method, params }));
-      } catch (error) {
-        clearTimeout(timer);
-        pending.delete(id);
-        rejectPromise(error);
-      }
-    });
-  }
-
-  return {
-    send,
-    close() {
-      socket.close();
-    },
-  };
-}
-
 async function waitForBrowserRegression(cdp) {
   void cdp; // Retained for diagnostic wrappers that replace the call site and use the live CDP session.
   const deadline = Date.now() + 30_000;
@@ -3809,7 +3760,11 @@ async function runChromeRegression(executable, url, width = 1280, height = 900) 
   try {
     browserRegressionResult = null;
     const target = await waitForPageTarget(debuggingPort, reflowMatrix ? "about:blank" : url);
-    cdp = await connectCdp(target.webSocketDebuggerUrl);
+    if (typeof globalThis.WebSocket !== "function") {
+      throw new Error("Node runtime does not expose WebSocket for Chrome DevTools Protocol.");
+    }
+    cdp = await connectCdp(target.webSocketDebuggerUrl,
+      "Node runtime does not expose WebSocket for Chrome DevTools Protocol.", 10_000);
     if (reflowMatrix) {
       // Apply dimensions before loading app scripts and first-paint CSS.
       await cdp.send("Page.enable");
