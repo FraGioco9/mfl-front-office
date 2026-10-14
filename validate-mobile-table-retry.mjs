@@ -1,15 +1,10 @@
 import { readFile } from "node:fs/promises";
+import { includes, excludes } from "./validation/assertions.mjs";
 
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
 import { readCanonicalCoreSource } from "./validate-core-sources.mjs";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
-const includes = (source, expected, message) => {
-  if (!source.includes(expected)) throw new Error(message);
-};
-const excludes = (source, unexpected, message) => {
-  if (source.includes(unexpected)) throw new Error(message);
-};
 
 const [sharedUi, staticUi, discountUi, evaluationSource, sharedSource, tableSource, generatedTable, buildCore, bootstrap, responsive] = await Promise.all([
   read("./shared-table-ui-runtime.js"),
