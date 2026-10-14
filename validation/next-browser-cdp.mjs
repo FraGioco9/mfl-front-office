@@ -53,7 +53,7 @@ export async function waitForPageTarget(port, targetUrlPrefix = "") {
   throw new Error("Chrome debugging target did not become ready.");
 }
 
-export async function connectCdp(webSocketUrl, missingWebSocketMessage, defaultTimeoutMs = 0) {
+export async function connectCdp(webSocketUrl, missingWebSocketMessage, defaultTimeoutMs = 0, events = false) {
   assert(typeof WebSocket === "function", missingWebSocketMessage);
   const socket = new WebSocket(webSocketUrl);
   await new Promise((resolvePromise, rejectPromise) => {
@@ -63,14 +63,20 @@ export async function connectCdp(webSocketUrl, missingWebSocketMessage, defaultT
 
   let sequence = 0;
   const pending = new Map();
+  const listeners = events ? new Map() : null;
   socket.addEventListener("message", (event) => {
     const message = JSON.parse(String(event.data));
-    if (!message?.id || !pending.has(message.id)) return;
-    const request = pending.get(message.id);
-    pending.delete(message.id);
-    if (defaultTimeoutMs) clearTimeout(request.timer);
-    if (message.error) request.reject(new Error(JSON.stringify(message.error)));
-    else request.resolve(message.result || {});
+    if (message?.id && pending.has(message.id)) {
+      const request = pending.get(message.id);
+      pending.delete(message.id);
+      if (defaultTimeoutMs) clearTimeout(request.timer);
+      if (message.error) request.reject(new Error(JSON.stringify(message.error)));
+      else request.resolve(message.result || {});
+      return;
+    }
+    const handlers = listeners?.get(String(message?.method || ""));
+    if (!handlers) return;
+    for (const handler of handlers) handler(message.params || {});
   });
 
   return {
@@ -92,6 +98,12 @@ export async function connectCdp(webSocketUrl, missingWebSocketMessage, defaultT
         }
       });
     },
+    ...(events ? { on(method, handler) {
+      const handlers = listeners.get(method) || new Set();
+      handlers.add(handler);
+      listeners.set(method, handlers);
+      return () => handlers.delete(handler);
+    } } : {}),
     close() {
       socket.close();
     },
