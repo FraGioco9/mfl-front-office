@@ -4,23 +4,23 @@ export function invariant(condition, message) {
 export const includes = (source, value, message) => invariant(source.includes(value), message);
 export const excludes = (source, value, message) => invariant(!source.includes(value), message);
 
-export function createStubbedHandlerLoader(requireFn) {
+export function createStubbedHandlerLoader(require) {
   return (path, stubs) => {
     const restored = [];
     for (const [file, exports] of Object.entries(stubs)) {
-      const id = requireFn.resolve(file);
-      restored.push([id, requireFn.cache[id]]);
-      requireFn.cache[id] = { id, filename: id, loaded: true, exports };
+      const id = require.resolve(file);
+      restored.push([id, require.cache[id]]);
+      require.cache[id] = { id, filename: id, loaded: true, exports };
     }
-    const id = requireFn.resolve(path);
-    restored.push([id, requireFn.cache[id]]);
-    delete requireFn.cache[id];
+    const id = require.resolve(path);
+    restored.push([id, require.cache[id]]);
+    delete require.cache[id];
     try {
-      return requireFn(path);
+      return require(path);
     } finally {
       for (const [key, previous] of restored) {
-        if (previous) requireFn.cache[key] = previous;
-        else delete requireFn.cache[key];
+        if (previous) require.cache[key] = previous;
+        else delete require.cache[key];
       }
     }
   };
