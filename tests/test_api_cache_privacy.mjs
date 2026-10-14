@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { createStubbedHandlerLoader } from "../validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 import { domainSuites } from "../validation/domain-suites.mjs";
@@ -85,25 +86,7 @@ assert.equal(requestMatchesEtag({ headers: { "if-none-match": '"different"' } },
   assert.equal(response.getHeader("etag"), undefined);
 }
 
-function loadHandler(path, stubs) {
-  const restored = [];
-  for (const [stubPath, exports] of Object.entries(stubs)) {
-    const id = require.resolve(stubPath);
-    restored.push([id, require.cache[id]]);
-    require.cache[id] = { id, filename: id, loaded: true, exports };
-  }
-  const handlerId = require.resolve(path);
-  restored.push([handlerId, require.cache[handlerId]]);
-  delete require.cache[handlerId];
-  try {
-    return require(path);
-  } finally {
-    for (const [id, previous] of restored) {
-      if (previous) require.cache[id] = previous;
-      else delete require.cache[id];
-    }
-  }
-}
+const loadHandler = createStubbedHandlerLoader(require);
 
 const walletAccess = loadHandler("../api/_handler-wallet-access.js", {
   "../api/_data-auth.js": {

@@ -1,29 +1,12 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { createStubbedHandlerLoader } from "../validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 const require = createRequire(import.meta.url);
 const wallet = "0xwallet-data02";
 
-function loadHandler(path, stubs) {
-  const restored = [];
-  for (const [file, exports] of Object.entries(stubs)) {
-    const id = require.resolve(file);
-    restored.push([id, require.cache[id]]);
-    require.cache[id] = { id, filename: id, loaded: true, exports };
-  }
-  const id = require.resolve(path);
-  restored.push([id, require.cache[id]]);
-  delete require.cache[id];
-  try {
-    return require(path);
-  } finally {
-    for (const [key, previous] of restored) {
-      if (previous) require.cache[key] = previous;
-      else delete require.cache[key];
-    }
-  }
-}
+const loadHandler = createStubbedHandlerLoader(require);
 
 let row = {
   wallet_address: wallet,

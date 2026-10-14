@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { createStubbedHandlerLoader } from "../validation/assertions.mjs";
 import { readFile } from "node:fs/promises";
 
 const require = createRequire(import.meta.url);
@@ -9,25 +10,7 @@ const initialShareId = "aaaaaaaaaaaaaaaa";
 const payload = { clubId: "9001", formation: "442", squad: [], lineup: [] };
 const now = "2026-10-05T15:30:00.000Z";
 
-function loadHandler(path, stubs) {
-  const restored = [];
-  for (const [file, exports] of Object.entries(stubs)) {
-    const id = require.resolve(file);
-    restored.push([id, require.cache[id]]);
-    require.cache[id] = { id, filename: id, loaded: true, exports };
-  }
-  const id = require.resolve(path);
-  restored.push([id, require.cache[id]]);
-  delete require.cache[id];
-  try {
-    return require(path);
-  } finally {
-    for (const [key, previous] of restored) {
-      if (previous) require.cache[key] = previous;
-      else delete require.cache[key];
-    }
-  }
-}
+const loadHandler = createStubbedHandlerLoader(require);
 
 const plans = new Map([[
   planId,
