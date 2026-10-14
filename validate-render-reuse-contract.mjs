@@ -2,21 +2,11 @@ import { invariant, includes, excludes } from "./validation/assertions.mjs";
 import { readValidationText } from "./validation-text.mjs";
 import vm from "node:vm";
 
-import { readCanonicalCoreArtifacts, readCanonicalCoreSource } from "./validate-core-sources.mjs";
+import { readCanonicalCoreArtifacts, readCanonicalCoreSource, readValidationCompositeSource } from "./validate-core-sources.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
 
-const coreSource = await Promise.all([
-  readCanonicalCoreSource("shared"),
-  read("./modules/core-sources/evaluation.js"),
-  read("./modules/core-sources/mfl-stats.js"),
-  read("./modules/core-sources/club.js"),
-  read("./modules/core-sources/settings.js"),
-  read("./modules/core-sources/player.js"),
-  Promise.resolve(readCanonicalCoreSource("table")),
-  read("./modules/core-sources/wallet.js"),
-  read("./modules/core-sources/watchlist.js"),
-]).then((parts) => parts.join("\n"));
+readValidationCompositeSource(read)
 const artifacts = readCanonicalCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const playerCore = String(artifacts.routeChunks?.player || "");

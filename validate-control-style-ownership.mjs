@@ -1,4 +1,4 @@
-import { readCanonicalCoreSource } from "./validate-core-sources.mjs";
+import { readValidationCompositeSource } from "./validate-core-sources.mjs";
 import { invariant } from "./validation/assertions.mjs";
 import { access, readFile } from "node:fs/promises";
 
@@ -15,17 +15,7 @@ const [stylesBase, styles, controls, footer, entry, staticUi, discountTooltipUi,
   read("./desktop-table-style-runtime.js"),
   read("./filter-controls-runtime.js"),
   read("./build-app-core.mjs"),
-  Promise.all([
-    readCanonicalCoreSource("shared"),
-    read("./modules/core-sources/evaluation.js"),
-    read("./modules/core-sources/mfl-stats.js"),
-    read("./modules/core-sources/club.js"),
-    read("./modules/core-sources/settings.js"),
-    read("./modules/core-sources/player.js"),
-    Promise.resolve(readCanonicalCoreSource("table")),
-    read("./modules/core-sources/wallet.js"),
-    read("./modules/core-sources/watchlist.js"),
-  ]).then((parts) => parts.join("\n")),
+  readValidationCompositeSource(read)
 ]);
 
 invariant(
