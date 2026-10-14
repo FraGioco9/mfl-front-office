@@ -8,9 +8,8 @@ const {
 } = require("./_data-auth");
 const { getGeneratedAt } = require("./_database");
 const { createRequestLog } = require("./_request-log");
-const { publicPageSnapshotEligible } = require("./_data-cache-policy");
 const { snapshotEtag, requestMatchesEtag } = require("./_http-cache");
-const { pagedData } = require("./_data-page");
+const { pagedData, publicPageSnapshotEligible } = require("./_data-page");
 const {
   bootstrapData,
   searchData,

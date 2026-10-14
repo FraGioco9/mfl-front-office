@@ -119,6 +119,15 @@ function marketplaceRequiredForPage(scope, sortKey, rules) {
   return rules.some((rule) => String(rule?.column || "").toLowerCase() === LISTING_COLUMN);
 }
 
+function pageRequestEmbedsMarketplace(query = {}) {
+  const scope = String(query.scope || "database").toLowerCase(), sortKey = String(query.sortKey || (scope === "club" ? "positions" : "overall"));
+  return marketplaceRequiredForPage(scope, sortKey, safeRules(query.filters));
+}
+
+function publicPageSnapshotEligible({ query = {}, requiresWallet = false } = {}) {
+  if (requiresWallet) return false;
+  return !pageRequestEmbedsMarketplace(query);
+}
 function addRuleResponseColumns(selectedColumns, rules) {
   rules.forEach((rule) => {
     const column = String(rule?.column || "");
@@ -702,6 +711,8 @@ module.exports = {
   LISTING_COLUMN,
   columnsWithListing,
   marketplaceRequiredForPage,
+  pageRequestEmbedsMarketplace,
+  publicPageSnapshotEligible,
   projectedDatabaseColumns,
   ruleSql,
   orderSql,

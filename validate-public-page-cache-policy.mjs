@@ -5,7 +5,7 @@ const require = createRequire(import.meta.url);
 const {
   pageRequestEmbedsMarketplace,
   publicPageSnapshotEligible,
-} = require("./api/_data-cache-policy");
+} = require("./api/_data-page");
 
 const eligible = (query, requiresWallet = false) => publicPageSnapshotEligible({ query, requiresWallet });
 

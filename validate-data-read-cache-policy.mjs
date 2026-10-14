@@ -2,14 +2,13 @@ import { invariant } from "./validation/assertions.mjs";
 import { readValidationText } from "./validation-text.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
-const [dataApi, dataAuth, dataPage, dataQuery, dataViews, databaseStats, dataCachePolicy, httpCache, database] = await Promise.all([
+const [dataApi, dataAuth, dataPage, dataQuery, dataViews, databaseStats, httpCache, database] = await Promise.all([
   read("./api/_handler-data.js"),
   read("./api/_data-auth.js"),
   read("./api/_data-page.js"),
   read("./api/_data-query.js"),
   read("./api/_data-views.js"),
   read("./api/_database-stats.js"),
-  read("./api/_data-cache-policy.js"),
   read("./api/_http-cache.js"),
   read("./api/_database.js"),
 ]);
@@ -33,9 +32,9 @@ invariant(
   "Paged data must use the explicit safe-page classifier instead of becoming unconditionally public-cacheable.",
 );
 invariant(
-  dataCachePolicy.includes("if (requiresWallet) return false;")
-    && dataCachePolicy.includes("return !pageRequestEmbedsMarketplace(query);")
-    && dataCachePolicy.includes("marketplaceRequiredForPage(scope, sortKey, parsedRules(query.filters))"),
+  dataPage.includes("if (requiresWallet) return false;")
+    && dataPage.includes("return !pageRequestEmbedsMarketplace(query);")
+    && dataPage.includes("marketplaceRequiredForPage(scope, sortKey, safeRules(query.filters))"),
   "Public paged-data reuse must reject wallet-dependent and marketplace-embedded requests through the canonical page marketplace policy.",
 );
 invariant(
