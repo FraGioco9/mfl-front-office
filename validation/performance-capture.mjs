@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { startChromium, stopChromium, waitForPageTarget } from "./next-browser-cdp.mjs";
+import { connectCdp, startChromium, stopChromium, waitForPageTarget } from "./next-browser-cdp.mjs";
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:4000";
 const DEFAULT_RUNS = 5;
@@ -321,60 +321,6 @@ function selectedJourneys(journeys) {
     }
     return journey;
   }));
-}
-
-async function connectCdp(webSocketUrl) {
-  const WebSocketConstructor = globalThis.WebSocket;
-  if (typeof WebSocketConstructor !== "function") {
-    throw new Error("Node runtime does not expose WebSocket for Chrome DevTools Protocol.");
-  }
-
-  const socket = new WebSocketConstructor(webSocketUrl);
-  await new Promise((resolvePromise, rejectPromise) => {
-    socket.addEventListener("open", resolvePromise, { once: true });
-    socket.addEventListener("error", rejectPromise, { once: true });
-  });
-
-  let sequence = 0;
-  const pending = new Map();
-  const listeners = new Map();
-
-  socket.addEventListener("message", (event) => {
-    const message = JSON.parse(String(event.data));
-    if (message?.id && pending.has(message.id)) {
-      const { resolve: resolvePromise, reject: rejectPromise } = pending.get(message.id);
-      pending.delete(message.id);
-      if (message.error) rejectPromise(new Error(JSON.stringify(message.error)));
-      else resolvePromise(message.result || {});
-      return;
-    }
-    const handlers = listeners.get(String(message?.method || ""));
-    if (!handlers) return;
-    for (const handler of handlers) handler(message.params || {});
-  });
-
-  function send(method, params = {}) {
-    const id = ++sequence;
-    return new Promise((resolvePromise, rejectPromise) => {
-      pending.set(id, { resolve: resolvePromise, reject: rejectPromise });
-      socket.send(JSON.stringify({ id, method, params }));
-    });
-  }
-
-  function on(method, handler) {
-    const handlers = listeners.get(method) || new Set();
-    handlers.add(handler);
-    listeners.set(method, handlers);
-    return () => handlers.delete(handler);
-  }
-
-  return Object.freeze({
-    send,
-    on,
-    close() {
-      socket.close();
-    },
-  });
 }
 
 async function evaluate(cdp, expression) {
@@ -1084,7 +1030,11 @@ async function runJourney(executable, profile, journey) {
   let cdp = null;
   try {
     const target = await waitForPageTarget(debuggingPort);
-    cdp = await connectCdp(target.webSocketDebuggerUrl);
+    if (typeof globalThis.WebSocket !== "function") {
+      throw new Error("Node runtime does not expose WebSocket for Chrome DevTools Protocol.");
+    }
+    cdp = Object.freeze(await connectCdp(target.webSocketDebuggerUrl,
+      "Node runtime does not expose WebSocket for Chrome DevTools Protocol.", 0, true));
     await Promise.all([
       cdp.send("Page.enable"),
       cdp.send("Runtime.enable"),
