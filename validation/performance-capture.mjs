@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
-import { reserveTcpPort, waitForPageTarget } from "./next-browser-cdp.mjs";
+import { startChromium, stopChromium, waitForPageTarget } from "./next-browser-cdp.mjs";
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:4000";
 const DEFAULT_RUNS = 5;
@@ -1077,22 +1076,10 @@ async function applyCachedRenderProbe(cdp, probe) {
 }
 
 async function runJourney(executable, profile, journey) {
-  const debuggingPort = await reserveTcpPort();
-  const userDataDirectory = await mkdtemp(join(tmpdir(), "mfl-performance-capture-"));
-  const child = spawn(executable, [
-    "--headless=new",
-    "--no-sandbox",
-    "--disable-gpu",
-    "--disable-dev-shm-usage",
-    "--window-size=1280,900",
-    `--remote-debugging-port=${debuggingPort}`,
-    "--remote-debugging-address=127.0.0.1",
-    `--user-data-dir=${userDataDirectory}`,
-    "about:blank",
-  ], { stdio: ["ignore", "ignore", "pipe"] });
-  let stderr = "";
-  child.stderr.setEncoding("utf8");
-  child.stderr.on("data", (chunk) => { stderr += chunk; });
+  const { port: debuggingPort, profile: userDataDirectory, child, stderr: readStderr } = await startChromium({
+    executable, prefix: "mfl-performance-capture-", target: "about:blank",
+    flags: ["--window-size=1280,900"],
+  });
 
   let cdp = null;
   try {
@@ -1158,16 +1145,9 @@ async function runJourney(executable, profile, journey) {
 
     return { cold, refresh, cached };
   } catch (error) {
-    throw new Error(`${profile.id}/${journey.id}: ${error.message}\n${stderr.slice(-2000)}`, { cause: error });
+    throw new Error(`${profile.id}/${journey.id}: ${error.message}\n${readStderr().slice(-2000)}`, { cause: error });
   } finally {
-    cdp?.close();
-    if (child.exitCode === null) {
-      await new Promise((resolvePromise) => {
-        child.once("close", resolvePromise);
-        child.kill("SIGKILL");
-      });
-    }
-    await rm(userDataDirectory, { recursive: true, force: true });
+    await stopChromium({ child, cdp, profile: userDataDirectory });
   }
 }
 

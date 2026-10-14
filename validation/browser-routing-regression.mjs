@@ -1,11 +1,9 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { extname, join, resolve, sep } from "node:path";
-import { tmpdir } from "node:os";
+import { extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { browserExecutable, reserveTcpPort, waitForPageTarget } from "./next-browser-cdp.mjs";
+import { browserExecutable, startChromium, stopChromium, waitForPageTarget } from "./next-browser-cdp.mjs";
 
 const siteDirectory = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const generatedAt = "2026-09-09T00:00:00.000Z";
@@ -3802,22 +3800,10 @@ async function waitForBrowserRegression(cdp) {
 
 async function runChromeRegression(executable, url, width = 1280, height = 900) {
   const reflowMatrix = new URL(url).hash.startsWith("#resp01-");
-  const debuggingPort = await reserveTcpPort();
-  const userDataDirectory = await mkdtemp(join(tmpdir(), "mfl-browser-routing-"));
-  const child = spawn(executable, [
-    "--headless=new",
-    "--no-sandbox",
-    "--disable-gpu",
-    "--disable-dev-shm-usage",
-    `--window-size=${width},${height}`,
-    `--remote-debugging-port=${debuggingPort}`,
-    "--remote-debugging-address=127.0.0.1",
-    `--user-data-dir=${userDataDirectory}`,
-    reflowMatrix ? "about:blank" : url,
-  ], { stdio: ["ignore", "ignore", "pipe"] });
-  let stderr = "";
-  child.stderr.setEncoding("utf8");
-  child.stderr.on("data", (chunk) => { stderr += chunk; });
+  const { port: debuggingPort, profile: userDataDirectory, child, stderr: readStderr } = await startChromium({
+    executable, prefix: "mfl-browser-routing-", target: reflowMatrix ? "about:blank" : url,
+    flags: [`--window-size=${width},${height}`],
+  });
 
   let cdp = null;
   try {
@@ -3836,16 +3822,9 @@ async function runChromeRegression(executable, url, width = 1280, height = 900) 
     await cdp.send("Runtime.enable");
     return await waitForBrowserRegression(cdp);
   } catch (error) {
-    throw new Error(`${error.message}\n${stderr.slice(-2000)}`, { cause: error });
+    throw new Error(`${error.message}\n${readStderr().slice(-2000)}`, { cause: error });
   } finally {
-    cdp?.close();
-    if (child.exitCode === null) {
-      await new Promise((resolvePromise) => {
-        child.once("close", resolvePromise);
-        child.kill("SIGKILL");
-      });
-    }
-    await rm(userDataDirectory, { recursive: true, force: true });
+    await stopChromium({ child, cdp, profile: userDataDirectory });
   }
 }
 
