@@ -184,7 +184,7 @@ assert(
 {
   let generation = "2026-10-05T00:00:00Z";
   let walletAttempts = 0;
-  let queryAttempts = 0;
+  let queryAttempts = 0, pageQueries = 0;
   let failQuery = false;
   const loggedErrors = [];
   const filterPayload = () => {
@@ -200,8 +200,8 @@ assert(
     },
     "../api/_database.js": { getGeneratedAt: () => generation },
     "../api/_data-views.js": { filterOptionsData: filterPayload, mflStatsSummaryData() {} },
-    "../api/_data-page.js": { pagedData: async () => { throw new Error("Unexpected page data."); } },
-    "../api/_data-cache-policy.js": { publicPageSnapshotEligible: () => false },
+    "../api/_data-page.js": { pagedData: () => { pageQueries++; return { rows: [], generatedAt: generation }; },
+      publicPageSnapshotEligible: ({ query, requiresWallet }) => !requiresWallet && query.sortKey !== "listing_price" },
     "../api/_request-log.js": { createRequestLog: () => ({
       info() {},
       error(event, fields) { loggedErrors.push({ event, fields }); },
@@ -209,9 +209,9 @@ assert(
     "../api/_clubs.js": { myClubsData() {}, myClubsCompetitionsData() {} },
     "../api/_database-stats.js": { databaseStatsData() {} },
   });
-  async function requestFilter({ url = "/api/data?mode=filter-options", headers = {}, method = "GET" } = {}) {
+  async function requestFilter({ url = "/api/data?mode=filter-options", headers = {}, method = "GET", query = { mode: "filter-options" } } = {}) {
     const response = responseFixture();
-    await dataHandler({ method, url, query: { mode: "filter-options" }, headers }, response);
+    await dataHandler({ method, url, query, headers }, response);
     return response;
   }
   const first = await requestFilter();
@@ -264,6 +264,10 @@ assert(
   assert.equal(nonGet.getHeader("cache-control"), "no-store");
   assert.equal(nonGet.getHeader("etag"), undefined);
   assert.equal(queryAttempts, 3, "Non-GET must not access the filter SQL.");
+  const pageQuery = { mode: "page", scope: "database" }, pageUrl = "/api/data?mode=page&scope=database";
+  const page = await requestFilter({ url: pageUrl, query: pageQuery });
+  const page304 = await requestFilter({ url: pageUrl, query: pageQuery, headers: { "if-none-match": page.getHeader("etag") } });
+  assert.deepEqual([page.statusCode, page304.statusCode, page304.body, pageQueries], [200, 304, "", 1]);
 
   failQuery = true;
   const failed = await requestFilter();

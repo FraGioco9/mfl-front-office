@@ -4,7 +4,7 @@ import { runInNewContext } from "node:vm";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { publicPageSnapshotEligible } = require("../api/_data-cache-policy.js");
+const { publicPageSnapshotEligible } = require("../api/_data-page.js");
 const source = readFileSync(new URL("../modules/core-sources/shared-incremental-routing.js", import.meta.url), "utf8");
 const start = source.indexOf("function incrementalDataQuery(route, page = 1) {");
 const end = source.indexOf("function databaseStatsDataCacheReady() {");
