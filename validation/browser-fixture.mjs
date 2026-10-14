@@ -4,8 +4,8 @@ import { readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 const directory = fileURLToPath(new URL("./", import.meta.url));
-const sourcePath = fileURLToPath(new URL("./browser-routing-regression.mjs", import.meta.url));
-export const readBrowserSource = () => readFile(sourcePath, "utf8");
+export const browserSourcePath = fileURLToPath(new URL("./browser-routing-regression.mjs", import.meta.url));
+export const readBrowserSource = () => readFile(browserSourcePath, "utf8");
 export function replaceBrowserScenarios(source, scenarios, message) {
   const pattern = /const regressionScenarios = Object\.freeze\(\[[\s\S]*?\n\]\);\n\nconst server =/u;
   assert.match(source, pattern, message);

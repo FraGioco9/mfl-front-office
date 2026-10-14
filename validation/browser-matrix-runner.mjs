@@ -1,7 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { runBrowserFixture, browserSourcePath } from "./browser-fixture.mjs";
 
 // Real Chromium, synthetic fixtures only; Safari, wallet and deployment QA remain separate.
 const suites = {
@@ -47,19 +45,9 @@ const name = process.argv[2];
 assert.ok(process.argv.length === 3 && Object.hasOwn(suites, name),
   "Specify one browser matrix: recovery, saved-actions, filter-state or narrow-reflow.");
 const suite = suites[name];
-const directory = dirname(fileURLToPath(import.meta.url));
 for (const viewport of suite.viewports ?? [null]) {
   const env = { ...process.env, MFL_BROWSER_SCENARIOS: suite.scenarios.join(","), ...suite.env };
   if (viewport !== null) env[suite.viewportKey] = viewport;
-  const code = await new Promise((done, fail) => {
-    const child = spawn(process.execPath, [resolve(directory, "browser-routing-regression.mjs")], {
-      cwd: resolve(directory, ".."),
-      stdio: "inherit",
-      env,
-    });
-    child.once("error", fail);
-    child.once("close", done);
-  });
-  assert.equal(code, 0, suite.failure(viewport));
+  await runBrowserFixture(browserSourcePath, suite.failure(viewport), env);
   console.log(suite.success(viewport));
 }

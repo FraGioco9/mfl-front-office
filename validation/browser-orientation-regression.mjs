@@ -1,15 +1,9 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readBrowserSource, withBrowserFixture, runBrowserFixture } from "./browser-fixture.mjs";
 
 // Controlled Chromium CSS orientation change on an already hydrated app.
 // This is not real device hardware rotation, safe-area, keyboard or Safari touch.
-const directory = dirname(fileURLToPath(import.meta.url));
-const sourcePath = resolve(directory, "browser-routing-regression.mjs");
-const temporaryPath = resolve(directory, ".browser-orientation-orientation.tmp.mjs");
-const original = await readFile(sourcePath, "utf8");
+const original = await readBrowserSource();
 const marker = '    await cdp.send("Runtime.enable");\n    return await waitForBrowserRegression(cdp);\n';
 assert.ok(original.includes(marker), "Existing browser CDP hook is missing.");
 
@@ -166,29 +160,16 @@ const cases = [
   { name: "player", old: '["player", "/players/1"],', replacement: '["player", "/players/1#resp01-390", 390, 844],' },
   { name: "planner", old: '["planner", "/planner", process.env.MFL_UX03_BROWSER_VIEWPORT === "phone" ? 390 : 1280, process.env.MFL_UX03_BROWSER_VIEWPORT === "phone" ? 844 : 900],', replacement: '["planner", "/planner#resp01-390", 390, 844],' },
 ];
-try {
-  for (const entry of cases) {
-    assert.ok(original.includes(entry.old), "Scenario hook missing: " + entry.name);
-    const changed = original.replace(entry.old, entry.replacement)
-      .replace(marker, '    await cdp.send("Runtime.enable");\n' + `\n    return await (${runOrientationRegression.toString()})(cdp, url, await waitForBrowserRegression(cdp));\n` + '\n');
-    await writeFile(temporaryPath, changed, "utf8");
-    const exit = await new Promise((resolveExit, rejectExit) => {
-      const child = spawn(process.execPath, [temporaryPath], {
-        cwd: resolve(directory, ".."),
-        stdio: "inherit",
-        env: {
-          ...process.env,
-          MFL_BROWSER_SCENARIOS: entry.name,
-          MFL_PLANNER_BROWSER_FOCUSED: "1",
-          MFL_PLANNER_BROWSER_PHASE: "shell",
-        },
-      });
-      child.once("error", rejectExit);
-      child.once("close", resolveExit);
-    });
-    assert.equal(exit, 0, "Orientation " + entry.name + " orientation matrix failed.");
-  }
-} finally {
-  await rm(temporaryPath, { force: true });
+for (const entry of cases) {
+  assert.ok(original.includes(entry.old), "Scenario hook missing: " + entry.name);
+  const changed = original.replace(entry.old, entry.replacement)
+    .replace(marker, '    await cdp.send("Runtime.enable");\n' + `\n    return await (${runOrientationRegression.toString()})(cdp, url, await waitForBrowserRegression(cdp));\n` + '\n');
+  await withBrowserFixture(changed, ".browser-orientation-orientation.tmp.mjs", path =>
+    runBrowserFixture(path, "Orientation " + entry.name + " orientation matrix failed.", {
+      ...process.env,
+      MFL_BROWSER_SCENARIOS: entry.name,
+      MFL_PLANNER_BROWSER_FOCUSED: "1",
+      MFL_PLANNER_BROWSER_PHASE: "shell",
+    }));
 }
 console.log("Orientation orientation matrix passed: Player and Planner.");
