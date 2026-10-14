@@ -256,12 +256,13 @@ test("timestamp and remote/tag parsing fail closed", () => {
   assert.throws(() => parseTagCommitShas("oops"));
 });
 
-test("workflow defaults manual cleanup to dry-run and has no deploy side effect", () => {
+test("workflow forbids closed-PR cleanup, makes automatic runs dry-run, and keeps manual deletion explicit", () => {
   const source = readFileSync(new URL("../.github/workflows/cleanup-unused-branches.yml", import.meta.url), "utf8");
-  assert.match(source, /pull_request_target:[\s\S]*?types:[\s\S]*?- closed/);
+  assert.doesNotMatch(source, /^  (?:pull_request|pull_request_target|schedule):/m);
+  assert.match(source, /push:\s*\n\s*branches:\s*\n\s*- main/);
   assert.match(source, /workflow_dispatch:[\s\S]*?dry_run:[\s\S]*?default: true/);
   assert.match(source, /min_age_days:[\s\S]*?default: "14"/);
-  assert.match(source, /CLEANUP_DRY_RUN:/);
+  assert.ok(source.includes("CLEANUP_DRY_RUN: ${{ github.event_name != 'workflow_dispatch' && 'true' || inputs.dry_run && 'true' || 'false' }}"));
   assert.match(source, /CLEANUP_MIN_AGE_DAYS:/);
   assert.match(source, /CLEANUP_BRANCH_ALLOWLIST: wip-\*,wip\/\*,keep-\*,keep\/\*,release-\*,release\/\*/);
   assert.match(source, /ref: main/);

@@ -83,7 +83,8 @@ invariant(
 invariant(
   cleanupWorkflow.includes("- release.json")
     && cleanupWorkflow.includes("branches:\n      - main")
-    && cleanupWorkflow.includes("pull_request_target:")
+    && !cleanupWorkflow.includes("pull_request_target:")
+    && cleanupWorkflow.includes("CLEANUP_DRY_RUN: ${{ github.event_name != 'workflow_dispatch' && 'true' || inputs.dry_run && 'true' || 'false' }}")
     && cleanupWorkflow.includes("cancel-in-progress: false")
     && cleanupWorkflow.includes("ref: main")
     && cleanupWorkflow.includes("node --test tests/test_cleanup_unused_branches.mjs")
@@ -94,7 +95,7 @@ invariant(
     && cleanupSource.includes("pr.head.ref")
     && cleanupSource.includes("REMOTE_SHA_CHANGED")
     && cleanupSource.includes("--force-with-lease=refs/heads/"),
-  "Release metadata changes on main must trigger serialized, fail-closed cleanup protecting open-PR heads and bases.",
+  "Release metadata changes on main must trigger safe, serialized dry-run cleanup; destructive cleanup requires an explicit manual dispatch.",
 );
 invariant(
   preBootstrapSource.includes("window.__mflRelease = data.release;")

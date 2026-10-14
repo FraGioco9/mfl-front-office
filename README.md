@@ -92,7 +92,7 @@ At a high level:
 - **Full database refresh** and **Marketplace snapshot** production cadence are Supabase-Cron-owned and enter GitHub through `workflow_dispatch`.
 - **Operational health monitor** is the only GitHub-scheduled production monitor.
 - **Progression email Gmail test** and **Vercel site update** are explicit manual operations.
-- **Cleanup unused branches** is the only workflow with branch-deletion authority and keeps dedicated safeguards.
+- **Cleanup unused branches** runs dry-run on selected `main` pushes; deletion requires an explicit manual dispatch and retains all branch safeguards.
 
 Generated application artifacts have one writer: **Site quality**. Production deploy remains manual and protected.
 
