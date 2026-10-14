@@ -5,7 +5,7 @@ import { readValidationText } from "./validation-text.mjs";
 const read = (path) => readValidationText(path, import.meta.url);
 
 const [core, generated, styles] = await Promise.all([
-  readValidationCompositeSource(read)
+  readValidationCompositeSource(read),
   read("./modules/app-core-table-runtime.js"),
   read("./styles-base.css"),
 ]);

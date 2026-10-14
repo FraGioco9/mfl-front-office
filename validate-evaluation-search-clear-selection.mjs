@@ -7,7 +7,7 @@ const read = (path) => readValidationText(path, import.meta.url);
 const [layoutRuntime, searchRuntime, appCoreSource, indexHtml] = await Promise.all([
   read("./evaluation-layout-runtime.js"),
   read("./evaluation-search-state-runtime.js"),
-  readValidationCompositeSource(read)
+  readValidationCompositeSource(read),
   read("./index.html"),
 ]);
 

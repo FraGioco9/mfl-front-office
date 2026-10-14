@@ -6,7 +6,7 @@ import { readCanonicalCoreArtifacts, readValidationCompositeSource } from "./val
 const read = (path) => readValidationText(path, import.meta.url);
 
 const [coreSource, styles, responsive, index] = await Promise.all([
-  readValidationCompositeSource(read)
+  readValidationCompositeSource(read),
   read("./styles-base.css"),
   read("./responsive.css"),
   read("./index.html"),

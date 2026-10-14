@@ -7,7 +7,7 @@ import { readCanonicalCoreArtifacts, readValidationCompositeSource } from "./val
 const read = (path) => readValidationText(path, import.meta.url);
 
 const [coreSource, appConfig, routeLoader, buildCore, appEntry, bootstrapCore, tableLoading, watchlistRouteRuntime, generatedWatchlist] = await Promise.all([
-  readValidationCompositeSource(read)
+  readValidationCompositeSource(read),
   read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
   read("./build-app-core.mjs"),

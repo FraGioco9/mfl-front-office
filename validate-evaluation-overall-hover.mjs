@@ -7,7 +7,7 @@ const read = async (path) => String(await readFile(new URL(path, import.meta.url
 const [controls, stylesBase, core, index] = await Promise.all([
   read("./controls.css"),
   read("./styles-base.css"),
-  readValidationCompositeSource(read)
+  readValidationCompositeSource(read),
   read("./index.html"),
 ]);
 

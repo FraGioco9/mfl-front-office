@@ -6,7 +6,7 @@ import { readFile } from "node:fs/promises";
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 
 const [source, generated] = await Promise.all([
-  readValidationCompositeSource(read)
+  readValidationCompositeSource(read),
   read("./modules/app-core-evaluation-runtime.js"),
 ]);
 

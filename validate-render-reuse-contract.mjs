@@ -6,7 +6,7 @@ import { readCanonicalCoreArtifacts, readCanonicalCoreSource, readValidationComp
 
 const read = (path) => readValidationText(path, import.meta.url);
 
-readValidationCompositeSource(read)
+const coreSource = await readValidationCompositeSource(read);
 const artifacts = readCanonicalCoreArtifacts(coreSource);
 const sharedCore = String(artifacts.core || "");
 const playerCore = String(artifacts.routeChunks?.player || "");
