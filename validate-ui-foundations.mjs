@@ -1,12 +1,7 @@
 import { readFile } from "node:fs/promises";
+import { includes, excludes } from "./validation/assertions.mjs";
 
 const read = async (path) => String(await readFile(new URL(path, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
-const includes = (source, token, message) => {
-  if (!source.includes(token)) throw new Error(message);
-};
-const excludes = (source, token, message) => {
-  if (source.includes(token)) throw new Error(message);
-};
 const exactRule = (source, selector) => {
   const start = source.indexOf(`${selector} {`);
   if (start < 0) return "";
