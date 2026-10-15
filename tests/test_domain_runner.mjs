@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { domainSuites } from "../validation/domain-suites.mjs";
+import { readCanonicalCoreSource, readValidationCompositeSource } from "../validate-core-sources.mjs";
 
 const expectedValidators = {
   "club": [
@@ -484,6 +485,17 @@ try {
   assert.match(failing.stderr, /\[fixture\] FAILED broken\.mjs/);
   assert.match(failing.stderr, /expected synthetic failure/);
   assert.doesNotMatch(failing.stdout + failing.stderr, /unexpected-after-failure|Fixture validator domain passed/);
+  const compositeModuleUrl = new URL("../validate-core-sources.mjs", import.meta.url).href;
+  await writeFile(join(scratch, "composite-fail.mjs"), [
+    "import { readValidationCompositeSource } from " + JSON.stringify(compositeModuleUrl) + ";",
+    'await readValidationCompositeSource(() => Promise.reject(new Error("N05 composite rejected")));',
+  ].join("\n") + "\n");
+  const compositeFailure = runCase(["first.mjs", "composite-fail.mjs", "never.mjs"]);
+  assert.equal(compositeFailure.error, undefined, "N05 composite failure process must start");
+  assert.notEqual(compositeFailure.status, 0, "N05 rejection must propagate nonzero");
+  assert.match(compositeFailure.stderr, /N05 composite rejected/);
+  assert.match(compositeFailure.stderr, /\[fixture\] FAILED composite-fail\.mjs/);
+  assert.doesNotMatch(compositeFailure.stdout + compositeFailure.stderr, /unexpected-after-failure|Fixture validator domain passed/);
 } finally {
   await rm(scratch, { recursive: true, force: true });
 }
@@ -602,5 +614,101 @@ try {
 } finally {
   await rm(cliFixtureRoot, { recursive: true, force: true });
 }
+// COMPOSITE-READ-01: negative I/O, cache, Promise and order contracts (N01-N04).
+const compositePaths = Object.freeze([
+  "./modules/core-sources/evaluation.js",
+  "./modules/core-sources/mfl-stats.js",
+  "./modules/core-sources/club.js",
+  "./modules/core-sources/settings.js",
+  "./modules/core-sources/player.js",
+  "./modules/core-sources/wallet.js",
+  "./modules/core-sources/watchlist.js",
+]);
+assert.equal(compositePaths.length, 7, "N04 composite reader uses seven caller-owned file reads");
+const missingError = Object.assign(new Error("N01 missing composite file"), { code: "ENOENT" });
+const inaccessibleError = Object.assign(new Error("N02 permission denied"), { code: "EACCES" });
+for (const [label, injected] of [["N01", missingError], ["N02", inaccessibleError]]) {
+  const result = readValidationCompositeSource((path) =>
+    path === compositePaths[2] ? Promise.reject(injected) : Promise.resolve(path));
+  await assert.rejects(result, (error) => error === injected, label + " preserves rejected error identity");
+  assert.equal(injected.code, label === "N01" ? "ENOENT" : "EACCES");
+}
+const synchronousError = Object.assign(new Error("N04 synchronous failure"), { code: "EIO" });
+assert.throws(
+  () => readValidationCompositeSource(() => { throw synchronousError; }),
+  (error) => error === synchronousError,
+  "N04 caller-side synchronous failures must not become asynchronous rejections",
+);
+let cacheLoads = 0, restoreCache = false;
+const compositeCache = new Map();
+const cachedFailure = new Error("N03 cached rejection");
+function cachedCompositeRead(path) {
+  if (!compositeCache.has(path)) {
+    cacheLoads++;
+    compositeCache.set(path, path === compositePaths[0] && !restoreCache
+      ? Promise.reject(cachedFailure)
+      : Promise.resolve(path));
+  }
+  return compositeCache.get(path);
+}
+await assert.rejects(readValidationCompositeSource(cachedCompositeRead), (error) => error === cachedFailure);
+await assert.rejects(readValidationCompositeSource(cachedCompositeRead), (error) => error === cachedFailure);
+assert.equal(cacheLoads, 7, "N03 rejected reads remain cached by the caller");
+restoreCache = true;
+compositeCache.clear();
+const refreshedComposite = await readValidationCompositeSource(cachedCompositeRead);
+assert.ok(refreshedComposite.includes(compositePaths[0]), "N03 clearing cache exposes refreshed file content");
+assert.equal(cacheLoads, 14, "N03 cache invalidation reloads all seven file inputs");
+let directLoads = 0;
+const directRead = (path) => {
+  directLoads++;
+  return Promise.resolve(path);
+};
+await readValidationCompositeSource(directRead);
+await readValidationCompositeSource(directRead);
+assert.equal(directLoads, 14, "N03 direct readers retain no new shared cache");
+const compositeCalls = [], compositePending = new Map();
+const delayedRead = (path) => {
+  compositeCalls.push(path);
+  return new Promise((resolve) => compositePending.set(path, resolve));
+};
+const pendingComposite = readValidationCompositeSource(delayedRead);
+assert.ok(pendingComposite instanceof Promise, "N04 helper returns the native Promise.all result");
+assert.deepEqual(compositeCalls, compositePaths, "N04 preserve all seven reader invocation paths and order");
+for (const path of [...compositeCalls].reverse()) compositePending.get(path)("value:" + path);
+const resolvedComposite = await pendingComposite;
+const compositeExpectedParts = [
+  readCanonicalCoreSource("shared"),
+  ...compositePaths.slice(0, 5).map((path) => "value:" + path),
+  readCanonicalCoreSource("table"),
+  ...compositePaths.slice(5).map((path) => "value:" + path),
+];
+assert.equal(compositeExpectedParts.length, 9, "N04 historical composite has exactly nine ordered parts");
+assert.equal(resolvedComposite, compositeExpectedParts.join("\n"), "N04 preserve join separators and input order");
+assert.ok(resolvedComposite.startsWith(readCanonicalCoreSource("shared") + "\n"));
+assert.ok(resolvedComposite.endsWith("value:" + compositePaths.at(-1)));
+const normalizeFixture = (value) => String(value).replace(/\r\n?/g, "\n");
+const normalizedComposite = await readValidationCompositeSource((path) =>
+  Promise.resolve(normalizeFixture("first\r\nsecond\rthird\n" + path)));
+assert.ok(normalizedComposite.includes("first\nsecond\nthird\n"), "N04 caller normalization remains intact");
+assert.ok(!normalizedComposite.includes("\r"), "N04 canonical reader normalization preserves LF only");
+console.log("COMPOSITE-READ-01 N01-N04 I/O/cache/Promise/ordering regressions passed.");
+const syncAccessError = Object.assign(new Error("N02 synchronous permission denied"), { code: "EACCES" });
+const syncAccessCalls = [];
+assert.throws(
+  () => readValidationCompositeSource((path) => {
+    syncAccessCalls.push(path);
+    if (path === compositePaths[2]) throw syncAccessError;
+    return Promise.resolve(path);
+  }),
+  (error) => error === syncAccessError,
+  "N02 synchronous access errors retain identity and timing",
+);
+assert.deepEqual(syncAccessCalls, compositePaths.slice(0, 3), "N02 stops reads after synchronous failure");
+assert.deepEqual(
+  [missingError.code, inaccessibleError.code],
+  ["ENOENT", "EACCES"],
+  "N01-N02 must not normalize distinct filesystem error codes",
+);
 console.log("SIM-09A CUT-04.4A: all 11 dispatcher domains pass synthetic golden CLI/subprocess/argv/log/URL/fail-fast regressions without tracked wrapper dependencies.");
 console.log("SIM-09A CUT-04.1: independent 214-validator/11-domain golden inventory, exact 63-slot ordering, output and failure contracts passed without deriving golden expectations from wrapper contents.");

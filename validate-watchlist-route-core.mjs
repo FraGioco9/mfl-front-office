@@ -2,22 +2,12 @@ import { invariant, includes, excludes } from "./validation/assertions.mjs";
 import { readValidationText } from "./validation-text.mjs";
 
 import { coreSourceByDomain } from "./modules/core-source-manifest.js";
-import { readCanonicalCoreArtifacts, readCanonicalCoreSource } from "./validate-core-sources.mjs";
+import { readCanonicalCoreArtifacts, readValidationCompositeSource } from "./validate-core-sources.mjs";
 
 const read = (path) => readValidationText(path, import.meta.url);
 
 const [coreSource, appConfig, routeLoader, buildCore, appEntry, bootstrapCore, tableLoading, watchlistRouteRuntime, generatedWatchlist] = await Promise.all([
-  Promise.all([
-    readCanonicalCoreSource("shared"),
-    read("./modules/core-sources/evaluation.js"),
-    read("./modules/core-sources/mfl-stats.js"),
-    read("./modules/core-sources/club.js"),
-    read("./modules/core-sources/settings.js"),
-    read("./modules/core-sources/player.js"),
-    Promise.resolve(readCanonicalCoreSource("table")),
-    read("./modules/core-sources/wallet.js"),
-    read("./modules/core-sources/watchlist.js"),
-  ]).then((parts) => parts.join("\n")),
+  readValidationCompositeSource(read),
   read("./modules/app-config.js"),
   read("./route-core-loader-runtime.js"),
   read("./build-app-core.mjs"),
