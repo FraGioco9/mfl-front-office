@@ -32,9 +32,9 @@
     "@onflow/fcl": "1.21.11",
     "pureimage": "0.4.20",
     "webp-wasm": "1.0.6",
-    "next": "16.3.8",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "next": "16.4.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "html-react-parser": "5.2.17"
   },
   "devDependencies": {
